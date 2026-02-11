@@ -1,7 +1,6 @@
 // src/utils/ageUtils.js
-
-export function getAgeGroup(age) {
-  if (age < 11) return "elementary";
-  if (age < 14) return "middle";
-  return "advanced";
-}
+export const getAgeGroup = (age) => {
+  if (age < 13) return 'kids';
+  if (age >= 13 && age < 18) return 'teens';
+  return 'adults';
+};

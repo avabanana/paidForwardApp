@@ -1,15 +1,5 @@
-// src/data/courses.js
-export const coursesByAgeGroup = {
-  elementary: [
-    { id: 1, title: "Saving Basics", progress: 0.6 },
-    { id: 2, title: "Needs vs Wants", progress: 0.2 },
-  ],
-  middle: [
-    { id: 3, title: "Budgeting 101", progress: 0.4 },
-    { id: 4, title: "Smart Spending", progress: 0.1 },
-  ],
-  advanced: [
-    { id: 5, title: "Investing Basics", progress: 0.0 },
-    { id: 6, title: "Credit & Debt", progress: 0.0 },
-  ],
-};
+export const courses = [
+  { id: 1, title: 'Financial Literacy 101', category: 'Finance', duration: '2h', progress: 0.4 },
+  { id: 2, title: 'Basic Coding Skills', category: 'Tech', duration: '5h', progress: 0.1 },
+  { id: 3, title: 'Community Leadership', category: 'Soft Skills', duration: '3h', progress: 0.8 },
+];
