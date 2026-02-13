@@ -1,91 +1,46 @@
-import React, { useContext } from "react";
-import { UserContext } from "../context/UserContext";
-import { games } from "../data/games"; 
+import React, { useState } from "react";
 
-const GamesScreen = () => {
-  const { user } = useContext(UserContext); 
+export default function GamesScreen() {
+  const [playing, setPlaying] = useState(false);
+  const [money, setMoney] = useState(100);
+
+  const handleChoice = (cost) => {
+    setMoney(prev => prev - cost);
+    if (money - cost <= 0) alert("You ran out of funds! Try a different strategy.");
+  };
+
+  if (playing) {
+    return (
+      <div style={gameWrapper}>
+        <button onClick={() => setPlaying(false)} style={backBtn}>← Back to Games</button>
+        <div style={gameDashboard}>
+          <h2>Budget Master</h2>
+          <div style={balanceCard}>Wallet: ${money}</div>
+          <p style={{ fontSize: '18px', margin: '20px 0' }}>You need lunch. The cafeteria is $12, but packing a sandwich is $3. What do you do?</p>
+          <div style={{ display: 'flex', gap: '15px' }}>
+            <button style={choiceBtn} onClick={() => handleChoice(12)}>Buy Cafeteria ($12)</button>
+            <button style={choiceBtn} onClick={() => handleChoice(3)}>Pack Lunch ($3)</button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div style={styles.container}>
-      <div style={styles.header}>
-        <h2 style={styles.title}>Games & Challenges</h2>
-        <p style={styles.subtitle}>
-          Welcome, <strong>{user?.email || 'Player'}</strong>! Level up your skills through play.
-        </p>
-      </div>
-      
-      <div style={styles.grid}>
-        {games && games.map((game) => (
-          <div key={game.id} style={styles.gameCard}>
-            <div style={styles.iconPlaceholder}>🎮</div>
-            <h3 style={styles.gameName}>{game.name}</h3>
-            <p style={styles.gameDescription}>{game.description}</p>
-            <button style={styles.playBtn}>Start Playing</button>
-          </div>
-        ))}
+    <div style={{ display: 'flex', gap: '20px' }}>
+      <div style={card}>
+        <h3>🎮 Budget Master</h3>
+        <p>Can you survive a week on a limited budget?</p>
+        <button style={startBtn} onClick={() => setPlaying(true)}>Start Playing</button>
       </div>
     </div>
   );
-};
+}
 
-const styles = {
-  container: {
-    width: '100%',
-  },
-  header: {
-    marginBottom: '30px',
-  },
-  title: {
-    fontSize: '2rem',
-    color: '#333',
-    margin: '0 0 10px 0',
-  },
-  subtitle: {
-    fontSize: '1.1rem',
-    color: '#666',
-  },
-  grid: { 
-    display: 'flex', 
-    flexWrap: 'wrap', 
-    gap: '25px',
-    justifyContent: 'flex-start',
-  },
-  gameCard: { 
-    display: 'flex',
-    flexDirection: 'column',
-    border: '1px solid #eee', 
-    padding: '25px', 
-    borderRadius: '16px', 
-    backgroundColor: '#fff',
-    boxShadow: '0 4px 12px rgba(0,0,0,0.05)',
-    flex: '1 1 300px',
-    maxWidth: '450px', 
-  },
-  iconPlaceholder: {
-    fontSize: '2rem',
-    marginBottom: '15px',
-  },
-  gameName: {
-    margin: '0 0 10px 0',
-    color: '#1a1a1a',
-    fontSize: '1.4rem',
-  },
-  gameDescription: {
-    color: '#555',
-    lineHeight: '1.5',
-    marginBottom: '20px',
-    flex: 1, 
-  },
-  playBtn: {
-    backgroundColor: '#4A90E2',
-    color: 'white',
-    border: 'none',
-    padding: '12px 20px',
-    borderRadius: '8px',
-    cursor: 'pointer',
-    fontWeight: 'bold',
-    fontSize: '1rem',
-  }
-};
-
-export default GamesScreen;
+const gameWrapper = { padding: '20px', backgroundColor: '#f0f9ff', borderRadius: '15px' };
+const balanceCard = { fontSize: '32px', fontWeight: 'bold', color: '#059669', margin: '10px 0' };
+const choiceBtn = { padding: '15px 25px', backgroundColor: '#4A90E2', color: 'white', border: 'none', borderRadius: '10px', cursor: 'pointer', fontWeight: 'bold' };
+const card = { padding: '20px', border: '1px solid #eee', borderRadius: '15px', width: '280px' };
+const startBtn = { width: '100%', padding: '10px', backgroundColor: '#4A90E2', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer' };
+const backBtn = { background: 'none', border: 'none', color: '#4A90E2', cursor: 'pointer', fontWeight: 'bold' };
+const gameDashboard = { textAlign: 'center' };

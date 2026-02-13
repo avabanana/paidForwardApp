@@ -1,19 +1,22 @@
 import React from 'react';
 
 const ProgressBar = ({ progress }) => {
+  // This will show up in your browser's Inspect > Console to prove it's updated
+  console.log("Current Progress:", progress);
+
   const containerStyle = {
     height: '10px',
     width: '100%',
     backgroundColor: '#eee',
     borderRadius: '10px',
     overflow: 'hidden',
-    marginTop: '5px'
+    marginTop: '10px'
   };
 
   const fillerStyle = {
     height: '100%',
-    width: `${Math.min((progress || 0) * 100, 100)}%`,
-    // Logic: If 100%, turn green. Otherwise, blue.
+    width: `${(progress || 0) * 100}%`,
+    // If progress is 1 (100%), it MUST turn green (#10b981)
     backgroundColor: progress >= 1 ? '#10b981' : '#4A90E2',
     transition: 'width 0.5s ease-in-out, background-color 0.3s ease'
   };
