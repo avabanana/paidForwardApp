@@ -1,59 +1,78 @@
 import React, { useState } from 'react';
 
-export default function DiscussionScreen() {
-  const [posts, setPosts] = useState([
-    { id: 1, user: 'Admin', text: 'Welcome to the PaidForward Community! Be kind.', likes: 10 },
-    { id: 2, user: 'FutureDev', text: 'Does anyone have a good resource for learning CSS Flexbox?', likes: 3 }
+export default function DiscussionScreen({ currentUser }) {
+  const [messages, setMessages] = useState([
+    { id: 1, user: 'GlobalSaver', text: 'Just finished the Finance 101 course! 🚀', time: '2h ago' },
+    { id: 2, user: 'ImpactLead', text: 'Welcome to the community! Check out the map to see our current project.', time: '1h ago' }
   ]);
-  const [newPost, setNewPost] = useState("");
+  const [inputText, setInputText] = useState('');
 
-  const handlePost = () => {
-    if (!newPost.trim()) return;
-    const post = { id: Date.now(), user: 'Anonymous User', text: newPost, likes: 0 };
-    setPosts([post, ...posts]);
-    setNewPost("");
+  const handleSendMessage = (e) => {
+    e.preventDefault();
+    if (!inputText.trim()) return;
+
+    const newMessage = {
+      id: messages.length + 1,
+      user: currentUser || 'Member', // This uses the prop we passed!
+      text: inputText,
+      time: 'Just now'
+    };
+
+    setMessages([...messages, newMessage]);
+    setInputText('');
   };
 
   return (
     <div style={styles.container}>
-      <p style={styles.text}>Ask questions and share experiences with others.</p>
-      
-      <div style={styles.inputArea}>
-        <textarea 
-          style={styles.textarea} 
-          placeholder="Start a conversation..." 
-          value={newPost}
-          onChange={(e) => setNewPost(e.target.value)}
-        />
-        <button style={styles.postBtn} onClick={handlePost}>Post Message</button>
+      <div style={styles.chatHeader}>
+        <h3>Community Discussion</h3>
+        <p>Chatting as <strong>@{currentUser || 'Member'}</strong></p>
       </div>
 
-      <div style={styles.feed}>
-        {posts.map(post => (
-          <div key={post.id} style={styles.postCard}>
-            <div style={styles.postHeader}>
-              <span style={styles.userName}>@{post.user}</span>
-            </div>
-            <p style={styles.postText}>{post.text}</p>
-            <div style={styles.postActions}>
-              <button style={styles.likeBtn}>❤️ {post.likes}</button>
-            </div>
+      <div style={styles.messageList}>
+        {messages.map((msg) => (
+          <div key={msg.id} style={{
+            ...styles.messageBubble,
+            alignSelf: msg.user === currentUser ? 'flex-end' : 'flex-start',
+            backgroundColor: msg.user === currentUser ? '#2563eb' : '#f1f5f9',
+            color: msg.user === currentUser ? '#fff' : '#1e293b'
+          }}>
+            <span style={styles.userName}>@{msg.user}</span>
+            <p style={styles.msgText}>{msg.text}</p>
+            <span style={styles.time}>{msg.time}</span>
           </div>
         ))}
       </div>
+
+      <form onSubmit={handleSendMessage} style={styles.inputArea}>
+        <input 
+          type="text" 
+          value={inputText}
+          onChange={(e) => setInputText(e.target.value)}
+          placeholder="Share your thoughts..." 
+          style={styles.input} 
+        />
+        <button type="submit" style={styles.sendBtn}>Post</button>
+      </form>
     </div>
   );
 }
 
 const styles = {
-  container: { padding: '10px', maxWidth: '800px' },
-  text: { color: '#666', marginBottom: '20px' },
-  inputArea: { display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '30px' },
-  textarea: { width: '100%', height: '80px', padding: '15px', borderRadius: '12px', border: '1px solid #ddd', fontSize: '16px', boxSizing: 'border-box' },
-  postBtn: { alignSelf: 'flex-end', backgroundColor: '#4A90E2', color: 'white', border: 'none', padding: '10px 20px', borderRadius: '20px', fontWeight: 'bold', cursor: 'pointer' },
-  feed: { display: 'flex', flexDirection: 'column', gap: '15px' },
-  postCard: { padding: '20px', backgroundColor: '#fefefe', borderRadius: '12px', border: '1px solid #eee' },
-  userName: { fontWeight: 'bold', color: '#4A90E2', fontSize: '14px' },
-  postText: { margin: '10px 0', fontSize: '16px', color: '#333' },
-  likeBtn: { background: 'none', border: 'none', color: '#888', cursor: 'pointer' }
+  container: { display: 'flex', flexDirection: 'column', height: '500px' },
+  chatHeader: { marginBottom: '20px', borderBottom: '1px solid #eee', paddingBottom: '10px' },
+  messageList: { flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '15px', padding: '10px' },
+  messageBubble: { 
+    padding: '12px 16px', 
+    borderRadius: '18px', 
+    maxWidth: '70%', 
+    boxShadow: '0 2px 4px rgba(0,0,0,0.05)',
+    position: 'relative'
+  },
+  userName: { fontSize: '11px', fontWeight: 'bold', display: 'block', marginBottom: '4px', opacity: 0.8 },
+  msgText: { margin: 0, fontSize: '15px', lineHeight: '1.4' },
+  time: { fontSize: '10px', marginTop: '4px', display: 'block', opacity: 0.6, textAlign: 'right' },
+  inputArea: { display: 'flex', gap: '10px', marginTop: '20px', padding: '10px', background: '#f8fafc', borderRadius: '16px' },
+  input: { flex: 1, padding: '12px', borderRadius: '12px', border: '1px solid #e2e8f0', outline: 'none' },
+  sendBtn: { padding: '0 24px', background: '#2563eb', color: '#fff', border: 'none', borderRadius: '12px', fontWeight: 'bold', cursor: 'pointer' }
 };
