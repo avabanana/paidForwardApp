@@ -1,17 +1,29 @@
 import React from 'react';
 import ProgressBar from '../components/ProgressBar';
 
-export default function ProgressScreen() {
+export default function ProgressScreen({ globalProgress, userTier, coursesCompleted = 0, gamesPlayed = 0, xp = 0 }) {
+  // derive level and xp progress
+  const level = Math.floor(xp / 1000) + 1;
+  const xpThisLevel = xp - (level - 1) * 1000;
+  const xpProgress = Math.min(xpThisLevel / 1000, 1);
+
+  const achievementList = [];
+  if (coursesCompleted > 0) achievementList.push({ icon: '🌱', title: 'Early Bird', color: '#dcfce7' });
+  if (gamesPlayed > 0) achievementList.push({ icon: '💰', title: 'Budget King', color: '#fef3c7' });
+  if (globalProgress > 0) achievementList.push({ icon: '🧠', title: 'Quiz Whiz', color: '#e0e7ff' });
+  if (xp >= 1500) achievementList.push({ icon: '🤝', title: 'Helper', color: '#fae8ff' });
+
   return (
     <div style={{ padding: '10px' }}>
       {/* Level Header */}
       <div style={styles.levelCard}>
-        <div style={styles.levelBadge}>LVL 2</div>
+        <div style={styles.levelBadge}>LVL {level}</div>
         <div style={{ textAlign: 'left', flex: 1 }}>
-          <h2 style={{ margin: 0, color: '#fff' }}>Wealth Builder</h2>
-          <p style={{ color: '#e0f2fe', margin: '5px 0' }}>You're in the top 15% of learners this week!</p>
-          <ProgressBar progress={0.65} />
-          <span style={{ fontSize: '12px', color: '#e0f2fe' }}>850 / 1200 XP to Level 3</span>
+          <h2 style={{ margin: 0, color: '#fff' }}>{userTier === 'elementary' ? 'Junior Builder' : 'Wealth Builder'}</h2>
+          <p style={{ color: '#e0f2fe', margin: '5px 0' }}>
+            {xpThisLevel} / 1000 XP to Level {level + 1}
+          </p>
+          <ProgressBar progress={xpProgress} />
         </div>
       </div>
 
@@ -19,13 +31,18 @@ export default function ProgressScreen() {
       <div style={styles.grid}>
         <div style={{ ...styles.statCard, background: '#ebf8ff' }}>
           <span style={styles.icon}>🎓</span>
-          <h4 style={styles.statLabel}>Courses Finished</h4>
-          <h2 style={styles.statValue}>3</h2>
+          <h4 style={styles.statLabel}>Modules Completed</h4>
+          <h2 style={styles.statValue}>{coursesCompleted}</h2>
         </div>
-        <div style={{ ...styles.statCard, background: '#f0fff4' }}>
+        <div style={{ ...styles.statCard, background: '#f0f4ff' }}>
+          <span style={styles.icon}>🎮</span>
+          <h4 style={styles.statLabel}>Games Played</h4>
+          <h2 style={styles.statValue}>{gamesPlayed}</h2>
+        </div>
+        <div style={{ ...styles.statCard, background: '#fff0f6' }}>
           <span style={styles.icon}>💎</span>
-          <h4 style={styles.statLabel}>Impact Points</h4>
-          <h2 style={styles.statValue}>1,250</h2>
+          <h4 style={styles.statLabel}>XP</h4>
+          <h2 style={styles.statValue}>{xp}</h2>
         </div>
         <div style={{ ...styles.statCard, background: '#fffaf0' }}>
           <span style={styles.icon}>🔥</span>
@@ -38,10 +55,11 @@ export default function ProgressScreen() {
       <div style={styles.badgeSection}>
         <h3 style={{ marginBottom: '15px' }}>Your Achievements</h3>
         <div style={{ display: 'flex', gap: '15px', overflowX: 'auto', paddingBottom: '10px' }}>
-          <Badge icon="🌱" title="Early Bird" color="#dcfce7" />
-          <Badge icon="💰" title="Budget King" color="#fef3c7" />
-          <Badge icon="🧠" title="Quiz Whiz" color="#e0e7ff" />
-          <Badge icon="🤝" title="Helper" color="#fae8ff" />
+          {achievementList.length > 0 ? (
+            achievementList.map((a, i) => <Badge key={i} icon={a.icon} title={a.title} color={a.color} />)
+          ) : (
+            <span style={{ color: '#64748b' }}>No badges yet</span>
+          )}
         </div>
       </div>
     </div>

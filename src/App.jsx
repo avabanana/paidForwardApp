@@ -15,6 +15,10 @@ function App() {
   const [birthYear, setBirthYear] = useState('');
   const [userTier, setUserTier] = useState('adult'); 
   const [courseProgress, setCourseProgress] = useState(0);
+  const [coursesCompleted, setCoursesCompleted] = useState(0); // counts individual lessons/modules finished
+  const [lastModuleCount, setLastModuleCount] = useState(0);
+  const [gamesPlayed, setGamesPlayed] = useState(0);
+  const [xp, setXp] = useState(0);
 
   const currentYear = new Date().getFullYear();
   const userAge = birthYear ? currentYear - parseInt(birthYear) : 0;
@@ -25,14 +29,53 @@ function App() {
     return saved ? JSON.parse(saved) : [];
   };
 
-  const updateGlobalProgress = (newProgress) => {
-    setCourseProgress(newProgress);
+  const saveUserUpdates = (updates) => {
     const allUsers = getUsers();
-    const updatedUsers = allUsers.map(u => {
-      if (u.email === email) return { ...u, progress: newProgress };
+    const updated = allUsers.map(u => {
+      if (u.email === email) {
+        return { ...u, ...updates };
+      }
       return u;
     });
-    localStorage.setItem('paidForwardUsers', JSON.stringify(updatedUsers));
+    localStorage.setItem('paidForwardUsers', JSON.stringify(updated));
+  };
+
+  // second arg optionally carries how many modules/lessons have been completed so far
+  const updateGlobalProgress = (newProgress, modulesDone = 0) => {
+    // if we received a module count and it increased compared to the last call,
+    // treat each additional finished module as a "course" for progress statistics
+    if (modulesDone > lastModuleCount) {
+      const delta = modulesDone - lastModuleCount;
+      setCoursesCompleted(prev => {
+        const newCount = prev + delta;
+        saveUserUpdates({ coursesCompleted: newCount });
+        return newCount;
+      });
+      setXp(prev => {
+        const newXp = prev + delta * 100;
+        saveUserUpdates({ xp: newXp });
+        return newXp;
+      });
+      setLastModuleCount(modulesDone);
+    }
+
+    setCourseProgress(newProgress);
+    saveUserUpdates({ progress: newProgress });
+  };
+
+  const handleGameEnd = (result) => {
+    // count finished/abandoned games
+    setGamesPlayed(prev => {
+      const newCount = prev + 1;
+      saveUserUpdates({ gamesPlayed: newCount });
+      return newCount;
+    });
+    setXp(prev => {
+      const newXp = prev + 100;
+      saveUserUpdates({ xp: newXp });
+      return newXp;
+    });
+    // we could do something with result if needed
   };
 
   const handleAuth = (e) => {
@@ -49,10 +92,18 @@ function App() {
       if (userAge <= 10) tier = 'elementary';
       else if (userAge <= 13) tier = 'middle';
 
-      const newUser = { email, username, password, birthYear, tier, progress: 0 };
+      const newUser = { 
+        email, username, password, birthYear, tier, progress: 0,
+        coursesCompleted: 0,
+        gamesPlayed: 0,
+        xp: 0
+      };
       localStorage.setItem('paidForwardUsers', JSON.stringify([...allUsers, newUser]));
       setUserTier(tier);
       setCourseProgress(0);
+      setCoursesCompleted(0);
+      setGamesPlayed(0);
+      setXp(0);
       setIsLoggedIn(true);
     } else {
       const user = allUsers.find(u => u.email === email && u.password === password);
@@ -61,6 +112,9 @@ function App() {
         setUserTier(user.tier);
         setBirthYear(user.birthYear);
         setCourseProgress(user.progress || 0);
+        setCoursesCompleted(user.coursesCompleted || 0);
+        setGamesPlayed(user.gamesPlayed || 0);
+        setXp(user.xp || 0);
         setIsLoggedIn(true);
       } else {
         alert("Invalid credentials");
@@ -72,10 +126,10 @@ function App() {
     switch (activeTab) {
       case 'Home': return <HomeScreen onNavigate={(tab) => setActiveTab(tab)} />;
       case 'Courses': return <CoursesScreen globalProgress={courseProgress} setGlobalProgress={updateGlobalProgress} userTier={userTier} username={username} />;
-      case 'Games': return <GamesScreen userTier={userTier} />;
+      case 'Games': return <GamesScreen userTier={userTier} onGameEnd={handleGameEnd} />;
       case 'Discussion': 
         return canAccessDiscussion ? <DiscussionScreen currentUser={username} /> : <HomeScreen onNavigate={(tab) => setActiveTab(tab)} />;
-      case 'Progress': return <ProgressScreen globalProgress={courseProgress} userTier={userTier} />; 
+      case 'Progress': return <ProgressScreen globalProgress={courseProgress} userTier={userTier} coursesCompleted={coursesCompleted} gamesPlayed={gamesPlayed} xp={xp} />; 
       default: return <HomeScreen onNavigate={(tab) => setActiveTab(tab)} />;
     }
   };
@@ -104,7 +158,7 @@ function App() {
     );
   }
 
-  const tabs = ['Home', 'Courses', 'Games'];
+  const tabs = ['Home', 'Courses', 'Games', 'Progress'];
   if (canAccessDiscussion) tabs.push('Discussion');
 
   return (

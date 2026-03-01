@@ -4,6 +4,7 @@ export const userProgress = {
   2: 0.8,
   3: 0.0,
   4: 0.0,
+  // additional slots are available for new courses
 };
 
 function isCourseUnlocked(index, courses, progressMap) {
