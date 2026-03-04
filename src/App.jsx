@@ -4,6 +4,7 @@ import CoursesScreen from './screens/CoursesScreen.jsx';
 import GamesScreen from './screens/GamesScreen.jsx';
 import DiscussionScreen from './screens/DiscussionScreen.jsx';
 import ProgressScreen from './screens/ProgressScreen.jsx'; 
+import GoalScreen from './screens/GoalScreen.jsx'; // ADDED
 
 function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -40,10 +41,7 @@ function App() {
     localStorage.setItem('paidForwardUsers', JSON.stringify(updated));
   };
 
-  // second arg optionally carries how many modules/lessons have been completed so far
   const updateGlobalProgress = (newProgress, modulesDone = 0) => {
-    // if we received a module count and it increased compared to the last call,
-    // treat each additional finished module as a "course" for progress statistics
     if (modulesDone > lastModuleCount) {
       const delta = modulesDone - lastModuleCount;
       setCoursesCompleted(prev => {
@@ -64,7 +62,6 @@ function App() {
   };
 
   const handleGameEnd = (result) => {
-    // count finished/abandoned games
     setGamesPlayed(prev => {
       const newCount = prev + 1;
       saveUserUpdates({ gamesPlayed: newCount });
@@ -75,7 +72,6 @@ function App() {
       saveUserUpdates({ xp: newXp });
       return newXp;
     });
-    // we could do something with result if needed
   };
 
   const handleAuth = (e) => {
@@ -130,6 +126,7 @@ function App() {
       case 'Discussion': 
         return canAccessDiscussion ? <DiscussionScreen currentUser={username} /> : <HomeScreen onNavigate={(tab) => setActiveTab(tab)} />;
       case 'Progress': return <ProgressScreen globalProgress={courseProgress} userTier={userTier} coursesCompleted={coursesCompleted} gamesPlayed={gamesPlayed} xp={xp} />; 
+      case 'Goals': return <GoalScreen />; // ADDED
       default: return <HomeScreen onNavigate={(tab) => setActiveTab(tab)} />;
     }
   };
@@ -158,7 +155,8 @@ function App() {
     );
   }
 
-  const tabs = ['Home', 'Courses', 'Games', 'Progress'];
+  // UPDATED TABS ARRAY
+  const tabs = ['Home', 'Courses', 'Games', 'Progress', 'Goals'];
   if (canAccessDiscussion) tabs.push('Discussion');
 
   return (
