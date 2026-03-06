@@ -1,11 +1,38 @@
 import React from 'react';
 import ProgressBar from '../components/ProgressBar';
 
-export default function ProgressScreen({ globalProgress, userTier, coursesCompleted = 0, gamesPlayed = 0, xp = 0 }) {
-  // derive level and xp progress
-  const level = Math.floor(xp / 1000) + 1;
-  const xpThisLevel = xp - (level - 1) * 1000;
-  const xpProgress = Math.min(xpThisLevel / 1000, 1);
+const AchievementBadge = ({ icon, title, requirement, achieved }) => (
+  <div 
+    style={{
+      ...styles.badge, 
+      opacity: achieved ? 1 : 0.4,
+      filter: achieved ? 'none' : 'grayscale(100%)',
+    }} 
+    title={achieved ? `Unlocked: ${requirement}` : `Locked: ${requirement}`}
+  ) {
+    return (
+      <div style={styles.badgeContent}>
+        <div style={styles.badgeIcon}>{icon}</div>
+        <div style={styles.badgeText}>{title}</div>
+        {achieved && <div style={styles.checkMark}>✓</div>}
+      </div>
+    );
+  }
+};
+
+export default function ProgressScreen({ 
+  courseProgressMap = {}, 
+  coursesCompleted = 0, 
+  gameWins = 0, 
+  gamesPlayed = 0, 
+  xp = 0, 
+  streak = 0,
+  userTier = 'adult'
+}) {
+  // Logic for Leveling System (Each level is 1000 XP)
+  const currentLevel = Math.floor(xp / 1000) + 1;
+  const xpIntoLevel = xp % 1000;
+  const levelProgress = xpIntoLevel / 1000;
 
   const achievementList = [];
   if (coursesCompleted > 0) achievementList.push({ icon: '🌱', title: 'Early Bird', color: '#dcfce7' });
