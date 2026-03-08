@@ -1,27 +1,48 @@
 import React from 'react';
 import ProgressBar from '../components/ProgressBar';
 
-const AchievementBadge = ({ icon, title, requirement, achieved }) => (
-  <div 
+const AchievementBadge = ({ icon, title, requirement, achieved, color }) => (
+  <div
     style={{
-      ...styles.badge, 
-      opacity: achieved ? 1 : 0.4,
+      minWidth: '110px',
+      padding: '15px',
+      borderRadius: '16px',
+      background: color,
+      textAlign: 'center',
+      border: '1px solid rgba(0,0,0,0.05)',
+      opacity: achieved ? 1 : 0.5,
       filter: achieved ? 'none' : 'grayscale(100%)',
-    }} 
+      position: 'relative'
+    }}
     title={achieved ? `Unlocked: ${requirement}` : `Locked: ${requirement}`}
-  ) {
-    return (
-      <div style={styles.badgeContent}>
-        <div style={styles.badgeIcon}>{icon}</div>
-        <div style={styles.badgeText}>{title}</div>
-        {achieved && <div style={styles.checkMark}>✓</div>}
+  >
+    <div style={{ fontSize: '30px', marginBottom: '5px' }}>{icon}</div>
+    <div style={{ fontSize: '11px', fontWeight: 'bold' }}>{title}</div>
+    <div style={{ fontSize: '10px', color: '#334155', marginTop: '5px' }}>{requirement}</div>
+    {achieved && (
+      <div
+        style={{
+          position: 'absolute',
+          top: '8px',
+          right: '8px',
+          width: '20px',
+          height: '20px',
+          borderRadius: '50%',
+          background: '#10b981',
+          color: '#fff',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          fontSize: '12px'
+        }}
+      >
+        ✓
       </div>
-    );
-  }
-};
+    )}
+  </div>
+);
 
 export default function ProgressScreen({ 
-  courseProgressMap = {}, 
   coursesCompleted = 0, 
   gameWins = 0, 
   gamesPlayed = 0, 
@@ -34,23 +55,48 @@ export default function ProgressScreen({
   const xpIntoLevel = xp % 1000;
   const levelProgress = xpIntoLevel / 1000;
 
-  const achievementList = [];
-  if (coursesCompleted > 0) achievementList.push({ icon: '🌱', title: 'Early Bird', color: '#dcfce7' });
-  if (gamesPlayed > 0) achievementList.push({ icon: '💰', title: 'Budget King', color: '#fef3c7' });
-  if (globalProgress > 0) achievementList.push({ icon: '🧠', title: 'Quiz Whiz', color: '#e0e7ff' });
-  if (xp >= 1500) achievementList.push({ icon: '🤝', title: 'Helper', color: '#fae8ff' });
+  const achievementList = [
+    {
+      icon: '🌱',
+      title: 'Early Bird',
+      requirement: 'Complete at least 1 module',
+      achieved: coursesCompleted > 0,
+      color: '#dcfce7'
+    },
+    {
+      icon: '🎮',
+      title: 'Game On',
+      requirement: 'Play at least 1 game',
+      achieved: gamesPlayed > 0,
+      color: '#fef3c7'
+    },
+    {
+      icon: '🏆',
+      title: 'Winner',
+      requirement: 'Win at least 1 game',
+      achieved: gameWins > 0,
+      color: '#e0e7ff'
+    },
+    {
+      icon: '💎',
+      title: 'XP Master',
+      requirement: 'Earn 1500 XP',
+      achieved: xp >= 1500,
+      color: '#fae8ff'
+    }
+  ];
 
   return (
     <div style={{ padding: '10px' }}>
       {/* Level Header */}
       <div style={styles.levelCard}>
-        <div style={styles.levelBadge}>LVL {level}</div>
+        <div style={styles.levelBadge}>LVL {currentLevel}</div>
         <div style={{ textAlign: 'left', flex: 1 }}>
           <h2 style={{ margin: 0, color: '#fff' }}>{userTier === 'elementary' ? 'Junior Builder' : 'Wealth Builder'}</h2>
           <p style={{ color: '#e0f2fe', margin: '5px 0' }}>
-            {xpThisLevel} / 1000 XP to Level {level + 1}
+            {xpIntoLevel} / 1000 XP to Level {currentLevel + 1}
           </p>
-          <ProgressBar progress={xpProgress} />
+          <ProgressBar progress={levelProgress} />
         </div>
       </div>
 
@@ -74,7 +120,7 @@ export default function ProgressScreen({
         <div style={{ ...styles.statCard, background: '#fffaf0' }}>
           <span style={styles.icon}>🔥</span>
           <h4 style={styles.statLabel}>Day Streak</h4>
-          <h2 style={styles.statValue}>5</h2>
+          <h2 style={styles.statValue}>{streak}</h2>
         </div>
       </div>
 
@@ -83,7 +129,16 @@ export default function ProgressScreen({
         <h3 style={{ marginBottom: '15px' }}>Your Achievements</h3>
         <div style={{ display: 'flex', gap: '15px', overflowX: 'auto', paddingBottom: '10px' }}>
           {achievementList.length > 0 ? (
-            achievementList.map((a, i) => <Badge key={i} icon={a.icon} title={a.title} color={a.color} />)
+            achievementList.map((a, i) => (
+              <AchievementBadge
+                key={i}
+                icon={a.icon}
+                title={a.title}
+                requirement={a.requirement}
+                achieved={a.achieved}
+                color={a.color}
+              />
+            ))
           ) : (
             <span style={{ color: '#64748b' }}>No badges yet</span>
           )}
@@ -92,16 +147,6 @@ export default function ProgressScreen({
     </div>
   );
 }
-
-const Badge = ({ icon, title, color }) => (
-  <div style={{ 
-    minWidth: '90px', padding: '15px', borderRadius: '16px', 
-    background: color, textAlign: 'center', border: '1px solid rgba(0,0,0,0.05)' 
-  }}>
-    <div style={{ fontSize: '30px', marginBottom: '5px' }}>{icon}</div>
-    <div style={{ fontSize: '11px', fontWeight: 'bold' }}>{title}</div>
-  </div>
-);
 
 const styles = {
   levelCard: { 
