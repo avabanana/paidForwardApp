@@ -55,6 +55,19 @@ export default function ProgressScreen({
   const xpIntoLevel = xp % 1000;
   const levelProgress = xpIntoLevel / 1000;
 
+  const [goalBadges, setGoalBadges] = React.useState([]);
+
+  React.useEffect(() => {
+    const saved = localStorage.getItem('pf_achievements');
+    if (saved) {
+      try {
+        setGoalBadges(JSON.parse(saved));
+      } catch {
+        setGoalBadges([]);
+      }
+    }
+  }, []);
+
   const achievementList = [
     {
       icon: '🌱',
@@ -83,7 +96,14 @@ export default function ProgressScreen({
       requirement: 'Earn 1500 XP',
       achieved: xp >= 1500,
       color: '#fae8ff'
-    }
+    },
+    ...goalBadges.map((badge) => ({
+      icon: '🏅',
+      title: badge,
+      requirement: 'Goal completed',
+      achieved: true,
+      color: '#ffedd5'
+    }))
   ];
 
   return (

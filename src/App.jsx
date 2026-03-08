@@ -21,6 +21,9 @@ import GamesScreen from './screens/GamesScreen.jsx';
 import DiscussionScreen from './screens/DiscussionScreen.jsx';
 import ProgressScreen from './screens/ProgressScreen.jsx'; 
 import GoalScreen from './screens/GoalScreen.jsx';
+import SalaryScreen from './screens/SalaryScreen.jsx';
+import LeagueScreen from './screens/LeagueScreen.jsx';
+import SettingsScreen from './screens/SettingsScreen.jsx';
 
 const firebaseConfig = {
   apiKey: "AIzaSyD6VbFwVhA-nPGXyPRN9llr0lXIrSTqwtM",
@@ -43,15 +46,18 @@ function App() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [username, setUsername] = useState('');
+  const [birthYear, setBirthYear] = useState('');
   
   const [stats, setStats] = useState({
     xp: 0,
     gameWins: 0,
+    gamesPlayed: 0,
     coursesCompleted: 0,
     streak: 0,
     tier: 'adult',
     username: '',
-    courseProgressMap: {}
+    courseProgressMap: {},
+    birthYear: null
   });
 
   useEffect(() => {
@@ -61,7 +67,20 @@ function App() {
         const userDocRef = doc(db, "users", currentUser.uid);
         const unsubscribeData = onSnapshot(userDocRef, (docSnap) => {
           if (docSnap.exists()) {
-            setStats(docSnap.data());
+            const data = docSnap.data();
+            setStats({
+              xp: 0,
+              gameWins: 0,
+              gamesPlayed: 0,
+              coursesCompleted: 0,
+              streak: 0,
+              tier: 'adult',
+              username: '',
+              courseProgressMap: {},
+              lastLogin: null,
+              birthYear: null,
+              ...data
+            });
           }
         });
         return () => unsubscribeData();
@@ -70,6 +89,21 @@ function App() {
     return () => unsubscribeAuth();
   }, []);
 
+  useEffect(() => {
+    if (!user) return;
+
+    const today = new Date().toISOString().slice(0, 10);
+    if (stats.lastLogin === today) return;
+
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    const yesterdayStr = yesterday.toISOString().slice(0, 10);
+
+    const nextStreak = stats.lastLogin === yesterdayStr ? (stats.streak || 0) + 1 : 1;
+
+    updateData({ lastLogin: today, streak: nextStreak });
+  }, [stats.lastLogin, stats.streak, user]);
+
   const updateData = async (updates) => {
     if (!user) return;
     const userRef = doc(db, "users", user.uid);
@@ -77,24 +111,64 @@ function App() {
   };
 
   const handleGameEnd = (status) => {
+    // Track every playthrough (win, lose, or quit)
+    const updates = {
+      gamesPlayed: (stats.gamesPlayed || 0) + 1,
+      xp: stats.xp + (status === 'won' ? 250 : 50)
+    };
+
     if (status === 'won') {
-      updateData({ 
-        gameWins: stats.gameWins + 1, 
-        xp: stats.xp + 250 
-      });
-    } else {
-      updateData({ xp: stats.xp + 50 });
+      updates.gameWins = (stats.gameWins || 0) + 1;
     }
+
+    // Optimistically update local state to keep Progress screen responsive
+    setStats(prev => ({
+      ...prev,
+      ...updates
+    }));
+
+    updateData(updates);
+  };
+
+  const normalizeCourseKey = (id) => `course_${id}`;
+
+  const handleCourseComplete = (courseId) => {
+    const key = normalizeCourseKey(courseId);
+    const alreadyCompleted = stats.courseProgressMap?.[courseId] >= 1 || stats.courseProgressMap?.[key] >= 1;
+    if (alreadyCompleted) return;
+
+    const updates = {
+      coursesCompleted: (stats.coursesCompleted || 0) + 1,
+      xp: stats.xp + 150,
+      [`courseProgressMap.${key}`]: 1
+    };
+
+    // Optimistic local update so UI reflects progress immediately
+    setStats(prev => ({
+      ...prev,
+      ...updates,
+      courseProgressMap: {
+        ...(prev.courseProgressMap || {}),
+        [key]: 1
+      }
+    }));
+
+    updateData(updates);
   };
 
   const handleAuth = async (e) => {
     e.preventDefault();
     try {
       if (isSignUp) {
+        if (!birthYear) throw new Error('Please enter your birth year.');
+        const numericYear = parseInt(birthYear, 10);
+        const age = new Date().getFullYear() - numericYear;
+        const tier = age >= 14 ? 'adult' : 'elementary';
+
         const res = await createUserWithEmailAndPassword(auth, email, password);
         await setDoc(doc(db, "users", res.user.uid), {
-          username, email, xp: 0, gameWins: 0, coursesCompleted: 0, 
-          streak: 1, tier: 'adult', courseProgressMap: {}
+          username, email, xp: 0, gameWins: 0, gamesPlayed: 0, coursesCompleted: 0,
+          streak: 1, tier, birthYear: numericYear, courseProgressMap: {}, lastLogin: null
         });
       } else {
         await signInWithEmailAndPassword(auth, email, password);
@@ -109,20 +183,25 @@ function App() {
         return <CoursesScreen 
           courseProgressMap={stats.courseProgressMap} 
           setCourseProgressMap={(id, prog) => updateData({ [`courseProgressMap.${id}`]: prog })} 
+          onCourseComplete={handleCourseComplete}
           userTier={stats.tier} 
           username={stats.username} 
         />;
       case 'Games': return <GamesScreen userTier={stats.tier} onGameEnd={handleGameEnd} />;
-      case 'Discussion': return <DiscussionScreen currentUser={stats.username} />;
+      case 'Discussion': return <DiscussionScreen currentUser={stats.username} streak={stats.streak} />;
       case 'Progress': 
         return <ProgressScreen 
           xp={stats.xp} 
           gameWins={stats.gameWins} 
+          gamesPlayed={stats.gamesPlayed}
           streak={stats.streak} 
           coursesCompleted={stats.coursesCompleted}
           userTier={stats.tier}
         />;
       case 'Goals': return <GoalScreen />;
+      case 'Leagues': return <LeagueScreen currentUser={stats.username} />;
+      case 'Salary': return <SalaryScreen />;
+      case 'Settings': return <SettingsScreen currentUser={user} stats={stats} updateData={updateData} />;
       default: return <HomeScreen onNavigate={(tab) => setActiveTab(tab)} />;
     }
   };
@@ -133,7 +212,20 @@ function App() {
         <div style={styles.authCard}>
           <h1 style={styles.authLogo}>PaidForward</h1>
           <form style={styles.authForm} onSubmit={handleAuth}>
-            {isSignUp && <input style={styles.input} placeholder="Username" onChange={e => setUsername(e.target.value)} />}
+            {isSignUp && (
+              <>
+                <input style={styles.input} placeholder="Username" onChange={e => setUsername(e.target.value)} />
+                <input
+                  style={styles.input}
+                  type="number"
+                  min="1900"
+                  max={new Date().getFullYear()}
+                  placeholder="Birth Year"
+                  value={birthYear}
+                  onChange={e => setBirthYear(e.target.value)}
+                />
+              </>
+            )}
             <input style={styles.input} type="email" placeholder="Email" onChange={e => setEmail(e.target.value)} />
             <input style={styles.input} type="password" placeholder="Password" onChange={e => setPassword(e.target.value)} />
             <button type="submit" style={styles.authBtn}>{isSignUp ? "Sign Up" : "Sign In"}</button>
@@ -151,7 +243,17 @@ function App() {
       <header style={styles.header}>
         <h1 style={styles.logo} onClick={() => setActiveTab('Home')}>PaidForward</h1>
         <nav style={styles.navBar}>
-          {['Home', 'Courses', 'Games', 'Progress', 'Goals', 'Discussion'].map((tab) => (
+          {[
+            'Home',
+            'Courses',
+            'Games',
+            'Progress',
+            'Goals',
+            'Leagues',
+            ...(stats.tier !== 'elementary' ? ['Discussion'] : []),
+            'Salary',
+            'Settings'
+          ].map((tab) => (
             <button key={tab} onClick={() => setActiveTab(tab)} style={{...styles.navItem, color: activeTab === tab ? '#2563eb' : '#64748b'}}>{tab}</button>
           ))}
         </nav>
