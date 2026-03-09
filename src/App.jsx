@@ -48,6 +48,9 @@ function App() {
   const [username, setUsername] = useState('');
   const [birthYear, setBirthYear] = useState('');
   
+  // Achievement Toast Notification State
+  const [toast, setToast] = useState({ show: false, message: '' });
+
   const [stats, setStats] = useState({
     xp: 0,
     gameWins: 0,
@@ -57,9 +60,11 @@ function App() {
     tier: 'adult',
     username: '',
     courseProgressMap: {},
-    birthYear: null
+    birthYear: null,
+    lastLogin: null
   });
 
+  // Listener for Data
   useEffect(() => {
     const unsubscribeAuth = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
@@ -67,20 +72,7 @@ function App() {
         const userDocRef = doc(db, "users", currentUser.uid);
         const unsubscribeData = onSnapshot(userDocRef, (docSnap) => {
           if (docSnap.exists()) {
-            const data = docSnap.data();
-            setStats({
-              xp: 0,
-              gameWins: 0,
-              gamesPlayed: 0,
-              coursesCompleted: 0,
-              streak: 0,
-              tier: 'adult',
-              username: '',
-              courseProgressMap: {},
-              lastLogin: null,
-              birthYear: null,
-              ...data
-            });
+            setStats(prev => ({ ...prev, ...docSnap.data() }));
           }
         });
         return () => unsubscribeData();
@@ -89,8 +81,9 @@ function App() {
     return () => unsubscribeAuth();
   }, []);
 
+  // Updated Streak Logic
   useEffect(() => {
-    if (!user) return;
+    if (!user || !stats.username) return;
 
     const today = new Date().toISOString().slice(0, 10);
     if (stats.lastLogin === today) return;
@@ -99,10 +92,22 @@ function App() {
     yesterday.setDate(yesterday.getDate() - 1);
     const yesterdayStr = yesterday.toISOString().slice(0, 10);
 
-    const nextStreak = stats.lastLogin === yesterdayStr ? (stats.streak || 0) + 1 : 1;
+    let nextStreak = stats.streak || 0;
+    if (stats.lastLogin === yesterdayStr) {
+      nextStreak += 1;
+      triggerToast(`Streak Continued! 🔥 ${nextStreak} Days`);
+    } else {
+      nextStreak = 1; // Reset or Start streak
+      triggerToast("Welcome Back! Day 1 Streak Started.");
+    }
 
     updateData({ lastLogin: today, streak: nextStreak });
-  }, [stats.lastLogin, stats.streak, user]);
+  }, [user, stats.username]); 
+
+  const triggerToast = (msg) => {
+    setToast({ show: true, message: msg });
+    setTimeout(() => setToast({ show: false, message: '' }), 4000);
+  };
 
   const updateData = async (updates) => {
     if (!user) return;
@@ -111,48 +116,33 @@ function App() {
   };
 
   const handleGameEnd = (status) => {
-    // Track every playthrough (win, lose, or quit)
+    const xpGained = status === 'won' ? 250 : 50;
     const updates = {
       gamesPlayed: (stats.gamesPlayed || 0) + 1,
-      xp: stats.xp + (status === 'won' ? 250 : 50)
+      xp: (stats.xp || 0) + xpGained
     };
 
     if (status === 'won') {
       updates.gameWins = (stats.gameWins || 0) + 1;
+      triggerToast(`Victory! +${xpGained} XP 🏆`);
+    } else {
+      triggerToast(`Game Over. +${xpGained} XP`);
     }
-
-    // Optimistically update local state to keep Progress screen responsive
-    setStats(prev => ({
-      ...prev,
-      ...updates
-    }));
 
     updateData(updates);
   };
 
-  const normalizeCourseKey = (id) => `course_${id}`;
-
-  const handleCourseComplete = (courseId) => {
-    const key = normalizeCourseKey(courseId);
-    const alreadyCompleted = stats.courseProgressMap?.[courseId] >= 1 || stats.courseProgressMap?.[key] >= 1;
-    if (alreadyCompleted) return;
+  const handleCourseComplete = (courseId, title) => {
+    const key = `course_${courseId}`;
+    if (stats.courseProgressMap?.[key] >= 1) return;
 
     const updates = {
       coursesCompleted: (stats.coursesCompleted || 0) + 1,
-      xp: stats.xp + 150,
+      xp: (stats.xp || 0) + 500, // Higher reward for full course
       [`courseProgressMap.${key}`]: 1
     };
 
-    // Optimistic local update so UI reflects progress immediately
-    setStats(prev => ({
-      ...prev,
-      ...updates,
-      courseProgressMap: {
-        ...(prev.courseProgressMap || {}),
-        [key]: 1
-      }
-    }));
-
+    triggerToast(`Achievement Unlocked: Mastered ${title || 'Course'}! 🎓`);
     updateData(updates);
   };
 
@@ -168,7 +158,7 @@ function App() {
         const res = await createUserWithEmailAndPassword(auth, email, password);
         await setDoc(doc(db, "users", res.user.uid), {
           username, email, xp: 0, gameWins: 0, gamesPlayed: 0, coursesCompleted: 0,
-          streak: 1, tier, birthYear: numericYear, courseProgressMap: {}, lastLogin: null
+          streak: 1, tier, birthYear: numericYear, courseProgressMap: {}, lastLogin: new Date().toISOString().slice(0, 10)
         });
       } else {
         await signInWithEmailAndPassword(auth, email, password);
@@ -181,8 +171,8 @@ function App() {
       case 'Home': return <HomeScreen onNavigate={(tab) => setActiveTab(tab)} />;
       case 'Courses': 
         return <CoursesScreen 
-          courseProgressMap={stats.courseProgressMap} 
-          setCourseProgressMap={(id, prog) => updateData({ [`courseProgressMap.${id}`]: prog })} 
+          courseProgressMap={stats.courseProgressMap || {}} 
+          updateCourseProgress={(id, prog) => updateData({ [`courseProgressMap.course_${id}`]: prog })} 
           onCourseComplete={handleCourseComplete}
           userTier={stats.tier} 
           username={stats.username} 
@@ -197,6 +187,7 @@ function App() {
           streak={stats.streak} 
           coursesCompleted={stats.coursesCompleted}
           userTier={stats.tier}
+          username={stats.username}
         />;
       case 'Goals': return <GoalScreen />;
       case 'Leagues': return <LeagueScreen currentUser={stats.username} />;
@@ -218,8 +209,6 @@ function App() {
                 <input
                   style={styles.input}
                   type="number"
-                  min="1900"
-                  max={new Date().getFullYear()}
                   placeholder="Birth Year"
                   value={birthYear}
                   onChange={e => setBirthYear(e.target.value)}
@@ -240,25 +229,23 @@ function App() {
 
   return (
     <div style={styles.container}>
+      {toast.show && (
+        <div style={styles.toast}>
+          {toast.message}
+        </div>
+      )}
       <header style={styles.header}>
         <h1 style={styles.logo} onClick={() => setActiveTab('Home')}>PaidForward</h1>
         <nav style={styles.navBar}>
-          {[
-            'Home',
-            'Courses',
-            'Games',
-            'Progress',
-            'Goals',
-            'Leagues',
-            ...(stats.tier !== 'elementary' ? ['Discussion'] : []),
-            'Salary',
-            'Settings'
-          ].map((tab) => (
+          {['Home', 'Courses', 'Games', 'Progress', 'Goals', 'Leagues', ...(stats.tier !== 'elementary' ? ['Discussion'] : []), 'Salary', 'Settings'].map((tab) => (
             <button key={tab} onClick={() => setActiveTab(tab)} style={{...styles.navItem, color: activeTab === tab ? '#2563eb' : '#64748b'}}>{tab}</button>
           ))}
         </nav>
         <div style={styles.headerRight}>
-          <div style={styles.streakDisplay}>🔥 {stats.streak}</div>
+          <div style={styles.userInfo}>
+            <span style={styles.userNameDisplay}>{stats.username}</span>
+            <div style={styles.streakDisplay}>🔥 {stats.streak}</div>
+          </div>
           <button onClick={() => signOut(auth)} style={styles.logoutBtn}>Logout</button>
         </div>
       </header>
@@ -268,6 +255,7 @@ function App() {
 }
 
 const styles = {
+  // ... existing styles ...
   authPage: { height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f8fafc', fontFamily: 'sans-serif' },
   authCard: { background: '#fff', padding: '40px', borderRadius: '24px', boxShadow: '0 10px 25px rgba(0,0,0,0.1)', width: '350px' },
   authLogo: { color: '#2563eb', textAlign: 'center', marginBottom: '20px' },
@@ -275,15 +263,18 @@ const styles = {
   input: { padding: '12px', borderRadius: '8px', border: '1px solid #e2e8f0' },
   authBtn: { padding: '14px', background: '#2563eb', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' },
   switchText: { textAlign: 'center', marginTop: '15px', fontSize: '14px', cursor: 'pointer', color: '#2563eb' },
-  container: { background: '#f1f5f9', minHeight: '100vh', fontFamily: 'sans-serif' },
+  container: { background: '#f1f5f9', minHeight: '100vh', fontFamily: 'sans-serif', position: 'relative' },
   header: { height: '70px', background: '#fff', padding: '0 40px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid #e2e8f0' },
   logo: { color: '#2563eb', fontSize: '22px', fontWeight: 'bold', cursor: 'pointer' },
   navBar: { display: 'flex', gap: '20px' },
   navItem: { background: 'none', border: 'none', fontWeight: 'bold', cursor: 'pointer', fontSize: '15px' },
   headerRight: { display: 'flex', alignItems: 'center', gap: '20px' },
+  userInfo: { display: 'flex', alignItems: 'center', gap: '12px' },
+  userNameDisplay: { fontWeight: 'bold', color: '#334155', fontSize: '14px' },
   streakDisplay: { background: '#fff7ed', color: '#ea580c', padding: '5px 12px', borderRadius: '20px', fontWeight: 'bold', fontSize: '14px', border: '1px solid #ffedd5' },
   logoutBtn: { padding: '8px 15px', borderRadius: '8px', border: '1px solid #cbd5e1', cursor: 'pointer', background: '#fff' },
-  main: { padding: '30px' }
+  main: { padding: '30px' },
+  toast: { position: 'fixed', bottom: '30px', right: '30px', background: '#1e293b', color: '#fff', padding: '15px 25px', borderRadius: '12px', boxShadow: '0 10px 15px rgba(0,0,0,0.2)', zIndex: 1000, animation: 'slideIn 0.3s ease-out' }
 };
 
 export default App;
