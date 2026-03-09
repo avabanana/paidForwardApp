@@ -1,11 +1,47 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
+
+const dailyTips = [
+  'Tip: Track one small purchase today and think about how it fits into your budget.',
+  'Tip: Saving just a little bit every day adds up quickly over a year.',
+  'Tip: When you earn money, try saving 10% first before spending the rest.',
+  'Tip: Compare prices before you buy to make sure you get the best deal.',
+  'Tip: Setting a savings goal makes it easier to say no to impulse buys.'
+];
+
+const getTodayKey = () => new Date().toISOString().slice(0, 10);
 
 export default function HomeScreen({ onNavigate }) {
+  const [tip, setTip] = useState(dailyTips[0]);
+
+  useEffect(() => {
+    const stored = localStorage.getItem('pf_daily_tip');
+    const today = getTodayKey();
+
+    if (stored) {
+      try {
+        const parsed = JSON.parse(stored);
+        if (parsed.date === today) {
+          setTip(parsed.tip);
+          return;
+        }
+      } catch {
+        // ignore
+      }
+    }
+
+    const nextTip = dailyTips[Math.floor(Math.random() * dailyTips.length)];
+    setTip(nextTip);
+    localStorage.setItem('pf_daily_tip', JSON.stringify({ date: today, tip: nextTip }));
+  }, []);
+
   return (
     <div style={styles.container}>
       <div style={styles.hero}>
         <h1 style={styles.heroTitle}>Your Financial Future Starts Here 🚀</h1>
         <p style={styles.heroSubtitle}>Learn, play, and make a global impact. Every lesson you complete helps fund community projects worldwide.</p>
+        <div style={styles.dailyTip}>
+          <strong>Daily Tip:</strong> {tip}
+        </div>
       </div>
 
       <div style={styles.statsRow}>
@@ -47,6 +83,7 @@ const styles = {
   },
   heroTitle: { fontSize: '2.5rem', margin: '0 0 10px 0' },
   heroSubtitle: { fontSize: '1.1rem', opacity: 0.9, maxWidth: '600px', margin: '0 auto' },
+  dailyTip: { marginTop: '20px', padding: '14px', borderRadius: '16px', background: 'rgba(255,255,255,0.2)', border: '1px solid rgba(255,255,255,0.35)', fontWeight: '600' },
   statsRow: { display: 'flex', gap: '20px', flexWrap: 'wrap', justifyContent: 'center', marginBottom: '30px' },
   infoCard: { 
     background: '#fff', 

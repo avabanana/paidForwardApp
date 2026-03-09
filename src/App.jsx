@@ -1,170 +1,212 @@
 import React, { useState, useEffect } from 'react';
+import { initializeApp } from "firebase/app";
+import { 
+  getAuth, 
+  signInWithEmailAndPassword, 
+  createUserWithEmailAndPassword, 
+  onAuthStateChanged,
+  signOut 
+} from "firebase/auth";
+import { 
+  getFirestore, 
+  doc, 
+  setDoc, 
+  onSnapshot, 
+  updateDoc 
+} from "firebase/firestore";
+
 import HomeScreen from './screens/HomeScreen.jsx';
 import CoursesScreen from './screens/CoursesScreen.jsx';
 import GamesScreen from './screens/GamesScreen.jsx';
 import DiscussionScreen from './screens/DiscussionScreen.jsx';
 import ProgressScreen from './screens/ProgressScreen.jsx'; 
 import GoalScreen from './screens/GoalScreen.jsx';
+import SalaryScreen from './screens/SalaryScreen.jsx';
+import LeagueScreen from './screens/LeagueScreen.jsx';
+import SettingsScreen from './screens/SettingsScreen.jsx';
+
+const firebaseConfig = {
+  apiKey: "AIzaSyD6VbFwVhA-nPGXyPRN9llr0lXIrSTqwtM",
+  authDomain: "paidforward-42c2f.firebaseapp.com",
+  projectId: "paidforward-42c2f",
+  storageBucket: "paidforward-42c2f.firebasestorage.app",
+  messagingSenderId: "171038802962",
+  appId: "1:171038802962:web:ec70ec0f503bd9615a84cb",
+  measurementId: "G-90HBZKHPC7"
+};
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
 
 function App() {
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [isSignUp, setIsSignUp] = useState(false);
+  const [user, setUser] = useState(null);
   const [activeTab, setActiveTab] = useState('Home');
+  const [isSignUp, setIsSignUp] = useState(false);
   const [email, setEmail] = useState('');
-  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [username, setUsername] = useState('');
   const [birthYear, setBirthYear] = useState('');
-  const [userTier, setUserTier] = useState('adult'); 
   
-  // STATS STATE
-  const [courseProgressMap, setCourseProgressMap] = useState({}); 
-  const [coursesCompleted, setCoursesCompleted] = useState(0);
-  const [gamesPlayed, setGamesPlayed] = useState(0);
-  const [gameWins, setGameWins] = useState(0); // Added for ProgressScreen tracking
-  const [xp, setXp] = useState(0);
-  const [streak, setStreak] = useState(0);
-  
-  // UI STATE
-  const [notification, setNotification] = useState(null);
+  const [stats, setStats] = useState({
+    xp: 0,
+    gameWins: 0,
+    gamesPlayed: 0,
+    coursesCompleted: 0,
+    streak: 0,
+    tier: 'adult',
+    username: '',
+    courseProgressMap: {},
+    birthYear: null
+  });
 
-  const currentYear = new Date().getFullYear();
-  const userAge = birthYear ? currentYear - parseInt(birthYear) : 0;
-  const canAccessDiscussion = userAge >= 14;
-
-  // --- UTILS ---
-  const getUsers = () => {
-    const saved = localStorage.getItem('paidForwardUsers');
-    return saved ? JSON.parse(saved) : [];
-  };
-
-  const triggerPopup = (title, message) => {
-    setNotification({ title, message });
-    setTimeout(() => setNotification(null), 4000);
-  };
-
-  const saveUserUpdates = (updates) => {
-    const allUsers = getUsers();
-    const updated = allUsers.map(u => {
-      if (u.email === email) return { ...u, ...updates };
-      return u;
-    });
-    localStorage.setItem('paidForwardUsers', JSON.stringify(updated));
-  };
-
-  // --- LOGIC ---
-  const updateStreak = (user) => {
-    const today = new Date().toISOString().split('T')[0];
-    const lastLogin = user.lastLoginDate;
-    let newStreak = user.streak || 0;
-
-    if (!lastLogin) {
-      newStreak = 1;
-    } else {
-      const lastDate = new Date(lastLogin);
-      const todayDate = new Date(today);
-      const diffDays = Math.ceil(Math.abs(todayDate - lastDate) / (1000 * 60 * 60 * 24));
-
-      if (diffDays === 1) newStreak += 1;
-      else if (diffDays > 1) newStreak = 1;
-    }
-
-    setStreak(newStreak);
-    saveUserUpdates({ streak: newStreak, lastLoginDate: today });
-  };
-
-  const updateCourseProgress = (courseId, newProgress) => {
-    setCourseProgressMap(prev => {
-      const isFinished = newProgress === 1.0 && prev[courseId] !== 1.0;
-      const updatedMap = { ...prev, [courseId]: newProgress };
-      
-      if (isFinished) {
-        setCoursesCompleted(c => c + 1);
-        setXp(x => x + 500);
-        triggerPopup("📚 Course Mastered!", "You've earned 500 XP and a new certificate.");
-        saveUserUpdates({ courseProgressMap: updatedMap, coursesCompleted: coursesCompleted + 1, xp: xp + 500 });
-      } else {
-        setXp(x => x + 50);
-        saveUserUpdates({ courseProgressMap: updatedMap, xp: xp + 50 });
+  useEffect(() => {
+    const unsubscribeAuth = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser);
+      if (currentUser) {
+        const userDocRef = doc(db, "users", currentUser.uid);
+        const unsubscribeData = onSnapshot(userDocRef, (docSnap) => {
+          if (docSnap.exists()) {
+            const data = docSnap.data();
+            setStats({
+              xp: 0,
+              gameWins: 0,
+              gamesPlayed: 0,
+              coursesCompleted: 0,
+              streak: 0,
+              tier: 'adult',
+              username: '',
+              courseProgressMap: {},
+              lastLogin: null,
+              birthYear: null,
+              ...data
+            });
+          }
+        });
+        return () => unsubscribeData();
       }
-      return updatedMap;
     });
+    return () => unsubscribeAuth();
+  }, []);
+
+  useEffect(() => {
+    if (!user) return;
+
+    const today = new Date().toISOString().slice(0, 10);
+    if (stats.lastLogin === today) return;
+
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    const yesterdayStr = yesterday.toISOString().slice(0, 10);
+
+    const nextStreak = stats.lastLogin === yesterdayStr ? (stats.streak || 0) + 1 : 1;
+
+    updateData({ lastLogin: today, streak: nextStreak });
+  }, [stats.lastLogin, stats.streak, user]);
+
+  const updateData = async (updates) => {
+    if (!user) return;
+    const userRef = doc(db, "users", user.uid);
+    await updateDoc(userRef, updates);
   };
 
   const handleGameEnd = (status) => {
-    const isWin = status === 'won';
-    
-    setGamesPlayed(prev => {
-      const newCount = prev + 1;
-      saveUserUpdates({ gamesPlayed: newCount });
-      return newCount;
-    });
+    // Track every playthrough (win, lose, or quit)
+    const updates = {
+      gamesPlayed: (stats.gamesPlayed || 0) + 1,
+      xp: stats.xp + (status === 'won' ? 250 : 50)
+    };
 
-    if (isWin) {
-      setGameWins(prev => {
-        const newWins = prev + 1;
-        saveUserUpdates({ gameWins: newWins });
-        return newWins;
-      });
-      setXp(prev => prev + 250);
-      triggerPopup("💰 Big Winner!", "You successfully grew your portfolio and earned 250 XP!");
-    } else {
-      setXp(prev => prev + 50);
-      triggerPopup("📉 Market Lesson", "You gained experience! +50 XP");
+    if (status === 'won') {
+      updates.gameWins = (stats.gameWins || 0) + 1;
     }
+
+    // Optimistically update local state to keep Progress screen responsive
+    setStats(prev => ({
+      ...prev,
+      ...updates
+    }));
+
+    updateData(updates);
   };
 
-  const handleAuth = (e) => {
-    e.preventDefault();
-    const allUsers = getUsers();
+  const normalizeCourseKey = (id) => `course_${id}`;
 
-    if (isSignUp) {
-      if (!birthYear || userAge < 6) return alert("Please enter a valid birth year.");
-      
-      let tier = 'adult';
-      if (userAge <= 10) tier = 'elementary';
-      else if (userAge <= 13) tier = 'middle';
+  const handleCourseComplete = (courseId) => {
+    const key = normalizeCourseKey(courseId);
+    const alreadyCompleted = stats.courseProgressMap?.[courseId] >= 1 || stats.courseProgressMap?.[key] >= 1;
+    if (alreadyCompleted) return;
 
-      const newUser = { 
-        email, username, password, birthYear, tier, 
-        courseProgressMap: {}, coursesCompleted: 0, gamesPlayed: 0, gameWins: 0, xp: 0,
-        streak: 1, lastLoginDate: new Date().toISOString().split('T')[0]
-      };
-      localStorage.setItem('paidForwardUsers', JSON.stringify([...allUsers, newUser]));
-      setUserTier(tier);
-      setStreak(1);
-      setIsLoggedIn(true);
-    } else {
-      const user = allUsers.find(u => u.email === email && u.password === password);
-      if (user) {
-        setUsername(user.username);
-        setUserTier(user.tier);
-        setBirthYear(user.birthYear);
-        setCourseProgressMap(user.courseProgressMap || {});
-        setCoursesCompleted(user.coursesCompleted || 0);
-        setGamesPlayed(user.gamesPlayed || 0);
-        setGameWins(user.gameWins || 0);
-        setXp(user.xp || 0);
-        updateStreak(user);
-        setIsLoggedIn(true);
-      } else {
-        alert("Invalid credentials");
+    const updates = {
+      coursesCompleted: (stats.coursesCompleted || 0) + 1,
+      xp: stats.xp + 150,
+      [`courseProgressMap.${key}`]: 1
+    };
+
+    // Optimistic local update so UI reflects progress immediately
+    setStats(prev => ({
+      ...prev,
+      ...updates,
+      courseProgressMap: {
+        ...(prev.courseProgressMap || {}),
+        [key]: 1
       }
-    }
+    }));
+
+    updateData(updates);
+  };
+
+  const handleAuth = async (e) => {
+    e.preventDefault();
+    try {
+      if (isSignUp) {
+        if (!birthYear) throw new Error('Please enter your birth year.');
+        const numericYear = parseInt(birthYear, 10);
+        const age = new Date().getFullYear() - numericYear;
+        const tier = age >= 14 ? 'adult' : 'elementary';
+
+        const res = await createUserWithEmailAndPassword(auth, email, password);
+        await setDoc(doc(db, "users", res.user.uid), {
+          username, email, xp: 0, gameWins: 0, gamesPlayed: 0, coursesCompleted: 0,
+          streak: 1, tier, birthYear: numericYear, courseProgressMap: {}, lastLogin: null
+        });
+      } else {
+        await signInWithEmailAndPassword(auth, email, password);
+      }
+    } catch (err) { alert(err.message); }
   };
 
   const renderScreen = () => {
     switch (activeTab) {
       case 'Home': return <HomeScreen onNavigate={(tab) => setActiveTab(tab)} />;
-      case 'Courses': return <CoursesScreen courseProgressMap={courseProgressMap} setCourseProgressMap={updateCourseProgress} userTier={userTier} username={username} />;
-      case 'Games': return <GamesScreen userTier={userTier} onGameEnd={handleGameEnd} />;
-      case 'Discussion': return canAccessDiscussion ? <DiscussionScreen currentUser={username} /> : <HomeScreen onNavigate={(tab) => setActiveTab(tab)} />;
-      case 'Progress': return <ProgressScreen courseProgressMap={courseProgressMap} userTier={userTier} coursesCompleted={coursesCompleted} gamesPlayed={gamesPlayed} gameWins={gameWins} xp={xp} streak={streak} />; 
+      case 'Courses': 
+        return <CoursesScreen 
+          courseProgressMap={stats.courseProgressMap} 
+          setCourseProgressMap={(id, prog) => updateData({ [`courseProgressMap.${id}`]: prog })} 
+          onCourseComplete={handleCourseComplete}
+          userTier={stats.tier} 
+          username={stats.username} 
+        />;
+      case 'Games': return <GamesScreen userTier={stats.tier} onGameEnd={handleGameEnd} />;
+      case 'Discussion': return <DiscussionScreen currentUser={stats.username} streak={stats.streak} />;
+      case 'Progress': 
+        return <ProgressScreen 
+          xp={stats.xp} 
+          gameWins={stats.gameWins} 
+          gamesPlayed={stats.gamesPlayed}
+          streak={stats.streak} 
+          coursesCompleted={stats.coursesCompleted}
+          userTier={stats.tier}
+        />;
       case 'Goals': return <GoalScreen />;
+      case 'Leagues': return <LeagueScreen currentUser={stats.username} />;
+      case 'Salary': return <SalaryScreen />;
+      case 'Settings': return <SettingsScreen currentUser={user} stats={stats} updateData={updateData} />;
       default: return <HomeScreen onNavigate={(tab) => setActiveTab(tab)} />;
     }
   };
 
-  if (!isLoggedIn) {
+  if (!user) {
     return (
       <div style={styles.authPage}>
         <div style={styles.authCard}>
@@ -172,22 +214,29 @@ function App() {
           <form style={styles.authForm} onSubmit={handleAuth}>
             {isSignUp && (
               <>
-                <input style={styles.input} placeholder="Username" value={username} onChange={e => setUsername(e.target.value)} />
-                <input style={styles.input} type="number" placeholder="Birth Year" value={birthYear} onChange={e => setBirthYear(e.target.value)} />
+                <input style={styles.input} placeholder="Username" onChange={e => setUsername(e.target.value)} />
+                <input
+                  style={styles.input}
+                  type="number"
+                  min="1900"
+                  max={new Date().getFullYear()}
+                  placeholder="Birth Year"
+                  value={birthYear}
+                  onChange={e => setBirthYear(e.target.value)}
+                />
               </>
             )}
-            <input style={styles.input} placeholder="Email" value={email} onChange={e => setEmail(e.target.value)} />
-            <input style={styles.input} type="password" placeholder="Password" value={password} onChange={e => setPassword(e.target.value)} />
+            <input style={styles.input} type="email" placeholder="Email" onChange={e => setEmail(e.target.value)} />
+            <input style={styles.input} type="password" placeholder="Password" onChange={e => setPassword(e.target.value)} />
             <button type="submit" style={styles.authBtn}>{isSignUp ? "Sign Up" : "Sign In"}</button>
           </form>
-          <p style={styles.switchText} onClick={() => setIsSignUp(!isSignUp)}>{isSignUp ? "Already have an account? Sign In" : "New? Sign Up"}</p>
+          <p style={styles.switchText} onClick={() => setIsSignUp(!isSignUp)}>
+            {isSignUp ? "Already have an account? Sign In" : "New? Create Account"}
+          </p>
         </div>
       </div>
     );
   }
-
-  const tabs = ['Home', 'Courses', 'Games', 'Progress', 'Goals'];
-  if (canAccessDiscussion) tabs.push('Discussion');
 
   return (
     <div style={styles.container}>
@@ -203,21 +252,25 @@ function App() {
       )}
 
       <header style={styles.header}>
-        <div style={styles.headerLeft}>
-          <h1 style={{...styles.logo, cursor: 'pointer'}} onClick={() => setActiveTab('Home')}>PaidForward</h1>
-          <nav style={styles.navBar}>
-            {tabs.map((tab) => (
-              <button key={tab} onClick={() => setActiveTab(tab)} style={{...styles.navItem, color: activeTab === tab ? '#2563eb' : '#64748b'}}>{tab}</button>
-            ))}
-          </nav>
-        </div>
+        <h1 style={styles.logo} onClick={() => setActiveTab('Home')}>PaidForward</h1>
+        <nav style={styles.navBar}>
+          {[
+            'Home',
+            'Courses',
+            'Games',
+            'Progress',
+            'Goals',
+            'Leagues',
+            ...(stats.tier !== 'elementary' ? ['Discussion'] : []),
+            'Salary',
+            'Settings'
+          ].map((tab) => (
+            <button key={tab} onClick={() => setActiveTab(tab)} style={{...styles.navItem, color: activeTab === tab ? '#2563eb' : '#64748b'}}>{tab}</button>
+          ))}
+        </nav>
         <div style={styles.headerRight}>
-          <div style={styles.streakDisplay}>🔥 {streak} Day Streak</div>
-          <div style={styles.userInfo}>
-            <span style={styles.userNameDisplay}>{username} <small style={styles.tierTag}>{userTier}</small></span>
-            <span style={styles.userEmailDisplay}>{email}</span>
-          </div>
-          <button onClick={() => setIsLoggedIn(false)} style={styles.logoutBtn}>Logout</button>
+          <div style={styles.streakDisplay}>🔥 {stats.streak}</div>
+          <button onClick={() => signOut(auth)} style={styles.logoutBtn}>Logout</button>
         </div>
       </header>
       <main style={styles.main}>{renderScreen()}</main>
@@ -235,16 +288,11 @@ const styles = {
   switchText: { textAlign: 'center', marginTop: '15px', fontSize: '14px', cursor: 'pointer', color: '#2563eb' },
   container: { background: '#f1f5f9', minHeight: '100vh', fontFamily: 'sans-serif' },
   header: { height: '70px', background: '#fff', padding: '0 40px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid #e2e8f0' },
-  headerLeft: { display: 'flex', alignItems: 'center', gap: '40px' },
-  logo: { color: '#2563eb', fontSize: '22px', fontWeight: 'bold' },
+  logo: { color: '#2563eb', fontSize: '22px', fontWeight: 'bold', cursor: 'pointer' },
   navBar: { display: 'flex', gap: '20px' },
   navItem: { background: 'none', border: 'none', fontWeight: 'bold', cursor: 'pointer', fontSize: '15px' },
   headerRight: { display: 'flex', alignItems: 'center', gap: '20px' },
   streakDisplay: { background: '#fff7ed', color: '#ea580c', padding: '5px 12px', borderRadius: '20px', fontWeight: 'bold', fontSize: '14px', border: '1px solid #ffedd5' },
-  userInfo: { display: 'flex', flexDirection: 'column', alignItems: 'flex-end' },
-  userNameDisplay: { fontWeight: 'bold', color: '#1e293b', fontSize: '14px' },
-  tierTag: { fontSize: '10px', background: '#e2e8f0', padding: '2px 6px', borderRadius: '4px', marginLeft: '5px', textTransform: 'uppercase' },
-  userEmailDisplay: { color: '#64748b', fontSize: '11px' },
   logoutBtn: { padding: '8px 15px', borderRadius: '8px', border: '1px solid #cbd5e1', cursor: 'pointer', background: '#fff' },
   main: { padding: '30px' },
   // Achievement Popup Styling

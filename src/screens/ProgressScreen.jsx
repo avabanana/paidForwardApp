@@ -1,9 +1,27 @@
 import React from 'react';
 import ProgressBar from '../components/ProgressBar';
 
+const AchievementBadge = ({ icon, title, requirement, achieved }) => (
+  <div 
+    style={{
+      ...styles.badge, 
+      opacity: achieved ? 1 : 0.4,
+      filter: achieved ? 'none' : 'grayscale(100%)',
+    }} 
+    title={achieved ? `Unlocked: ${requirement}` : `Locked: ${requirement}`}
+  ) {
+    return (
+      <div style={styles.badgeContent}>
+        <div style={styles.badgeIcon}>{icon}</div>
+        <div style={styles.badgeText}>{title}</div>
+        {achieved && <div style={styles.checkMark}>✓</div>}
+      </div>
+    );
+  }
+};
+
 export default function ProgressScreen({ 
-  globalProgress, 
-  userTier, 
+  courseProgressMap = {}, 
   coursesCompleted = 0, 
   gamesPlayed = 0, 
   gameWins = 0, // Added gameWins prop
@@ -15,52 +33,25 @@ export default function ProgressScreen({
   const xpThisLevel = xp - (level - 1) * 1000;
   const xpProgress = Math.min(xpThisLevel / 1000, 1);
 
-  // Updated achievement list with requirement descriptions for the hover feature
   const achievementList = [];
-  if (coursesCompleted > 0) {
-    achievementList.push({ 
-      icon: '🌱', title: 'Early Bird', color: '#dcfce7', 
-      req: 'Complete your first learning module' 
-    });
-  }
-  if (gameWins > 0) { // Changed to track wins specifically
-    achievementList.push({ 
-      icon: '💰', title: 'Budget King', color: '#fef3c7', 
-      req: 'Win a game simulation by reaching your financial goal' 
-    });
-  }
-  if (globalProgress > 0) {
-    achievementList.push({ 
-      icon: '🧠', title: 'Quiz Whiz', color: '#e0e7ff', 
-      req: 'Score perfectly on a module quiz' 
-    });
-  }
-  if (xp >= 1500) {
-    achievementList.push({ 
-      icon: '🤝', title: 'Helper', color: '#fae8ff', 
-      req: 'Reach 1,500 total XP' 
-    });
-  }
-  if (streak >= 7) {
-    achievementList.push({ 
-      icon: '🔥', title: '7-Day Legend', color: '#ffedd5', 
-      req: 'Maintain a learning streak for 7 consecutive days' 
-    });
-  }
+  if (coursesCompleted > 0) achievementList.push({ icon: '🌱', title: 'Early Bird', color: '#dcfce7' });
+  if (gamesPlayed > 0) achievementList.push({ icon: '💰', title: 'Budget King', color: '#fef3c7' });
+  if (globalProgress > 0) achievementList.push({ icon: '🧠', title: 'Quiz Whiz', color: '#e0e7ff' });
+  if (xp >= 1500) achievementList.push({ icon: '🤝', title: 'Helper', color: '#fae8ff' });
 
   return (
     <div style={{ padding: '10px' }}>
       {/* Level Header */}
       <div style={styles.levelCard}>
-        <div style={styles.levelBadge}>LVL {level}</div>
+        <div style={styles.levelBadge}>LVL {currentLevel}</div>
         <div style={{ textAlign: 'left', flex: 1 }}>
           <h2 style={{ margin: 0, color: '#fff' }}>
             {userTier === 'elementary' ? 'Junior Builder' : 'Wealth Builder'}
           </h2>
           <p style={{ color: '#e0f2fe', margin: '5px 0' }}>
-            {xpThisLevel} / 1000 XP to Level {level + 1}
+            {xpIntoLevel} / 1000 XP to Level {currentLevel + 1}
           </p>
-          <ProgressBar progress={xpProgress} />
+          <ProgressBar progress={levelProgress} />
         </div>
       </div>
 
@@ -96,15 +87,7 @@ export default function ProgressScreen({
         </p>
         <div style={{ display: 'flex', gap: '15px', overflowX: 'auto', paddingBottom: '10px' }}>
           {achievementList.length > 0 ? (
-            achievementList.map((a, i) => (
-              <Badge 
-                key={i} 
-                icon={a.icon} 
-                title={a.title} 
-                color={a.color} 
-                requirement={a.req} 
-              />
-            ))
+            achievementList.map((a, i) => <Badge key={i} icon={a.icon} title={a.title} color={a.color} />)
           ) : (
             <span style={{ color: '#64748b' }}>No badges yet. Keep learning to unlock them!</span>
           )}
@@ -114,16 +97,11 @@ export default function ProgressScreen({
   );
 }
 
-// Updated Badge component with requirement hover title
-const Badge = ({ icon, title, color, requirement }) => (
-  <div 
-    title={requirement} // This creates the native hover popup
-    style={{ 
-      minWidth: '90px', padding: '15px', borderRadius: '16px', 
-      background: color, textAlign: 'center', border: '1px solid rgba(0,0,0,0.05)',
-      cursor: 'help' // Changes cursor to indicate more info is available
-    }}
-  >
+const Badge = ({ icon, title, color }) => (
+  <div style={{ 
+    minWidth: '90px', padding: '15px', borderRadius: '16px', 
+    background: color, textAlign: 'center', border: '1px solid rgba(0,0,0,0.05)' 
+  }}>
     <div style={{ fontSize: '30px', marginBottom: '5px' }}>{icon}</div>
     <div style={{ fontSize: '11px', fontWeight: 'bold' }}>{title}</div>
   </div>

@@ -31,6 +31,12 @@ export default function GamesScreen({ userTier, onGameEnd }) {
         { q: "Tutoring: Invest 12⭐ in materials. Risky!", optA: ["Invest", 12], optB: ["Skip", 0] },
         { q: "Pool cleaning gig: Spend 8⭐ on tools. Might work!", optA: ["Invest", 8], optB: ["Skip", 0] },
         { q: "Final gamble: Use 25⭐ to start your biggest venture yet?", optA: ["Go Big", 25], optB: ["Play Safe", 0] }
+      ],
+      savingScenarios: [
+        { q: "You found 5⭐ under your pillow. Add to savings or spend it?", optA: ["Spend it", 5], optB: ["Save it", 0] },
+        { q: "Your piggy bank is full. Add another 10⭐ or buy a small toy?", optA: ["Buy Toy", 10], optB: ["Add to Savings", 0] },
+        { q: "A neighbor offers you 5⭐ for helping with chores. Keep or save?", optA: ["Keep it", 5], optB: ["Save it", 0] },
+        { q: "Your allowance comes in. Spend it or move to savings?", optA: ["Spend it", 15], optB: ["Save it", 0] }
       ]
     },
     middle: {
@@ -58,6 +64,12 @@ export default function GamesScreen({ userTier, onGameEnd }) {
         { q: "Tutoring service: Spend $30 on ads. Might flop.", optA: ["Advertise", 30], optB: ["Skip", 0] },
         { q: "Freelance platform: $45 investment. Competitive field.", optA: ["Subscribe", 45], optB: ["Skip", 0] },
         { q: "Last shot: Spend $80 on your biggest gamble yet!", optA: ["Go Big", 80], optB: ["Play Safe", 0] }
+      ],
+      savingScenarios: [
+        { q: "You got a bonus for helping a friend. Save it or spend it?", optA: ["Spend it", 20], optB: ["Save it", 0] },
+        { q: "A sale is on! Buy now or save the extra money?", optA: ["Buy now", 30], optB: ["Save the difference", 0] },
+        { q: "You found leftover cash in your jacket. Add to savings?", optA: ["Spend it", 15], optB: ["Save it", 0] },
+        { q: "Your side gig pays $50. Save or treat yourself?", optA: ["Treat yourself", 50], optB: ["Save most", 0] }
       ]
     },
     adult: {
@@ -99,20 +111,42 @@ export default function GamesScreen({ userTier, onGameEnd }) {
         { q: "Crypto NFT: $200 collectible. Bubble?", optA: ["Buy", 200], optB: ["Skip", 0] },
         { q: "Private equity: $450 opportunity. Exclusive!", optA: ["Invest", 450], optB: ["Pass", 0] },
         { q: "FINAL GAMBLE: All-in on something risky or finish safe?", optA: ["All In", 350], optB: ["Conservative", 0] }
+      ],
+      savingScenarios: [
+        { q: "You got a tax refund. Put it in savings or splurge?", optA: ["Splurge", 120], optB: ["Save it", 0] },
+        { q: "Your pay raise arrived! Shift it to savings or spend more?", optA: ["Spend more", 110], optB: ["Save more", 0] },
+        { q: "You found extra cash in an old coat. Add it to savings?", optA: ["Treat yourself", 60], optB: ["Save it", 0] },
+        { q: "You can set aside $100 for your future. Do it?", optA: ["Spend it", 100], optB: ["Save it", 0] }
       ]
     }
   };
-
   const config = tierSettings[userTier] || tierSettings.adult;
-  const scenarios = activeGame === 'Market' ? config.marketScenarios : config.scenarios;
+  const scenarios = activeGame === 'Market'
+    ? config.marketScenarios
+    : activeGame === 'Save'
+    ? config.savingScenarios
+    : config.scenarios;
   const currentScenario = scenarios[Math.min(day - 1, scenarios.length - 1)];
 
   const handleChoice = (cost) => {
-    // Logic for Market Game (Random luck)
-    let outcomeMoney = money - cost;
-    if (activeGame === 'Market' && cost > 0) {
+    let outcomeMoney = money;
+
+    // Different game modes have different risk/reward mechanics
+    if (activeGame === 'Market') {
+      // Market is a gamble: succeed or lose the bet
       const success = Math.random() > 0.5;
-      outcomeMoney = success ? money + (cost * 2) : money - cost;
+      outcomeMoney = success ? money + cost * 2 : money - cost;
+    } else if (activeGame === 'Save') {
+      // Saving game: choosing the safe option (cost 0) increases your balance.
+      if (cost === 0) {
+        const bonus = Math.max(10, Math.round(config.startingCash * 0.05));
+        outcomeMoney = money + bonus;
+      } else {
+        outcomeMoney = money - cost;
+      }
+    } else {
+      // Budget game: spending reduces money, skipping (cost 0) gives a small boost.
+      outcomeMoney = cost === 0 ? money + 10 : money - cost;
     }
 
     if (outcomeMoney <= 0) {
@@ -122,16 +156,28 @@ export default function GamesScreen({ userTier, onGameEnd }) {
       if (onGameEnd) onGameEnd('lost');
       return;
     }
-    
+
     const maxDays = scenarios.length;
+
     if (day < maxDays) {
       setMoney(outcomeMoney);
       setDay(day + 1);
-    } else {
-      setMoney(outcomeMoney);
-      setGameResult('won');
-      if (onGameEnd) onGameEnd('won');
+      return;
     }
+
+    // Reached the end of the game
+    setMoney(outcomeMoney);
+
+    const winThreshold =
+      activeGame === 'Market'
+        ? config.startingCash * 1.1
+        : activeGame === 'Save'
+        ? config.startingCash * 1.2
+        : config.startingCash * 0.9;
+
+    const won = outcomeMoney >= winThreshold;
+    setGameResult(won ? 'won' : 'lost');
+    if (onGameEnd) onGameEnd(won ? 'won' : 'lost');
   };
 
   const resetGame = () => {
@@ -149,28 +195,45 @@ export default function GamesScreen({ userTier, onGameEnd }) {
 
   if (gameResult) {
     const isWin = gameResult === 'won';
-    const winThreshold = config.startingCash * 1.5;
-    const didWellEnough = money >= config.startingCash * 0.8;
-    
+    const winThreshold =
+      activeGame === 'Market'
+        ? config.startingCash * 1.1
+        : activeGame === 'Save'
+        ? config.startingCash * 1.2
+        : config.startingCash * 0.9;
+
+    const winLabel = activeGame === 'Market' ? 'Investment' : activeGame === 'Save' ? 'Savings' : 'Budget';
+
     return (
       <div style={gStyles.resultContainer}>
-        <div style={{...gStyles.resultCard, background: isWin ? 'linear-gradient(135deg, #10b981 0%, #059669 100%)' : 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)'}}>
+        <div
+          style={{
+            ...gStyles.resultCard,
+            background: isWin
+              ? 'linear-gradient(135deg, #10b981 0%, #059669 100%)'
+              : 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)'
+          }}
+        >
           <div style={gStyles.resultEmoji}>{isWin ? '🎉🏆' : '💔😢'}</div>
           <h1 style={gStyles.resultTitle}>{isWin ? 'YOU WON!' : 'GAME OVER!'}</h1>
-          
+
           <div style={gStyles.resultDetails}>
             <div style={gStyles.statRow}>
-              <span>Starting Balance:</span>
-              <span style={{fontWeight: 'bold'}}>{config.currencySymbol}{config.startingCash}</span>
+              <span>Start:</span>
+              <span style={{ fontWeight: 'bold' }}>
+                {config.currencySymbol}{config.startingCash}
+              </span>
             </div>
             <div style={gStyles.statRow}>
-              <span>Final Balance:</span>
-              <span style={{fontWeight: 'bold', fontSize: '20px'}}>{config.currencySymbol}{money}</span>
+              <span>End:</span>
+              <span style={{ fontWeight: 'bold', fontSize: '20px' }}>
+                {config.currencySymbol}{money}
+              </span>
             </div>
             <div style={gStyles.statRow}>
-              <span>Change:</span>
-              <span style={{fontWeight: 'bold', color: money >= config.startingCash ? '#4ade80' : '#f87171'}}>
-                {money >= config.startingCash ? '+' : ''}{config.currencySymbol}{money - config.startingCash}
+              <span>Goal:</span>
+              <span style={{ fontWeight: 'bold' }}>
+                {config.currencySymbol}{Math.round(winThreshold)}
               </span>
             </div>
           </div>
@@ -178,23 +241,38 @@ export default function GamesScreen({ userTier, onGameEnd }) {
           <div style={gStyles.resultMessage}>
             {isWin ? (
               <>
-                <p>🌟 Excellent money management! You survived all {config.totalDays} rounds!</p>
-                {money > config.startingCash && <p>💪 You even grew your wealth! Amazing!</p>}
+                <p>
+                  🎯 You reached the {winLabel} goal! Great job navigating the choices.
+                </p>
+                <p>
+                  {money >= config.startingCash
+                    ? 'You finished stronger than when you started — keep it up!'
+                    : 'You finished at least close to your goal. Keep practicing!'}
+                </p>
               </>
             ) : (
               <>
-                <p>💸 You ran out of money and couldn't continue.</p>
-                {money === 0 && <p>Zero balance reached. You learned a valuable lesson about budgeting!</p>}
-                <p>💡 Tip: Balance your spending and save for emergencies.</p>
+                <p>
+                  💸 You didn’t hit the goal this time. That’s okay — every play teaches you something.
+                </p>
+                <p>
+                  Tip: Try making safer choices earlier and keeping more of your starting balance.
+                </p>
               </>
             )}
           </div>
 
           <div style={gStyles.resultActions}>
-            <button style={{...gStyles.playBtn, background: '#fff', color: isWin ? '#059669' : '#dc2626'}} onClick={resetGame}>
+            <button
+              style={{ ...gStyles.playBtn, background: '#fff', color: isWin ? '#059669' : '#dc2626' }}
+              onClick={resetGame}
+            >
               Play Again
             </button>
-            <button style={{...gStyles.playBtn, background: 'rgba(255,255,255,0.2)', color: '#fff'}} onClick={resetGame}>
+            <button
+              style={{ ...gStyles.playBtn, background: 'rgba(255,255,255,0.2)', color: '#fff' }}
+              onClick={resetGame}
+            >
               Back to Games
             </button>
           </div>
@@ -231,28 +309,61 @@ export default function GamesScreen({ userTier, onGameEnd }) {
 
   return (
     <div style={gStyles.menuContainer}>
-       <div style={{display: 'flex', gap: '20px', flexWrap: 'wrap', justifyContent: 'center'}}>
-          {/* Game 1: Original Budget Game */}
-          <div style={{...gStyles.promoCard, borderTop: `8px solid ${config.themeColor}`, width: '300px'}}>
-            <div style={gStyles.gameIcon}>{config.icon}</div>
-            <h3>Budgeting Basics</h3>
-            <button style={{...gStyles.playBtn, background: config.themeColor}} onClick={() => { setMoney(config.startingCash); setActiveGame('Budget'); setPlaying(true); }}>Play Budgeting</button>
-          </div>
-          
-          {/* Game 2: NEW Market Game */}
-          <div style={{...gStyles.promoCard, borderTop: `8px solid #8b5cf6`, width: '300px'}}>
-            <div style={gStyles.gameIcon}>📈</div>
-            <h3>Market Mania</h3>
-            <button style={{...gStyles.playBtn, background: '#8b5cf6'}} onClick={() => { setMoney(config.startingCash); setActiveGame('Market'); setPlaying(true); }}>Play Investing</button>
-          </div>
+      <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap', justifyContent: 'center' }}>
+        <div style={{ ...gStyles.promoCard, borderTop: `8px solid ${config.themeColor}`, width: '300px' }}>
+          <div style={gStyles.gameIcon}>{config.icon}</div>
+          <h3>Budgeting Basics</h3>
+          <p style={{ color: '#64748b', fontSize: '14px' }}>
+            Make smart spending choices and keep more money in your wallet.
+          </p>
+          <button
+            style={{ ...gStyles.playBtn, background: config.themeColor }}
+            onClick={() => {
+              setMoney(config.startingCash);
+              setActiveGame('Budget');
+              setPlaying(true);
+            }}
+          >
+            Play Budgeting
+          </button>
+        </div>
 
-          {/* Game 3: Second Budget‑style Game */}
-          <div style={{...gStyles.promoCard, borderTop: `8px solid ${config.themeColor}`, width: '300px'}}>
-            <div style={gStyles.gameIcon}>{config.icon}</div>
-            <h3>Budget Blitz</h3>
-            <button style={{...gStyles.playBtn, background: config.themeColor}} onClick={() => { setMoney(config.startingCash); setActiveGame('Budget2'); setPlaying(true); }}>Play Budget Blitz</button>
-          </div>
-       </div>
+        <div style={{ ...gStyles.promoCard, borderTop: `8px solid #8b5cf6`, width: '300px' }}>
+          <div style={gStyles.gameIcon}>📈</div>
+          <h3>Investing Adventure</h3>
+          <p style={{ color: '#64748b', fontSize: '14px' }}>
+            Try your hand at risk vs reward and see if you can grow your money.
+          </p>
+          <button
+            style={{ ...gStyles.playBtn, background: '#8b5cf6' }}
+            onClick={() => {
+              setMoney(config.startingCash);
+              setActiveGame('Market');
+              setPlaying(true);
+            }}
+          >
+            Play Investing
+          </button>
+        </div>
+
+        <div style={{ ...gStyles.promoCard, borderTop: '8px solid #10b981', width: '300px' }}>
+          <div style={gStyles.gameIcon}>💰</div>
+          <h3>Savings Sprint</h3>
+          <p style={{ color: '#64748b', fontSize: '14px' }}>
+            Grow your stash by making smart saving choices each day.
+          </p>
+          <button
+            style={{ ...gStyles.playBtn, background: '#10b981' }}
+            onClick={() => {
+              setMoney(config.startingCash);
+              setActiveGame('Save');
+              setPlaying(true);
+            }}
+          >
+            Play Saving
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
