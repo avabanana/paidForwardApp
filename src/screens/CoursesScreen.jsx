@@ -1,9 +1,14 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import ProgressBar from '../components/ProgressBar';
 
-export default function EarningGrowthScreen({ globalProgress, setGlobalProgress, userTier, username }) {
+export default function CoursesScreen({ 
+  courseProgressMap = {}, // Parent should pass { 0: 0.5, 1: 0 }
+  setCourseProgressMap,    // Parent function: (id, percent) => { ... }
+  userTier, 
+  username 
+}) {
   const [mode, setMode] = useState('list');
-  const [selectedCourse, setSelectedCourse] = useState(null); // null = list, 0 or 1 = course 1 or 2
+  const [selectedCourse, setSelectedCourse] = useState(null); 
   const [currentLessonIndex, setCurrentLessonIndex] = useState(0);
   const [view, setView] = useState('article'); 
   const [questionIndex, setQuestionIndex] = useState(0);
@@ -153,9 +158,26 @@ export default function EarningGrowthScreen({ globalProgress, setGlobalProgress,
     }
   ];
 
+  // 1. PERSISTENCE FIX: When a course is opened, calculate the correct starting lesson
+  useEffect(() => {
+    if (selectedCourse !== null) {
+      const course = courses[selectedCourse];
+      const content = course.content[userTier] || course.content.adult;
+      const progress = courseProgressMap[selectedCourse] || 0;
+      
+      const savedIndex = Math.floor(progress * content.length);
+      setCurrentLessonIndex(Math.min(savedIndex, content.length - 1));
+      setQuestionIndex(0);
+      setView('article');
+    }
+  }, [selectedCourse]);
+
   const courseContent = selectedCourse !== null ? courses[selectedCourse] : null;
   const currentCourse = courseContent ? courseContent.content[userTier] || courseContent.content.adult : [];
   const lesson = currentCourse[currentLessonIndex];
+
+  // 2. SEPARATION FIX: progress bars now read specifically from the Map by ID
+  const getProgressForCourse = (id) => courseProgressMap[id] || 0;
 
   const handleQuizAnswer = (idx) => {
     const q = isRetry ? lesson.backups[lesson.quizPool[questionIndex].topic] : lesson.quizPool[questionIndex];
@@ -172,7 +194,10 @@ export default function EarningGrowthScreen({ globalProgress, setGlobalProgress,
       } else {
         const modulesDone = currentLessonIndex + 1;
         const newProg = Math.min(modulesDone / currentCourse.length, 1.0);
-        setGlobalProgress(newProg, modulesDone);
+        
+        // 3. COLLISION FIX: Tell parent to update ONLY this course ID
+        setCourseProgressMap(selectedCourse, newProg);
+        
         setMode('score');
       }
     } else {
@@ -222,7 +247,8 @@ export default function EarningGrowthScreen({ globalProgress, setGlobalProgress,
             setIsRetry(false);
             setMode('learning');
           } else {
-            setGlobalProgress(1.0, currentCourse.length); setShowCertificate(true); setMode('list');
+            setShowCertificate(true); 
+            setMode('list');
           }
         }}>{currentLessonIndex === currentCourse.length - 1 ? "Claim Certificate" : "Next Module"}</button>
       </div>
@@ -232,8 +258,8 @@ export default function EarningGrowthScreen({ globalProgress, setGlobalProgress,
   if (mode === 'learning') return (
     <div style={styles.learningLayout}>
       <div style={styles.learningHeader}>
-        <button onClick={() => { setMode('list'); setSelectedCourse(null); setCurrentLessonIndex(0); setQuestionIndex(0); }} style={styles.iconBtn}>✕</button>
-        <div style={{flex: 1}}><ProgressBar progress={globalProgress} /></div>
+        <button onClick={() => { setMode('list'); setSelectedCourse(null); }} style={styles.iconBtn}>✕</button>
+        <div style={{flex: 1}}><ProgressBar progress={getProgressForCourse(selectedCourse)} /></div>
         <span style={styles.tierTag}>{userTier.toUpperCase()}</span>
       </div>
       
@@ -277,6 +303,7 @@ export default function EarningGrowthScreen({ globalProgress, setGlobalProgress,
   );
 
   if (mode === 'list' && selectedCourse !== null) {
+    const courseProgress = getProgressForCourse(selectedCourse);
     return (
       <div style={styles.dashboard}>
         {showCertificate && <CertificateModal />}
@@ -291,12 +318,12 @@ export default function EarningGrowthScreen({ globalProgress, setGlobalProgress,
             <div style={styles.progressSection}>
               <div style={styles.progressText}>
                 <span>Overall Progress</span>
-                <span>{Math.min(Math.round(globalProgress * 100), 100)}%</span>
+                <span>{Math.min(Math.round(courseProgress * 100), 100)}%</span>
               </div>
-              <ProgressBar progress={globalProgress} />
+              <ProgressBar progress={courseProgress} />
             </div>
             <button style={styles.primaryBtn} onClick={() => {setMode('learning'); setView('article');}}>
-              {globalProgress >= 1 ? "Review Material" : globalProgress > 0 ? "Continue Learning" : "Start Course"}
+              {courseProgress >= 1 ? "Review Material" : courseProgress > 0 ? "Continue Learning" : "Start Course"}
             </button>
             <button style={{...styles.secondaryBtn, marginTop: '10px'}} onClick={() => setSelectedCourse(null)}>
               Back to Courses
@@ -311,28 +338,31 @@ export default function EarningGrowthScreen({ globalProgress, setGlobalProgress,
   return (
     <div style={styles.dashboard}>
       <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap', justifyContent: 'center' }}>
-        {courses.map((course, idx) => (
-          <div key={idx} style={styles.coursePreviewCard}>
-            <div style={{...styles.cardBanner, background: course.color}}>
-              {course.emoji}
-            </div>
-            <div style={styles.cardContent}>
-              <span style={styles.categoryLabel}>CURRICULUM</span>
-              <h3 style={styles.cardTitle}>{course.title}</h3>
-              <p style={styles.cardDesc}>{course.description}</p>
-              <div style={styles.progressSection}>
-                <div style={styles.progressText}>
-                  <span>Progress</span>
-                  <span>{Math.min(Math.round(globalProgress * 100), 100)}%</span>
-                </div>
-                <ProgressBar progress={globalProgress} />
+        {courses.map((course, idx) => {
+          const prog = getProgressForCourse(course.id);
+          return (
+            <div key={idx} style={styles.coursePreviewCard}>
+              <div style={{...styles.cardBanner, background: course.color}}>
+                {course.emoji}
               </div>
-              <button style={{...styles.primaryBtn, background: course.color}} onClick={() => setSelectedCourse(idx)}>
-                {globalProgress >= 1 ? "Review Course" : globalProgress > 0 ? "Continue" : "Start Course"}
-              </button>
+              <div style={styles.cardContent}>
+                <span style={styles.categoryLabel}>CURRICULUM</span>
+                <h3 style={styles.cardTitle}>{course.title}</h3>
+                <p style={styles.cardDesc}>{course.description}</p>
+                <div style={styles.progressSection}>
+                  <div style={styles.progressText}>
+                    <span>Progress</span>
+                    <span>{Math.min(Math.round(prog * 100), 100)}%</span>
+                  </div>
+                  <ProgressBar progress={prog} />
+                </div>
+                <button style={{...styles.primaryBtn, background: course.color}} onClick={() => setSelectedCourse(idx)}>
+                  {prog >= 1 ? "Review Course" : prog > 0 ? "Continue" : "Start Course"}
+                </button>
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );
