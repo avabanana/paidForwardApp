@@ -1,14 +1,16 @@
 import React, { useState, useEffect } from 'react';
-import { initializeApp } from "firebase/app";
+
+// Import auth and db from your new firebase.js file
+import { auth, db } from './firebase'; 
+
+// Keep the specific Firebase functions you need for App.jsx logic
 import { 
-  getAuth, 
   signInWithEmailAndPassword, 
   createUserWithEmailAndPassword, 
   onAuthStateChanged,
   signOut 
 } from "firebase/auth";
 import { 
-  getFirestore, 
   doc, 
   setDoc, 
   onSnapshot, 
@@ -25,20 +27,6 @@ import SalaryScreen from './screens/SalaryScreen.jsx';
 import LeagueScreen from './screens/LeagueScreen.jsx';
 import SettingsScreen from './screens/SettingsScreen.jsx';
 
-const firebaseConfig = {
-  apiKey: "AIzaSyD6VbFwVhA-nPGXyPRN9llr0lXIrSTqwtM",
-  authDomain: "paidforward-42c2f.firebaseapp.com",
-  projectId: "paidforward-42c2f",
-  storageBucket: "paidforward-42c2f.firebasestorage.app",
-  messagingSenderId: "171038802962",
-  appId: "1:171038802962:web:ec70ec0f503bd9615a84cb",
-  measurementId: "G-90HBZKHPC7"
-};
-
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db = getFirestore(app);
-
 function App() {
   const [user, setUser] = useState(null);
   const [activeTab, setActiveTab] = useState('Home');
@@ -48,6 +36,8 @@ function App() {
   const [username, setUsername] = useState('');
   const [birthYear, setBirthYear] = useState('');
   
+  const [notification, setNotification] = useState(null);
+
   const [stats, setStats] = useState({
     xp: 0,
     gameWins: 0,
@@ -68,19 +58,10 @@ function App() {
         const unsubscribeData = onSnapshot(userDocRef, (docSnap) => {
           if (docSnap.exists()) {
             const data = docSnap.data();
-            setStats({
-              xp: 0,
-              gameWins: 0,
-              gamesPlayed: 0,
-              coursesCompleted: 0,
-              streak: 0,
-              tier: 'adult',
-              username: '',
-              courseProgressMap: {},
-              lastLogin: null,
-              birthYear: null,
+            setStats(prev => ({
+              ...prev,
               ...data
-            });
+            }));
           }
         });
         return () => unsubscribeData();
@@ -90,19 +71,31 @@ function App() {
   }, []);
 
   useEffect(() => {
-    if (!user) return;
+    if (!user || !stats.username) return;
 
-    const today = new Date().toISOString().slice(0, 10);
-    if (stats.lastLogin === today) return;
+    const now = new Date();
+    const todayStr = now.toLocaleDateString('en-CA'); 
+    
+    if (stats.lastLogin === todayStr) return;
 
-    const yesterday = new Date();
-    yesterday.setDate(yesterday.getDate() - 1);
-    const yesterdayStr = yesterday.toISOString().slice(0, 10);
+    const lastLoginDate = stats.lastLogin ? new Date(stats.lastLogin) : null;
+    let nextStreak = stats.streak || 0;
 
-    const nextStreak = stats.lastLogin === yesterdayStr ? (stats.streak || 0) + 1 : 1;
+    if (lastLoginDate) {
+      const diffTime = Math.abs(now - lastLoginDate);
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
-    updateData({ lastLogin: today, streak: nextStreak });
-  }, [stats.lastLogin, stats.streak, user]);
+      if (diffDays === 1) {
+        nextStreak += 1;
+      } else if (diffDays > 1) {
+        nextStreak = 1;
+      }
+    } else {
+      nextStreak = 1;
+    }
+
+    updateData({ lastLogin: todayStr, streak: nextStreak });
+  }, [user, stats.lastLogin]);
 
   const updateData = async (updates) => {
     if (!user) return;
@@ -110,23 +103,24 @@ function App() {
     await updateDoc(userRef, updates);
   };
 
+  const triggerNotification = (msg) => {
+    setNotification(msg);
+    setTimeout(() => setNotification(null), 4000);
+  };
+
   const handleGameEnd = (status) => {
-    // Track every playthrough (win, lose, or quit)
+    const xpGain = status === 'won' ? 250 : 50;
     const updates = {
       gamesPlayed: (stats.gamesPlayed || 0) + 1,
-      xp: stats.xp + (status === 'won' ? 250 : 50)
+      xp: stats.xp + xpGain
     };
 
     if (status === 'won') {
       updates.gameWins = (stats.gameWins || 0) + 1;
+      triggerNotification("🏆 Achievement Unlocked: Budget King!");
     }
 
-    // Optimistically update local state to keep Progress screen responsive
-    setStats(prev => ({
-      ...prev,
-      ...updates
-    }));
-
+    setStats(prev => ({ ...prev, ...updates }));
     updateData(updates);
   };
 
@@ -134,7 +128,7 @@ function App() {
 
   const handleCourseComplete = (courseId) => {
     const key = normalizeCourseKey(courseId);
-    const alreadyCompleted = stats.courseProgressMap?.[courseId] >= 1 || stats.courseProgressMap?.[key] >= 1;
+    const alreadyCompleted = stats.courseProgressMap?.[key] === 1;
     if (alreadyCompleted) return;
 
     const updates = {
@@ -143,14 +137,12 @@ function App() {
       [`courseProgressMap.${key}`]: 1
     };
 
-    // Optimistic local update so UI reflects progress immediately
+    triggerNotification("🎓 Course Mastered! +150 XP");
+
     setStats(prev => ({
       ...prev,
       ...updates,
-      courseProgressMap: {
-        ...(prev.courseProgressMap || {}),
-        [key]: 1
-      }
+      courseProgressMap: { ...(prev.courseProgressMap || {}), [key]: 1 }
     }));
 
     updateData(updates);
@@ -168,7 +160,7 @@ function App() {
         const res = await createUserWithEmailAndPassword(auth, email, password);
         await setDoc(doc(db, "users", res.user.uid), {
           username, email, xp: 0, gameWins: 0, gamesPlayed: 0, coursesCompleted: 0,
-          streak: 1, tier, birthYear: numericYear, courseProgressMap: {}, lastLogin: null
+          streak: 1, tier, birthYear: numericYear, courseProgressMap: {}, lastLogin: new Date().toLocaleDateString('en-CA')
         });
       } else {
         await signInWithEmailAndPassword(auth, email, password);
@@ -218,8 +210,6 @@ function App() {
                 <input
                   style={styles.input}
                   type="number"
-                  min="1900"
-                  max={new Date().getFullYear()}
                   placeholder="Birth Year"
                   value={birthYear}
                   onChange={e => setBirthYear(e.target.value)}
@@ -240,25 +230,28 @@ function App() {
 
   return (
     <div style={styles.container}>
+      {notification && (
+        <div style={styles.notificationToast}>
+          {notification}
+        </div>
+      )}
+
       <header style={styles.header}>
         <h1 style={styles.logo} onClick={() => setActiveTab('Home')}>PaidForward</h1>
         <nav style={styles.navBar}>
           {[
-            'Home',
-            'Courses',
-            'Games',
-            'Progress',
-            'Goals',
-            'Leagues',
+            'Home', 'Courses', 'Games', 'Progress', 'Goals', 'Leagues',
             ...(stats.tier !== 'elementary' ? ['Discussion'] : []),
-            'Salary',
-            'Settings'
+            'Salary', 'Settings'
           ].map((tab) => (
             <button key={tab} onClick={() => setActiveTab(tab)} style={{...styles.navItem, color: activeTab === tab ? '#2563eb' : '#64748b'}}>{tab}</button>
           ))}
         </nav>
         <div style={styles.headerRight}>
-          <div style={styles.streakDisplay}>🔥 {stats.streak}</div>
+          <div style={styles.userBadge}>
+            <span style={styles.usernameText}>👤 {stats.username || 'User'}</span>
+            <div style={styles.streakDisplay}>🔥 {stats.streak}</div>
+          </div>
           <button onClick={() => signOut(auth)} style={styles.logoutBtn}>Logout</button>
         </div>
       </header>
@@ -272,18 +265,26 @@ const styles = {
   authCard: { background: '#fff', padding: '40px', borderRadius: '24px', boxShadow: '0 10px 25px rgba(0,0,0,0.1)', width: '350px' },
   authLogo: { color: '#2563eb', textAlign: 'center', marginBottom: '20px' },
   authForm: { display: 'flex', flexDirection: 'column', gap: '15px' },
-  input: { padding: '12px', borderRadius: '8px', border: '1px solid #e2e8f0' },
+  input: { padding: '12px', borderRadius: '8px', border: '1px solid #e2e8f0', boxSizing: 'border-box', width: '100%' },
   authBtn: { padding: '14px', background: '#2563eb', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' },
   switchText: { textAlign: 'center', marginTop: '15px', fontSize: '14px', cursor: 'pointer', color: '#2563eb' },
-  container: { background: '#f1f5f9', minHeight: '100vh', fontFamily: 'sans-serif' },
+  container: { background: '#f1f5f9', minHeight: '100vh', fontFamily: 'sans-serif', position: 'relative' },
   header: { height: '70px', background: '#fff', padding: '0 40px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid #e2e8f0' },
   logo: { color: '#2563eb', fontSize: '22px', fontWeight: 'bold', cursor: 'pointer' },
   navBar: { display: 'flex', gap: '20px' },
   navItem: { background: 'none', border: 'none', fontWeight: 'bold', cursor: 'pointer', fontSize: '15px' },
-  headerRight: { display: 'flex', alignItems: 'center', gap: '20px' },
-  streakDisplay: { background: '#fff7ed', color: '#ea580c', padding: '5px 12px', borderRadius: '20px', fontWeight: 'bold', fontSize: '14px', border: '1px solid #ffedd5' },
-  logoutBtn: { padding: '8px 15px', borderRadius: '8px', border: '1px solid #cbd5e1', cursor: 'pointer', background: '#fff' },
-  main: { padding: '30px' }
+  headerRight: { display: 'flex', alignItems: 'center', gap: '15px' },
+  userBadge: { display: 'flex', alignItems: 'center', gap: '10px', padding: '5px 15px', borderRadius: '12px', background: '#f8fafc', border: '1px solid #e2e8f0' },
+  usernameText: { fontSize: '14px', fontWeight: '700', color: '#1e293b' },
+  streakDisplay: { color: '#ea580c', fontWeight: 'bold', fontSize: '14px' },
+  logoutBtn: { padding: '8px 15px', borderRadius: '8px', border: '1px solid #cbd5e1', cursor: 'pointer', background: '#fff', fontSize: '13px' },
+  main: { padding: '30px' },
+  notificationToast: {
+    position: 'fixed', top: '20px', left: '50%', transform: 'translateX(-50%)',
+    background: '#1e293b', color: '#fff', padding: '15px 30px', borderRadius: '50px',
+    boxShadow: '0 10px 25px rgba(0,0,0,0.2)', zIndex: 1000, fontWeight: 'bold',
+    animation: 'slideDown 0.5s ease-out'
+  }
 };
 
 export default App;

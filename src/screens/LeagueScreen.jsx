@@ -1,4 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { db } from '../firebase'; 
+import { collection, query, onSnapshot, doc, setDoc, updateDoc } from "firebase/firestore";
 
 const defaultScenarios = [
   { description: 'You found $50 in your pocket. Do you save it or spend it on snacks?', save: 50, spend: 50 },
@@ -6,82 +8,89 @@ const defaultScenarios = [
   { description: 'A friend invites you to go out. Do you keep the $30 or spend it on the outing?', save: 30, spend: 30 }
 ];
 
-const getLeagues = () => {
-  const raw = localStorage.getItem('pf_leagues');
-  return raw ? JSON.parse(raw) : [];
-};
-
-const setLeagues = (data) => {
-  localStorage.setItem('pf_leagues', JSON.stringify(data));
-};
-
 export default function LeagueScreen({ currentUser }) {
-  const [leagues, setLeagueState] = useState(getLeagues());
-  const [activeCode, setActiveCode] = useState(leagues[0]?.code || '');
+  const [leagues, setLeagueState] = useState([]);
+  const [activeCode, setActiveCode] = useState('');
   const [newLeagueName, setNewLeagueName] = useState('');
   const [joinCode, setJoinCode] = useState('');
   const [message, setMessage] = useState('');
   const [scenario, setScenario] = useState(defaultScenarios[0]);
 
+  // Firebase Real-time Listener
   useEffect(() => {
-    setLeagueState(getLeagues());
-  }, []);
+    const q = query(collection(db, "leagues"));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const fetchedLeagues = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      setLeagueState(fetchedLeagues);
+      
+      // Set initial active code if not set
+      if (fetchedLeagues.length > 0 && !activeCode) {
+        setActiveCode(fetchedLeagues[0].code);
+      }
+    });
+    return () => unsubscribe();
+  }, [activeCode]);
 
   const activeLeague = useMemo(() => leagues.find((l) => l.code === activeCode), [leagues, activeCode]);
 
-  const updateLeagues = (next) => {
-    setLeagueState(next);
-    setLeagues(next);
-  };
-
   const makeCode = () => Math.random().toString(36).slice(2, 8).toUpperCase();
 
-  const createLeague = () => {
+  const createLeague = async () => {
     if (!newLeagueName.trim()) return;
     const code = makeCode();
-    const more = {
+    const newLeague = {
       code,
       name: newLeagueName.trim(),
       members: {
         [currentUser]: { savings: 0, spent: 0 }
       }
     };
-    const next = [...leagues, more];
-    updateLeagues(next);
-    setActiveCode(code);
-    setNewLeagueName('');
-    setMessage(`League created! Share code: ${code}`);
+    
+    try {
+      await setDoc(doc(db, "leagues", code), newLeague);
+      setActiveCode(code);
+      setNewLeagueName('');
+      setMessage(`League created! Share code: ${code}`);
+    } catch (e) {
+      setMessage("Error creating league.");
+    }
   };
 
-  const joinLeague = () => {
+  const joinLeague = async () => {
     const league = leagues.find((l) => l.code === joinCode.trim().toUpperCase());
     if (!league) {
       setMessage('League not found. Check the code.');
       return;
     }
     if (!league.members[currentUser]) {
-      league.members[currentUser] = { savings: 0, spent: 0 };
-      updateLeagues([...leagues]);
+      const updatedMembers = {
+        ...league.members,
+        [currentUser]: { savings: 0, spent: 0 }
+      };
+      await updateDoc(doc(db, "leagues", league.code), { members: updatedMembers });
     }
     setActiveCode(league.code);
     setJoinCode('');
     setMessage(`Joined league ${league.name}!`);
   };
 
-  const recordAction = (amount, type) => {
+  const recordAction = async (amount, type) => {
     if (!activeLeague) return;
 
-    const nextLeagues = leagues.map((l) => {
-      if (l.code !== activeLeague.code) return l;
-      const members = { ...l.members };
-      const userEntry = members[currentUser] || { savings: 0, spent: 0 };
-      userEntry.savings += type === 'save' ? amount : 0;
-      userEntry.spent += type === 'spend' ? amount : 0;
-      members[currentUser] = userEntry;
-      return { ...l, members };
-    });
-    updateLeagues(nextLeagues);
-    setScenario(defaultScenarios[Math.floor(Math.random() * defaultScenarios.length)]);
+    const members = { ...activeLeague.members };
+    const userEntry = members[currentUser] || { savings: 0, spent: 0 };
+    
+    if (type === 'save') userEntry.savings += amount;
+    else userEntry.spent += amount;
+    
+    members[currentUser] = userEntry;
+
+    try {
+      await updateDoc(doc(db, "leagues", activeLeague.code), { members });
+      setScenario(defaultScenarios[Math.floor(Math.random() * defaultScenarios.length)]);
+    } catch (e) {
+      setMessage("Error updating action.");
+    }
   };
 
   const leaderboard = useMemo(() => {
@@ -177,7 +186,8 @@ const styles = {
   row: { display: 'flex', gap: '18px', flexWrap: 'wrap', marginBottom: '18px' },
   card: { flex: '1 1 280px', background: '#fff', padding: '18px', borderRadius: '18px', boxShadow: '0 12px 24px rgba(0,0,0,0.05)' },
   cardTitle: { margin: '0 0 12px 0' },
-  input: { width: '100%', padding: '12px', borderRadius: '12px', border: '1px solid #cbd5e1', marginBottom: '10px' },
+  // BOX-SIZING FIX ADDED HERE
+  input: { width: '100%', padding: '12px', borderRadius: '12px', border: '1px solid #cbd5e1', marginBottom: '10px', boxSizing: 'border-box' },
   button: { padding: '12px 18px', background: '#2563eb', color: '#fff', border: 'none', borderRadius: '12px', cursor: 'pointer' },
   message: { marginTop: '12px', padding: '12px', background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '12px', color: '#0369a1' },
   activeInfo: { display: 'flex', justifyContent: 'space-between', background: '#f8fafc', padding: '12px 18px', borderRadius: '14px', marginBottom: '18px' },

@@ -1,100 +1,104 @@
 import React, { useState, useEffect } from "react";
+import { db } from '../firebase'; 
+import { 
+  collection, 
+  query, 
+  onSnapshot, 
+  addDoc, 
+  orderBy, 
+  serverTimestamp, 
+  doc, 
+  deleteDoc, 
+  updateDoc 
+} from "firebase/firestore";
 
 export default function DiscussionScreen({ currentUser, streak = 0 }) {
   const [posts, setPosts] = useState([]);
   const [newPost, setNewPost] = useState("");
   const [showMine, setShowMine] = useState(false);
-  const [replyText, setReplyText] = useState({}); // Tracking text per post ID
+  const [replyText, setReplyText] = useState({}); 
 
-  // 1. Load posts & Listen for changes in other tabs
+  // Sync with Firestore in real-time
   useEffect(() => {
-    const loadPosts = () => {
-      const savedPosts = localStorage.getItem("paidForwardPosts");
-      if (savedPosts) setPosts(JSON.parse(savedPosts));
-    };
+    const q = query(collection(db, "discussions"), orderBy("createdAt", "desc"));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const fetchedPosts = snapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          ...data,
+          // Handle Firestore timestamps vs local strings
+          timestamp: data.createdAt?.toDate ? data.createdAt.toDate().toLocaleString() : "Just now",
+          likes: data.likes || [],
+          reactions: data.reactions || { thumbs: [], laugh: [] },
+          replies: data.replies || []
+        };
+      });
+      setPosts(fetchedPosts);
+    });
 
-    loadPosts();
-
-    // Sync across tabs/windows
-    window.addEventListener("storage", loadPosts);
-    return () => window.removeEventListener("storage", loadPosts);
+    return () => unsubscribe();
   }, []);
 
-  // 2. Save posts helper
-  const savePosts = (updatedPosts) => {
-    setPosts(updatedPosts);
-    localStorage.setItem("paidForwardPosts", JSON.stringify(updatedPosts));
-  };
-
-  const handlePost = (e) => {
+  const handlePost = async (e) => {
     e.preventDefault();
     if (!newPost.trim()) return;
 
-    const postObj = {
-      id: Date.now(),
-      user: currentUser,
+    await addDoc(collection(db, "discussions"), {
+      user: currentUser || "Ava",
       text: newPost,
-      timestamp: new Date().toLocaleString(),
+      createdAt: serverTimestamp(),
       likes: [],
       reactions: { thumbs: [], laugh: [] },
       replies: []
-    };
+    });
 
-    savePosts([postObj, ...posts]);
     setNewPost("");
   };
 
-  const deletePost = (id) => {
-    savePosts(posts.filter((p) => p.id !== id));
+  const deletePost = async (id) => {
+    await deleteDoc(doc(db, "discussions", id));
   };
 
-  const toggleReaction = (id, type) => {
-    const updated = posts.map((p) => {
-      if (p.id !== id) return p;
+  const toggleReaction = async (id, type) => {
+    const post = posts.find(p => p.id === id);
+    if (!post) return;
 
-      // Keep legacy support for 'likes' while adding new reaction types
-      if (type === 'like') {
-        const hasLiked = (p.likes || []).includes(currentUser);
-        const nextLikes = hasLiked
-          ? (p.likes || []).filter((u) => u !== currentUser)
-          : [...(p.likes || []), currentUser];
-        return { ...p, likes: nextLikes };
-      }
-
-      const reactions = p.reactions || { thumbs: [], laugh: [] };
+    let updates = {};
+    if (type === 'like') {
+      const hasLiked = post.likes.includes(currentUser);
+      updates.likes = hasLiked
+        ? post.likes.filter(u => u !== currentUser)
+        : [...post.likes, currentUser];
+    } else {
+      const reactions = post.reactions;
       const current = reactions[type] || [];
       const hasReacted = current.includes(currentUser);
-      const next = hasReacted
-        ? current.filter((u) => u !== currentUser)
-        : [...current, currentUser];
-
-      return {
-        ...p,
-        reactions: { ...reactions, [type]: next }
+      updates.reactions = {
+        ...reactions,
+        [type]: hasReacted ? current.filter(u => u !== currentUser) : [...current, currentUser]
       };
-    });
+    }
 
-    savePosts(updated);
+    await updateDoc(doc(db, "discussions", id), updates);
   };
 
-  const handleReply = (postId) => {
+  const handleReply = async (postId) => {
     if (!replyText[postId]?.trim()) return;
 
-    const updated = posts.map(p => {
-      if (p.id === postId) {
-        const newReply = {
-          id: Date.now(),
-          user: currentUser,
-          text: replyText[postId],
-          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-        };
-        return { ...p, replies: [...p.replies, newReply] };
-      }
-      return p;
+    const post = posts.find(p => p.id === postId);
+    const newReply = {
+      id: Date.now(),
+      user: currentUser || "Ava",
+      text: replyText[postId],
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    };
+
+    await updateDoc(doc(db, "discussions", postId), {
+      replies: [...post.replies, newReply]
     });
 
-    savePosts(updated);
-    setReplyText({ ...replyText, [postId]: "" }); // Clear input
+    setReplyText({ ...replyText, [postId]: "" });
   };
 
   const visiblePosts = showMine ? posts.filter((p) => p.user === currentUser) : posts;
@@ -116,7 +120,7 @@ export default function DiscussionScreen({ currentUser, streak = 0 }) {
           value={newPost}
           onChange={(e) => setNewPost(e.target.value)}
         />
-        <button type="submit" style={dStyles.postBtn}>Post</button>
+        <button type="submit" style={dStyles.postBtn}>Post as {currentUser || "Ava"}</button>
       </form>
 
       <div style={dStyles.feed}>
@@ -128,86 +132,66 @@ export default function DiscussionScreen({ currentUser, streak = 0 }) {
             </p>
           </div>
         ) : (
-          visiblePosts.map((post) => {
-            return (
-              <div key={post.id} style={dStyles.postCard}>
-                <div style={dStyles.postHeader}>
-                  <span style={dStyles.userName}>
-                    {post.user}
-                    {post.user === currentUser && streak > 1 && (
-                      <span style={dStyles.streakTag}> 🔥{streak}</span>
-                    )}
-                  </span>
-                  <span style={dStyles.time}>{post.timestamp}</span>
-                </div>
-                <p style={dStyles.postText}>{post.text}</p>
-
-                <div style={dStyles.actions}>
-                  <button
-                    onClick={() => toggleReaction(post.id, 'like')}
-                    style={{ ...dStyles.actionLink, color: (post.likes || []).includes(currentUser) ? '#2563eb' : '#64748b' }}
-                  >
-                    ❤️ {(post.likes || []).length} {(post.likes || []).includes(currentUser) ? 'Liked' : 'Like'}
-                  </button>
-
-                  <button
-                    onClick={() => toggleReaction(post.id, 'thumbs')}
-                    style={{ ...dStyles.actionLink, color: (post.reactions?.thumbs || []).includes(currentUser) ? '#2563eb' : '#64748b' }}
-                  >
-                    👍 {(post.reactions?.thumbs || []).length}
-                  </button>
-
-                  <button
-                    onClick={() => toggleReaction(post.id, 'laugh')}
-                    style={{ ...dStyles.actionLink, color: (post.reactions?.laugh || []).includes(currentUser) ? '#2563eb' : '#64748b' }}
-                  >
-                    😂 {(post.reactions?.laugh || []).length}
-                  </button>
-
-                  {post.user === currentUser && (
-                    <button onClick={() => deletePost(post.id)} style={dStyles.deleteBtn}>Delete</button>
+          visiblePosts.map((post) => (
+            <div key={post.id} style={dStyles.postCard}>
+              <div style={dStyles.postHeader}>
+                <span style={dStyles.userName}>
+                  {post.user}
+                  {post.user === currentUser && streak > 1 && (
+                    <span style={dStyles.streakTag}> 🔥{streak}</span>
                   )}
-                </div>
+                </span>
+                <span style={dStyles.time}>{post.timestamp}</span>
+              </div>
+              <p style={dStyles.postText}>{post.text}</p>
 
-                {/* Replies Section */}
-                <div style={dStyles.repliesSection}>
-                  {post.replies.map((reply) => (
-                    <div key={reply.id} style={dStyles.replyItem}>
-                      <span style={dStyles.replyUser}>{reply.user}: </span>
-                      <span style={dStyles.replyText}>{reply.text}</span>
-                      {reply.user === currentUser && (
-                        <button
-                          onClick={() => {
-                            const updated = posts.map((p) => {
-                              if (p.id !== post.id) return p;
-                              return {
-                                ...p,
-                                replies: p.replies.filter((r) => r.id !== reply.id)
-                              };
-                            });
-                            savePosts(updated);
-                          }}
-                          style={dStyles.replyDeleteBtn}
-                        >
-                          Delete
-                        </button>
-                      )}
-                    </div>
-                  ))}
+              <div style={dStyles.actions}>
+                <button
+                  onClick={() => toggleReaction(post.id, 'like')}
+                  style={{ ...dStyles.actionLink, color: post.likes.includes(currentUser) ? '#2563eb' : '#64748b' }}
+                >
+                  ❤️ {post.likes.length} {post.likes.includes(currentUser) ? 'Liked' : 'Like'}
+                </button>
 
-                  <div style={dStyles.replyInputRow}>
-                    <input
-                      style={dStyles.replyInput}
-                      placeholder="Write a reply..."
-                      value={replyText[post.id] || ""}
-                      onChange={(e) => setReplyText({ ...replyText, [post.id]: e.target.value })}
-                    />
-                    <button onClick={() => handleReply(post.id)} style={dStyles.replyBtn}>Reply</button>
+                <button
+                  onClick={() => toggleReaction(post.id, 'thumbs')}
+                  style={{ ...dStyles.actionLink, color: (post.reactions?.thumbs || []).includes(currentUser) ? '#2563eb' : '#64748b' }}
+                >
+                  👍 {(post.reactions?.thumbs || []).length}
+                </button>
+
+                <button
+                  onClick={() => toggleReaction(post.id, 'laugh')}
+                  style={{ ...dStyles.actionLink, color: (post.reactions?.laugh || []).includes(currentUser) ? '#2563eb' : '#64748b' }}
+                >
+                  😂 {(post.reactions?.laugh || []).length}
+                </button>
+
+                {post.user === currentUser && (
+                  <button onClick={() => deletePost(post.id)} style={dStyles.deleteBtn}>Delete</button>
+                )}
+              </div>
+
+              <div style={dStyles.repliesSection}>
+                {post.replies.map((reply) => (
+                  <div key={reply.id} style={dStyles.replyItem}>
+                    <span style={dStyles.replyUser}>{reply.user}: </span>
+                    <span style={dStyles.replyText}>{reply.text}</span>
                   </div>
+                ))}
+
+                <div style={dStyles.replyInputRow}>
+                  <input
+                    style={dStyles.replyInput}
+                    placeholder="Write a reply..."
+                    value={replyText[post.id] || ""}
+                    onChange={(e) => setReplyText({ ...replyText, [post.id]: e.target.value })}
+                  />
+                  <button onClick={() => handleReply(post.id)} style={dStyles.replyBtn}>Reply</button>
                 </div>
               </div>
-            );
-          })
+            </div>
+          ))
         )}
       </div>
     </div>
@@ -221,7 +205,8 @@ const dStyles = {
   subText: { color: '#64748b', fontSize: '14px' },
   toggleBtn: { background: '#f1f5f9', border: '1px solid #e2e8f0', borderRadius: '999px', padding: '6px 14px', cursor: 'pointer', fontSize: '12px' },
   postBox: { background: '#fff', padding: '20px', borderRadius: '16px', boxShadow: '0 4px 6px rgba(0,0,0,0.05)', marginBottom: '30px', display: 'flex', flexDirection: 'column', gap: '10px' },
-  textarea: { width: '100%', height: '60px', padding: '12px', borderRadius: '8px', border: '1px solid #e2e8f0', resize: 'none' },
+  // FIX: Added boxSizing and width
+  textarea: { width: '100%', height: '80px', padding: '12px', borderRadius: '8px', border: '1px solid #e2e8f0', resize: 'none', boxSizing: 'border-box' },
   postBtn: { alignSelf: 'flex-end', padding: '8px 20px', background: '#2563eb', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' },
   feed: { display: 'flex', flexDirection: 'column', gap: '20px' },
   postCard: { background: '#fff', padding: '20px', borderRadius: '16px', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' },
@@ -238,8 +223,8 @@ const dStyles = {
   replyUser: { fontWeight: 'bold', color: '#475569' },
   replyText: { color: '#64748b' },
   replyInputRow: { display: 'flex', gap: '10px', marginTop: '10px' },
-  replyInput: { flex: 1, padding: '6px 12px', borderRadius: '20px', border: '1px solid #e2e8f0', fontSize: '13px' },
+  // FIX: Added boxSizing
+  replyInput: { flex: 1, padding: '8px 12px', borderRadius: '20px', border: '1px solid #e2e8f0', fontSize: '13px', boxSizing: 'border-box' },
   replyBtn: { background: 'none', border: 'none', color: '#2563eb', fontWeight: 'bold', cursor: 'pointer', fontSize: '13px' },
-  replyDeleteBtn: { background: 'none', border: 'none', color: '#ef4444', fontWeight: 'bold', cursor: 'pointer', fontSize: '12px' },
   emptyState: { padding: '30px', textAlign: 'center', color: '#64748b', border: '1px dashed #cbd5e1', borderRadius: '16px' }
 };
