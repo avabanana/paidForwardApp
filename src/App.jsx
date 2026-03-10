@@ -47,9 +47,11 @@ function App() {
     tier: 'adult',
     username: '',
     courseProgressMap: {},
-    birthYear: null
+    birthYear: null,
+    lastLogin: null
   });
 
+  // Listener for Data
   useEffect(() => {
     const unsubscribeAuth = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
@@ -70,6 +72,7 @@ function App() {
     return () => unsubscribeAuth();
   }, []);
 
+  // Updated Streak Logic
   useEffect(() => {
     if (!user || !stats.username) return;
 
@@ -133,7 +136,7 @@ function App() {
 
     const updates = {
       coursesCompleted: (stats.coursesCompleted || 0) + 1,
-      xp: stats.xp + 150,
+      xp: (stats.xp || 0) + 500, // Higher reward for full course
       [`courseProgressMap.${key}`]: 1
     };
 
@@ -173,8 +176,8 @@ function App() {
       case 'Home': return <HomeScreen onNavigate={(tab) => setActiveTab(tab)} />;
       case 'Courses': 
         return <CoursesScreen 
-          courseProgressMap={stats.courseProgressMap} 
-          setCourseProgressMap={(id, prog) => updateData({ [`courseProgressMap.${id}`]: prog })} 
+          courseProgressMap={stats.courseProgressMap || {}} 
+          updateCourseProgress={(id, prog) => updateData({ [`courseProgressMap.course_${id}`]: prog })} 
           onCourseComplete={handleCourseComplete}
           userTier={stats.tier} 
           username={stats.username} 
@@ -189,6 +192,7 @@ function App() {
           streak={stats.streak} 
           coursesCompleted={stats.coursesCompleted}
           userTier={stats.tier}
+          username={stats.username}
         />;
       case 'Goals': return <GoalScreen />;
       case 'Leagues': return <LeagueScreen currentUser={stats.username} />;
@@ -261,6 +265,7 @@ function App() {
 }
 
 const styles = {
+  // ... existing styles ...
   authPage: { height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f8fafc', fontFamily: 'sans-serif' },
   authCard: { background: '#fff', padding: '40px', borderRadius: '24px', boxShadow: '0 10px 25px rgba(0,0,0,0.1)', width: '350px' },
   authLogo: { color: '#2563eb', textAlign: 'center', marginBottom: '20px' },
@@ -268,6 +273,7 @@ const styles = {
   input: { padding: '12px', borderRadius: '8px', border: '1px solid #e2e8f0', boxSizing: 'border-box', width: '100%' },
   authBtn: { padding: '14px', background: '#2563eb', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' },
   switchText: { textAlign: 'center', marginTop: '15px', fontSize: '14px', cursor: 'pointer', color: '#2563eb' },
+  container: { background: '#f1f5f9', minHeight: '100vh', fontFamily: 'sans-serif', position: 'relative' },
   container: { background: '#f1f5f9', minHeight: '100vh', fontFamily: 'sans-serif', position: 'relative' },
   header: { height: '70px', background: '#fff', padding: '0 40px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid #e2e8f0' },
   logo: { color: '#2563eb', fontSize: '22px', fontWeight: 'bold', cursor: 'pointer' },

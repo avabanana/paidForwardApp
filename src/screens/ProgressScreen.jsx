@@ -45,12 +45,12 @@ const AchievementBadge = ({ icon, title, requirement, achieved, color, isGoal })
 );
 
 export default function ProgressScreen({ 
+  courseProgressMap = {}, 
   coursesCompleted = 0, 
-  gameWins = 0, 
   gamesPlayed = 0, 
-  xp = 0, 
-  streak = 0,
-  userTier = 'adult'
+  gameWins = 0, // Added gameWins prop
+  xp = 0,
+  streak = 0    // Added streak prop
 }) {
   const currentLevel = Math.floor(xp / 1000) + 1;
   const xpIntoLevel = xp % 1000;
@@ -117,11 +117,16 @@ export default function ProgressScreen({
   }));
 
   return (
-    <div style={{ padding: '10px' }}>
-      {/* Level Header */}
+    <div style={{ padding: '10px', maxWidth: '800px', margin: '0 auto' }}>
       <div style={styles.levelCard}>
-        <div style={styles.levelBadge}>LVL {currentLevel}</div>
+        <div style={styles.levelBadge}>
+          <span style={{fontSize: '12px', display: 'block'}}>LVL</span>
+          {currentLevel}
+        </div>
         <div style={{ textAlign: 'left', flex: 1 }}>
+          <h2 style={{ margin: 0, color: '#fff' }}>
+            {userTier === 'elementary' ? 'Junior Builder' : 'Wealth Builder'}
+          </h2>
           <h2 style={{ margin: 0, color: '#fff' }}>
             {userTier === 'elementary' ? 'Junior Builder' : 'Wealth Builder'}
           </h2>
@@ -132,7 +137,6 @@ export default function ProgressScreen({
         </div>
       </div>
 
-      {/* Grid Stats */}
       <div style={styles.grid}>
         <div style={{ ...styles.statCard, background: '#ebf8ff' }}>
           <span style={styles.icon}>🎓</span>
@@ -146,7 +150,7 @@ export default function ProgressScreen({
         </div>
         <div style={{ ...styles.statCard, background: '#fff0f6' }}>
           <span style={styles.icon}>💎</span>
-          <h4 style={styles.statLabel}>XP</h4>
+          <h4 style={styles.statLabel}>Total XP</h4>
           <h2 style={styles.statValue}>{xp}</h2>
         </div>
         <div style={{ ...styles.statCard, background: '#fffaf0' }}>
@@ -156,7 +160,6 @@ export default function ProgressScreen({
         </div>
       </div>
 
-      {/* Badges Section */}
       <div style={styles.badgeSection}>
         <h3 style={{ marginBottom: '15px' }}>Achievements & Goals</h3>
         <div style={{ display: 'flex', gap: '15px', overflowX: 'auto', paddingBottom: '10px' }}>
@@ -181,20 +184,32 @@ export default function ProgressScreen({
   );
 }
 
+const Badge = ({ icon, title, color }) => (
+  <div style={{ 
+    minWidth: '90px', padding: '15px', borderRadius: '16px', 
+    background: color, textAlign: 'center', border: '1px solid rgba(0,0,0,0.05)' 
+  }}>
+    <div style={{ fontSize: '30px', marginBottom: '5px' }}>{icon}</div>
+    <div style={{ fontSize: '11px', fontWeight: 'bold' }}>{title}</div>
+  </div>
+);
+
 const styles = {
   levelCard: { 
     background: 'linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%)', 
-    padding: '30px', borderRadius: '20px', display: 'flex', alignItems: 'center', gap: '20px', marginBottom: '25px' 
+    padding: '30px', borderRadius: '24px', display: 'flex', alignItems: 'center', gap: '20px', marginBottom: '25px',
+    boxShadow: '0 10px 25px rgba(59, 130, 246, 0.3)'
   },
   levelBadge: { 
-    width: '70px', height: '70px', borderRadius: '50%', background: '#fff', 
-    color: '#1e3a8a', display: 'flex', alignItems: 'center', justifyContent: 'center', 
-    fontSize: '20px', fontWeight: '900', boxShadow: '0 4px 10px rgba(0,0,0,0.2)' 
+    width: '75px', height: '75px', borderRadius: '20px', background: '#fff', 
+    color: '#1e3a8a', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', 
+    fontSize: '28px', fontWeight: '900', boxShadow: '0 4px 10px rgba(0,0,0,0.1)' 
   },
-  grid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '20px', marginBottom: '25px' },
-  statCard: { padding: '20px', borderRadius: '16px', textAlign: 'center' },
-  icon: { fontSize: '24px', display: 'block', marginBottom: '5px' },
-  statLabel: { margin: 0, fontSize: '12px', color: '#666', textTransform: 'uppercase', letterSpacing: '1px' },
-  statValue: { margin: '5px 0 0 0', fontSize: '24px', color: '#333' },
-  badgeSection: { background: '#fff', padding: '25px', borderRadius: '20px', boxShadow: '0 4px 12px rgba(0,0,0,0.03)' }
+  grid: { display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '15px', marginBottom: '25px' },
+  statCard: { padding: '20px', borderRadius: '20px', textAlign: 'center', border: '1px solid rgba(0,0,0,0.02)' },
+  icon: { fontSize: '24px', display: 'block', marginBottom: '8px' },
+  statLabel: { margin: 0, fontSize: '11px', color: '#64748b', textTransform: 'uppercase', fontWeight: '700' },
+  statValue: { margin: '5px 0 0 0', fontSize: '28px', color: '#1e293b', fontWeight: '800' },
+  badgeSection: { background: '#fff', padding: '25px', borderRadius: '24px', border: '1px solid #f1f5f9' },
+  badgeScroll: { display: 'flex', gap: '15px', overflowX: 'auto', paddingBottom: '15px', msOverflowStyle: 'none', scrollbarWidth: 'none' }
 };
