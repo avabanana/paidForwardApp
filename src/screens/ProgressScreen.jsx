@@ -1,129 +1,43 @@
 import React from 'react';
 import ProgressBar from '../components/ProgressBar';
 
-const AchievementBadge = ({ icon, title, requirement, achieved, color }) => (
-  <div
+const AchievementBadge = ({ icon, title, requirement, achieved }) => (
+  <div 
     style={{
-      minWidth: '110px',
-      padding: '15px',
-      borderRadius: '16px',
-      background: color,
-      textAlign: 'center',
-      border: '1px solid rgba(0,0,0,0.05)',
+      ...styles.badge, 
       opacity: achieved ? 1 : 0.4,
       filter: achieved ? 'none' : 'grayscale(100%)',
-      position: 'relative',
-      transition: 'all 0.3s ease'
-    }}
+    }} 
     title={achieved ? `Unlocked: ${requirement}` : `Locked: ${requirement}`}
-  >
-    <div style={{ fontSize: '30px', marginBottom: '5px' }}>{icon}</div>
-    <div style={{ fontSize: '11px', fontWeight: 'bold' }}>{title}</div>
-    <div style={{ fontSize: '10px', color: '#334155', marginTop: '5px' }}>{requirement}</div>
-    {achieved && (
-      <div
-        style={{
-          position: 'absolute',
-          top: '8px',
-          right: '8px',
-          width: '20px',
-          height: '20px',
-          borderRadius: '50%',
-          background: '#10b981',
-          color: '#fff',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          fontSize: '12px',
-          boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
-        }}
-      >
-        ✓
+  ) {
+    return (
+      <div style={styles.badgeContent}>
+        <div style={styles.badgeIcon}>{icon}</div>
+        <div style={styles.badgeText}>{title}</div>
+        {achieved && <div style={styles.checkMark}>✓</div>}
       </div>
-    )}
-  </div>
-);
+    );
+  }
+};
 
 export default function ProgressScreen({ 
+  courseProgressMap = {}, 
   coursesCompleted = 0, 
-  gameWins = 0, 
   gamesPlayed = 0, 
-  xp = 0, 
-  streak = 0,
-  userTier = 'adult'
+  gameWins = 0, // Added gameWins prop
+  xp = 0,
+  streak = 0    // Added streak prop
 }) {
-  const currentLevel = Math.floor(xp / 1000) + 1;
-  const xpIntoLevel = xp % 1000;
-  const levelProgress = xpIntoLevel / 1000;
+  // derive level and xp progress
+  const level = Math.floor(xp / 1000) + 1;
+  const xpThisLevel = xp - (level - 1) * 1000;
+  const xpProgress = Math.min(xpThisLevel / 1000, 1);
 
-  // Adaptive Titles based on Tier
-  const getLevelTitle = () => {
-    const titles = {
-      elementary: ['Seed Sower', 'Star Saver', 'Junior Builder', 'Coin Captain'],
-      middle: ['Budgeter', 'Goal Getter', 'Wealth Builder', 'Market Master'],
-      adult: ['Financial Novice', 'Asset Allocator', 'Portfolio Pro', 'Fiscal Legend']
-    };
-    const tierTitles = titles[userTier] || titles.adult;
-    return tierTitles[Math.min(currentLevel - 1, tierTitles.length - 1)];
-  };
-
-  const [goalBadges, setGoalBadges] = React.useState([]);
-
-  React.useEffect(() => {
-    const saved = localStorage.getItem('pf_achievements');
-    if (saved) {
-      try {
-        setGoalBadges(JSON.parse(saved));
-      } catch {
-        setGoalBadges([]);
-      }
-    }
-  }, []);
-
-  const achievementList = [
-    {
-      icon: '🌱',
-      title: 'Early Bird',
-      requirement: 'Complete 1 module',
-      achieved: coursesCompleted > 0,
-      color: '#dcfce7'
-    },
-    {
-      icon: '🎮',
-      title: 'Game On',
-      requirement: 'Play 1 game',
-      achieved: gamesPlayed > 0,
-      color: '#fef3c7'
-    },
-    {
-      icon: '🏆',
-      title: 'Winner',
-      requirement: 'Win 1 game',
-      achieved: gameWins > 0,
-      color: '#e0e7ff'
-    },
-    {
-      icon: '🔥',
-      title: 'Dedicated',
-      requirement: '3 Day Streak',
-      achieved: streak >= 3,
-      color: '#ffedd5'
-    },
-    {
-      icon: '💎',
-      title: 'XP Master',
-      requirement: 'Earn 1500 XP',
-      achieved: xp >= 1500,
-      color: '#fae8ff'
-    },
-    ...goalBadges.map((badge, i) => ({
-      icon: '🏅',
-      title: badge,
-      requirement: 'Goal completed',
-      achieved: true,
-      color: '#f1f5f9'
-    }))
-  ];
+  const achievementList = [];
+  if (coursesCompleted > 0) achievementList.push({ icon: '🌱', title: 'Early Bird', color: '#dcfce7' });
+  if (gamesPlayed > 0) achievementList.push({ icon: '💰', title: 'Budget King', color: '#fef3c7' });
+  if (globalProgress > 0) achievementList.push({ icon: '🧠', title: 'Quiz Whiz', color: '#e0e7ff' });
+  if (xp >= 1500) achievementList.push({ icon: '🤝', title: 'Helper', color: '#fae8ff' });
 
   return (
     <div style={{ padding: '10px', maxWidth: '800px', margin: '0 auto' }}>
@@ -133,8 +47,10 @@ export default function ProgressScreen({
           {currentLevel}
         </div>
         <div style={{ textAlign: 'left', flex: 1 }}>
-          <h2 style={{ margin: 0, color: '#fff', fontSize: '24px' }}>{getLevelTitle()}</h2>
-          <p style={{ color: '#e0f2fe', margin: '5px 0', fontSize: '14px' }}>
+          <h2 style={{ margin: 0, color: '#fff' }}>
+            {userTier === 'elementary' ? 'Junior Builder' : 'Wealth Builder'}
+          </h2>
+          <p style={{ color: '#e0f2fe', margin: '5px 0' }}>
             {xpIntoLevel} / 1000 XP to Level {currentLevel + 1}
           </p>
           <ProgressBar progress={levelProgress} />
@@ -142,30 +58,52 @@ export default function ProgressScreen({
       </div>
 
       <div style={styles.grid}>
-        <StatCard icon="🎓" label="Modules" value={coursesCompleted} color="#ebf8ff" />
-        <StatCard icon="🎮" label="Games" value={gamesPlayed} color="#f0f4ff" />
-        <StatCard icon="💎" label="Total XP" value={xp} color="#fff0f6" />
-        <StatCard icon="🔥" label="Streak" value={streak} color="#fffaf0" />
+        <div style={{ ...styles.statCard, background: '#ebf8ff' }}>
+          <span style={styles.icon}>🎓</span>
+          <h4 style={styles.statLabel}>Modules Completed</h4>
+          <h2 style={styles.statValue}>{coursesCompleted}</h2>
+        </div>
+        <div style={{ ...styles.statCard, background: '#f0f4ff' }}>
+          <span style={styles.icon}>🏆</span>
+          <h4 style={styles.statLabel}>Game Wins</h4>
+          <h2 style={styles.statValue}>{gameWins}</h2>
+        </div>
+        <div style={{ ...styles.statCard, background: '#fff0f6' }}>
+          <span style={styles.icon}>💎</span>
+          <h4 style={styles.statLabel}>Total XP</h4>
+          <h2 style={styles.statValue}>{xp}</h2>
+        </div>
+        <div style={{ ...styles.statCard, background: '#fffaf0' }}>
+          <span style={styles.icon}>🔥</span>
+          <h4 style={styles.statLabel}>Day Streak</h4>
+          <h2 style={styles.statValue}>{streak}</h2>
+        </div>
       </div>
 
       <div style={styles.badgeSection}>
-        <h3 style={{ marginBottom: '20px', fontSize: '18px', fontWeight: '800' }}>Your Achievements</h3>
-        <div style={styles.badgeScroll}>
-          {achievementList.map((a, i) => (
-            <AchievementBadge key={i} {...a} />
-          ))}
+        <h3 style={{ marginBottom: '5px' }}>Your Achievements</h3>
+        <p style={{ fontSize: '12px', color: '#64748b', marginBottom: '15px' }}>
+          Hover over a badge to see how you earned it!
+        </p>
+        <div style={{ display: 'flex', gap: '15px', overflowX: 'auto', paddingBottom: '10px' }}>
+          {achievementList.length > 0 ? (
+            achievementList.map((a, i) => <Badge key={i} icon={a.icon} title={a.title} color={a.color} />)
+          ) : (
+            <span style={{ color: '#64748b' }}>No badges yet. Keep learning to unlock them!</span>
+          )}
         </div>
       </div>
     </div>
   );
 }
 
-// Helper component for cleaner JSX
-const StatCard = ({ icon, label, value, color }) => (
-  <div style={{ ...styles.statCard, background: color }}>
-    <span style={styles.icon}>{icon}</span>
-    <h4 style={styles.statLabel}>{label}</h4>
-    <h2 style={styles.statValue}>{value}</h2>
+const Badge = ({ icon, title, color }) => (
+  <div style={{ 
+    minWidth: '90px', padding: '15px', borderRadius: '16px', 
+    background: color, textAlign: 'center', border: '1px solid rgba(0,0,0,0.05)' 
+  }}>
+    <div style={{ fontSize: '30px', marginBottom: '5px' }}>{icon}</div>
+    <div style={{ fontSize: '11px', fontWeight: 'bold' }}>{title}</div>
   </div>
 );
 

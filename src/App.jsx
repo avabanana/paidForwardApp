@@ -229,11 +229,17 @@ function App() {
 
   return (
     <div style={styles.container}>
-      {toast.show && (
-        <div style={styles.toast}>
-          {toast.message}
+      {/* Achievement Popup Notification */}
+      {notification && (
+        <div style={styles.popup}>
+          <div style={styles.popupIcon}>🌟</div>
+          <div>
+            <div style={styles.popupTitle}>{notification.title}</div>
+            <div style={styles.popupSub}>{notification.message}</div>
+          </div>
         </div>
       )}
+
       <header style={styles.header}>
         <h1 style={styles.logo} onClick={() => setActiveTab('Home')}>PaidForward</h1>
         <nav style={styles.navBar}>
@@ -274,7 +280,16 @@ const styles = {
   streakDisplay: { background: '#fff7ed', color: '#ea580c', padding: '5px 12px', borderRadius: '20px', fontWeight: 'bold', fontSize: '14px', border: '1px solid #ffedd5' },
   logoutBtn: { padding: '8px 15px', borderRadius: '8px', border: '1px solid #cbd5e1', cursor: 'pointer', background: '#fff' },
   main: { padding: '30px' },
-  toast: { position: 'fixed', bottom: '30px', right: '30px', background: '#1e293b', color: '#fff', padding: '15px 25px', borderRadius: '12px', boxShadow: '0 10px 15px rgba(0,0,0,0.2)', zIndex: 1000, animation: 'slideIn 0.3s ease-out' }
+  // Achievement Popup Styling
+  popup: {
+    position: 'fixed', bottom: '20px', right: '20px',
+    background: '#1e293b', color: '#fff', padding: '16px 24px',
+    borderRadius: '16px', display: 'flex', alignItems: 'center', gap: '15px',
+    boxShadow: '0 10px 25px rgba(0,0,0,0.2)', zIndex: 9999,
+  },
+  popupTitle: { fontWeight: '800', fontSize: '14px', color: '#fbbf24' },
+  popupSub: { fontSize: '12px', color: '#cbd5e1' },
+  popupIcon: { fontSize: '24px' }
 };
 
 export default App;
