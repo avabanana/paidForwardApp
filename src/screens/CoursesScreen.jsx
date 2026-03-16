@@ -1,620 +1,522 @@
-import React, { useState } from 'react';
-
+import React, { useMemo, useState } from 'react';
 import ProgressBar from '../components/ProgressBar';
 
-
-
-export default function CoursesScreen({ courseProgressMap = {}, setCourseProgressMap, onCourseComplete, userTier, username }) {
-  const normalizeCourseKey = (id) => `course_${id}`;
-  const getProgress = (id) => {
-    return courseProgressMap[id] ?? courseProgressMap[normalizeCourseKey(id)] ?? 0;
-  };
-
-  const [mode, setMode] = useState('list');
-
-  const [selectedCourse, setSelectedCourse] = useState(null); // null = list, 0 or 1 = course 1 or 2
-
-  const [currentLessonIndex, setCurrentLessonIndex] = useState(0);
-
-  const [view, setView] = useState('article');
-
-  const [questionIndex, setQuestionIndex] = useState(0);
-
-  const [showFeedback, setShowFeedback] = useState(false);
-
-  const [isCorrect, setIsCorrect] = useState(false);
-
-  const [isRetry, setIsRetry] = useState(false);
-
-  const [showCertificate, setShowCertificate] = useState(false);
-
-
-
-  const courses = [
-
-    {
-
-      id: 0,
-
-      title: 'Earning & Growing Your Money',
-
-      emoji: '🚀',
-
-      color: '#8b5cf6',
-
-      description: 'Learn how to create value, earn income, and build your financial foundation.',
-
-      content: {
-
-        elementary: [
-
-          {
-
-            title: "🍋 The Lemonade Stand",
-
-            info: ["Being an entrepreneur means starting your own mini-business, like a lemonade stand!", "You have to buy lemons and sugar first (expenses) before you can sell a cup for a profit.", "Profit is the 'happy money' left over after you pay for your supplies."],
-
-            quizPool: [{ q: "What is 'Profit'?", a: ["Money spent on lemons", "Money left over after paying for supplies", "The price of one cup"], c: 1, topic: "profit" }],
-
-            backups: { "profit": { q: "If it costs $1 to make lemonade and you sell it for $3, how much is your profit?", a: ["$3", "$2", "$1"], c: 1 } }
-
-          },
-
-          {
-
-            title: "🚜 Jobs vs. Chores",
-
-            info: ["A chore is something you do to help your family, but a job is something people pay you for because you provide a service.", "Whether it's walking a neighbor's dog or washing a car, you are trading your time and hard work for money.", "The better you are at your job, the more people will want to hire you!"],
-
-            quizPool: [{ q: "What are you 'trading' when you do a job for someone?", a: ["Your toys", "Your time and skills", "Your lunch"], c: 1, topic: "work" }],
-
-            backups: { "work": { q: "Why might someone pay you more for a job?", a: ["Because you did a great job quickly", "Because you were bored"], c: 0 } }
-
-          },
-
-          {
-
-            title: "🎨 Investing in Yourself",
-
-            info: ["The best way to earn more money later is to learn new things now!", "When you practice drawing, coding, or reading, you are 'investing' in your brain.", "Smart earners never stop learning because their skills are what help them grow their 'Money Tree'."],
-
-            quizPool: [{ q: "What is the best thing to 'invest' in while you are young?", a: ["Candy", "Your own skills and learning", "Video games"], c: 1, topic: "learning" }],
-
-            backups: { "learning": { q: "If you learn how to fix bikes, can you earn more money?", a: ["Yes, because you have a new skill", "No, skills don't matter"], c: 0 } }
-
-          }
-
+const coursesData = [
+  {
+    id: 0,
+    title: 'Earning & Growing Your Money',
+    emoji: '🚀',
+    color: '#8b5cf6',
+    gradient: 'linear-gradient(135deg,#8b5cf6,#6366f1)',
+    tag: 'Starter',
+    tagColor: '#ede9fe',
+    tagText: '#6d28d9',
+    lessons: [
+      {
+        title: 'Make Your First Budget',
+        info: [
+          'A budget is your most powerful money tool. Start by writing down every source of income, then list every expense — fixed (rent, subscriptions) and variable (food, fun).',
+          'The golden rule: pay yourself first. Move money to savings before spending on anything optional.',
+          'Even saving $20/month builds the habit that leads to financial freedom.'
         ],
-
-        middle: [
-
-          {
-
-            title: "📈 The Invisible Thief: Inflation",
-
-            info: ["Inflation is why a candy bar cost 5 cents in 1950 but costs $2 today.", "It means that over time, your money loses 'purchasing power'—it buys fewer things than it used to.", "To beat inflation, you need your money to grow faster than the prices in the stores."],
-
-            quizPool: [{ q: "What does inflation do to your money's value?", a: ["Makes it worth more", "Makes it worth less over time", "Keeps it exactly the same"], c: 1, topic: "inflation" }],
-
-            backups: { "inflation": { q: "If inflation is 3%, how much should your savings grow to keep up?", a: ["At least 3%", "0%", "1%"], c: 0 } }
-
-          },
-
-          {
-
-            title: "🛠️ Active vs. Passive Income",
-
-            info: ["Active income is money you get for 'doing' (like a paycheck). If you stop working, the money stops.", "Passive income is money that works for you while you sleep, like rental income or dividends from stocks.", "Building passive income is the secret to long-term financial freedom."],
-
-            quizPool: [{ q: "Which of these is 'Passive' income?", a: ["Working a shift at a cafe", "Mowing a lawn", "Earning money from a book you wrote years ago"], c: 2, topic: "income" }],
-
-            backups: { "income": { q: "Why is passive income helpful?", a: ["It requires 40 hours a week forever", "It keeps earning even when you aren't working"], c: 1 } }
-
-          },
-
-          {
-
-            title: "🧾 The Tax Man Cometh",
-
-            info: ["When you earn money, the government takes a small piece called 'Income Tax'.", "This money pays for things everyone uses, like roads, parks, schools, and fire trucks.", "Your 'Gross Pay' is what you earned, but your 'Net Pay' is what you actually take home."],
-
-            quizPool: [{ q: "What is 'Net Pay'?", a: ["Total money earned before taxes", "The money you keep after taxes", "A bonus from your boss"], c: 1, topic: "taxes" }],
-
-            backups: { "taxes": { q: "What do taxes pay for?", a: ["Public services like roads and schools", "Private birthday parties"], c: 0 } }
-
-          }
-
-        ],
-
-        adult: [
-
-          {
-
-            title: "🚀 Human Capital & Leverage",
-
-            info: ["Human Capital is the economic value of your experience and skills.", "To maximize earnings, you must use 'leverage'—scaling your output through technology, capital, or by managing other people.", "High-value skills are those that are rare and difficult for others to replicate."],
-
-            quizPool: [{ q: "How do you increase your 'Human Capital'?", a: ["Working more hours of manual labor", "Education and specialized training", "Saving more of your current paycheck"], c: 1, topic: "capital" }],
-
-            backups: { "capital": { q: "What is an example of 'leverage' in business?", a: ["Doing every task yourself", "Using software to automate a process"], c: 1 } }
-
-          },
-
-          {
-
-            title: "📊 The Equity Equation",
-
-            info: ["Wealth is rarely built through a salary alone; it is built through 'Equity' (ownership).", "Owning a piece of a business or real estate allows you to benefit from the growth of the asset's value, not just your hourly rate."],
-
-            quizPool: [{ q: "Why is 'Equity' important for wealth building?", a: ["It provides a guaranteed hourly wage", "It allows you to own assets that appreciate", "It's a form of debt"], c: 1, topic: "equity" }],
-
-            backups: { "equity": { q: "Which person is building more equity?", a: ["A salaried employee", "A business owner"], c: 1 } }
-
-          },
-
-          {
-
-            title: "📉 Real vs. Nominal Returns",
-
-            info: ["Nominal return is the percentage your investment made on paper.", "Real return is the nominal return minus inflation ($$Real = Nominal - Inflation$$).", "If your investment made 5% but inflation was 6%, you actually lost 1% of your purchasing power."],
-
-            quizPool: [{ q: "If your ROI is 8% and inflation is 3%, what is your Real Return?", a: ["11%", "8%", "5%"], c: 2, topic: "real_returns" }],
-
-            backups: { "real_returns": { q: "Why calculate Real Returns?", a: ["To see how much actual buying power you gained", "To pay fewer taxes"], c: 0 } }
-
-          }
-
+        quiz: [
+          { q: 'What should you track first in a budget?', choices: ['Income and expenses', 'Your social media feed', 'Weather forecasts', 'Your friends\' spending'], a: 0 },
+          { q: 'If you consistently spend more than you earn, the best fix is to:', choices: ['Find ways to reduce spending', 'Open a new credit card', 'Ignore it and hope for a raise', 'Borrow from friends'], a: 0 },
+          { q: '"Pay yourself first" means:', choices: ['Transfer to savings before spending on wants', 'Spend on yourself before paying bills', 'Buy treats as a reward', 'Ignore savings until you\'re rich'], a: 0 },
+          { q: 'Which of these is a variable expense?', choices: ['Dining out', 'Monthly rent', 'Car loan payment', 'Internet bill'], a: 0 },
+          { q: 'An emergency fund is best described as:', choices: ['Money saved for unexpected costs', 'A fund for vacations', 'Money set aside for fun', 'A retirement account'], a: 0 },
+          { q: 'The most effective saving strategy for beginners is:', choices: ['Saving small, consistent amounts regularly', 'Waiting until you have a lot to save', 'Only saving windfalls and bonuses', 'Saving nothing until debt is paid off'], a: 0 }
         ]
-
-      }
-
-    },
-
-    {
-
-      id: 1,
-
-      title: 'Smart Spending & Saving',
-
-      emoji: '🏪',
-
-      color: '#059669',
-
-      description: 'Master the art of budgeting, making wise purchases, and building your savings.',
-
-      content: {
-
-        elementary: [
-
-          {
-
-            title: "🛍️ Smart vs. Silly Spending",
-
-            info: ["Every dollar you have is a choice: spend it now or save it for later.", "Smart spending means buying things you need and value. Silly spending is buying things just because they look cool.", "Before you buy something, ask: 'Do I need this, or do I just want it?'"],
-
-            quizPool: [{ q: "Which is an example of SMART spending?", a: ["Buying every new toy when it comes out", "Buying a winter coat when it's cold", "Buying candy every single day"], c: 1, topic: "spending" }],
-
-            backups: { "spending": { q: "Why is it good to wait before buying something?", a: ["You might change your mind about wanting it", "You'll definitely change your mind", "Waiting never helps"], c: 0 } }
-
-          },
-
-          {
-
-            title: "🐷 Your Piggy Bank: Saving",
-
-            info: ["Saving means putting money away instead of spending it all right now.", "When you save, your money grows! Even small amounts add up over time.", "A great goal is to save at least 10% of any money you get."],
-
-            quizPool: [{ q: "If you get $10 and save 10%, how much do you save?", a: ["$1", "$10", "$5"], c: 0, topic: "saving" }],
-
-            backups: { "saving": { q: "Why does your savings grow?", a: ["Because you add to it over time", "Because the bank clones your money", "It doesn't actually grow"], c: 0 } }
-
-          },
-
-          {
-
-            title: "⏰ The Magic of Waiting",
-
-            info: ["Delayed gratification means waiting to get something you want.", "When you wait, you often discover you didn't want it as much as you thought.", "The people who wait and save are the ones who build real wealth."],
-
-            quizPool: [{ q: "What is 'Delayed Gratification'?", a: ["Being grateful you're late", "Waiting before spending your money", "Eating dessert first"], c: 1, topic: "delay" }],
-
-            backups: { "delay": { q: "Does waiting to buy something help you save money?", a: ["Yes, often you'll decide you don't need it", "No, the price will go up", "Maybe, depending on the day"], c: 0 } }
-
-          }
-
+      },
+      {
+        title: 'Grow With Goals',
+        info: [
+          'Short-term goals (under a year): saving for a phone, trip, or emergency fund. Long-term goals: car, college, house.',
+          'The SMART method works: make goals Specific, Measurable, Achievable, Relevant, and Time-bound.',
+          'Checking your progress weekly — even for 5 minutes — dramatically increases your success rate.'
         ],
-
-        middle: [
-
-          {
-
-            title: "📋 The Budget: Your Money Battle Plan",
-
-            info: ["A budget is a plan for your money. You write down how much you have, and how you'll spend it.", "The best budgets follow the rule: Income - Expenses = Savings.", "When you budget, you always know where your money goes."],
-
-            quizPool: [{ q: "What is a 'Budget'?", a: ["A type of food", "A plan for how to spend your money", "A fancy wallet"], c: 1, topic: "budget" }],
-
-            backups: { "budget": { q: "If you make $100 and spend $70, how much can you save?", a: ["$30", "$70", "$100"], c: 0 } }
-
-          },
-
-          {
-
-            title: "🎯 Wants vs. Needs",
-
-            info: ["Needs are things you must have: food, shelter, clothes, school supplies.", "Wants are things you'd like to have but can live without: games, trendy clothes, snacks.", "Smart budgeting means paying for needs first, then using leftover money for wants."],
-
-            quizPool: [{ q: "Which of these is a NEED?", a: ["A new gaming console", "Groceries and food", "The latest fashion sneakers"], c: 1, topic: "needs" }],
-
-            backups: { "needs": { q: "Should you buy a want before a need?", a: ["Yes, wants are more fun", "No, needs come first", "It doesn't matter"], c: 1 } }
-
-          },
-
-          {
-
-            title: "🆘 Building an Emergency Fund",
-
-            info: ["An emergency fund is money you keep saved for unexpected problems.", "If your bike breaks or you need a doctor visit, an emergency fund saves the day.", "Try to save 3 months of expenses. Start small—even $20 a month helps!"],
-
-            quizPool: [{ q: "What is an 'Emergency Fund'?", a: ["Money you spend on video games", "Money saved for unexpected problems", "A government program"], c: 1, topic: "emergency" }],
-
-            backups: { "emergency": { q: "How much should you try to save in an emergency fund?", a: ["1 month of expenses", "3 months of expenses", "All your money"], c: 1 } }
-
-          }
-
-        ],
-
-        adult: [
-
-          {
-
-            title: "📊 Advanced Budgeting Strategies",
-
-            info: ["The 50/30/20 rule: 50% to needs, 30% to wants, 20% to savings and debt repayment.", "Zero-based budgeting means every dollar has a job—you plan exactly where it goes.", "Track your spending weekly to catch budget creep before it becomes a problem."],
-
-            quizPool: [{ q: "In the 50/30/20 rule, what percentage goes to needs?", a: ["30%", "50%", "20%"], c: 1, topic: "budgetadvanced" }],
-
-            backups: { "budgetadvanced": { q: "What does zero-based budgeting mean?", a: ["Spending zero money", "Every dollar has a purpose", "Saving your money at zero interest"], c: 1 } }
-
-          },
-
-          {
-
-            title: "💳 Debt: Understanding the Cost",
-
-            info: ["Debt is money you borrow that you must pay back, usually with interest.", "Interest is the price you pay for borrowing. A 20% interest credit card means you pay extra for every delayed payment.", "High-interest debt is a wealth killer. The best strategy is to avoid it or pay it off fast."],
-
-            quizPool: [{ q: "What does 'Interest' mean in the context of debt?", a: ["Being curious about something", "The extra money you pay for borrowing", "A savings account"], c: 1, topic: "debt" }],
-
-            backups: { "debt": { q: "Is high-interest debt good or bad for wealth?", a: ["Good, you build credit", "Bad, it costs you money", "Neutral"], c: 1 } }
-
-          },
-
-          {
-
-            title: "📱 Lifestyle Inflation: The Silent Killer",
-
-            info: ["Lifestyle inflation happens when your spending grows as your income grows.", "You get a raise, so you buy a nicer car, bigger apartment, fancier dinners. Suddenly, you have no savings.", "The antidote: when your income increases, increase your savings first, then your lifestyle."],
-
-            quizPool: [{ q: "What is 'Lifestyle Inflation'?", a: ["Prices going up", "Spending more when you earn more", "Financial inflation"], c: 1, topic: "lifestyle" }],
-
-            backups: { "lifestyle": { q: "How do you prevent lifestyle inflation?", a: ["Earn less", "Increase savings first when income rises", "Spend everything immediately"], c: 1 } }
-
-          }
-
+        quiz: [
+          { q: 'A short-term financial goal typically refers to:', choices: ['A target achievable within a year', 'A retirement plan', 'A 30-year mortgage', 'An inheritance plan'], a: 0 },
+          { q: 'Long-term financial goals are best for:', choices: ['Major future milestones like buying a car', 'This week\'s groceries', 'Daily coffee budgeting', 'Weekend plans'], a: 0 },
+          { q: 'Reviewing your goals regularly helps you:', choices: ['Stay on track and adjust as needed', 'Forget what you were saving for', 'Accidentally spend your savings', 'Lower your ambitions'], a: 0 },
+          { q: 'A SMART goal is:', choices: ['Specific, Measurable, Achievable, Relevant, Time-bound', 'Simple, Magic, Automatic, Random, Tidy', 'Saving Money At Random Times', 'None of the above'], a: 0 },
+          { q: 'Tracking your savings progress means:', choices: ['Checking your balance and progress consistently', 'Looking at it once a year', 'Asking someone else to track it', 'Never thinking about it'], a: 0 },
+          { q: 'The strongest motivation to reach a financial goal comes from:', choices: ['Personal reasons that matter to you', 'Peer pressure from others', 'Random external rewards', 'Social media trends'], a: 0 }
         ]
-
-      }
-
-    },
-    {
-      id: 2,
-      title: 'Credit & Borrowing Basics',
-      emoji: '💳',
-      color: '#ef4444',
-      description: 'Understand credit, interest, and how borrowing wisely can help you reach your goals.',
-      content: {
-        elementary: [
-          {
-            title: "📘 What is Credit?",
-            info: [
-              "Credit is when someone lets you borrow money now and pay it back later.",
-              "If you use credit wisely, you can buy bigger things, like a bike or a computer, and pay over time.",
-              "Using credit responsibly helps you build trust with lenders (like banks)."
-            ],
-            quizPool: [{ q: "If you borrow $5 and pay it back later, you are using...", a: ["Savings", "Credit", "A gift"], c: 1, topic: "credit" }],
-            backups: { "credit": { q: "Borrowing money and paying it back later is called...", a: ["Saving", "Credit", "Stealing"], c: 1 } }
-          },
-          {
-            title: "💡 Good Credit Habits",
-            info: [
-              "Paying back what you borrow on time is the best way to build good credit.",
-              "If you miss payments, it can be harder to borrow money later.",
-              "Good credit can help you get better deals on loans and even help you rent an apartment."
-            ],
-            quizPool: [{ q: "What helps build good credit?", a: ["Paying bills on time", "Ignoring bills", "Borrowing more money"], c: 0, topic: "credit_habits" }],
-            backups: { "credit_habits": { q: "Missing payments can...", a: ["Help your credit", "Hurt your credit", "Do nothing"], c: 1 } }
-          },
-          {
-            title: "🔍 Interest: The Cost of Borrowing",
-            info: [
-              "Interest is extra money you pay when you borrow money.",
-              "If the interest is high, you pay back much more than you borrowed.",
-              "It's smart to compare interest rates before you borrow."
-            ],
-            quizPool: [{ q: "If a loan has high interest, you will...", a: ["Pay back more than you borrowed", "Pay back less", "Pay back the same"], c: 0, topic: "interest" }],
-            backups: { "interest": { q: "Interest is...", a: ["Free money", "Extra cost when you borrow", "A type of credit score"], c: 1 } }
-          }
+      },
+      {
+        title: 'Smart Spending',
+        info: [
+          'Needs are things required to survive: food, housing, health. Wants are extras — nice but optional.',
+          'Before any non-urgent purchase over $50, try a 24-hour wait. Impulse decisions often disappear.',
+          'Price comparison takes 2 minutes and can save you hundreds per year.'
         ],
-        middle: [
-          {
-            title: "🏦 Building a Credit Score",
-            info: [
-              "A credit score shows how likely you are to pay back money you borrow.",
-              "Paying on time, keeping balances low, and not applying for too much credit can help your score.",
-              "A higher score can mean better loan rates when you're older."
-            ],
-            quizPool: [{ q: "Which action can help your credit score?", a: ["Paying bills late", "Using half of your available credit", "Applying for many cards"], c: 1, topic: "credit_score" }],
-            backups: { "credit_score": { q: "Using too much of your available credit can...", a: ["Help your score", "Hurt your score", "Make no difference"], c: 1 } }
-          },
-          {
-            title: "💱 Interest Rates Explained",
-            info: [
-              "Interest rates can be fixed (stay the same) or variable (go up and down).",
-              "A lower interest rate usually means you pay less over time.",
-              "Always compare interest rates before choosing a loan."
-            ],
-            quizPool: [{ q: "A loan with a lower interest rate will...", a: ["Cost you less overall", "Cost you more overall", "Be confusing"], c: 0, topic: "interest_rates" }],
-            backups: { "interest_rates": { q: "Searching for a lower rate can help you...", a: ["Save money", "Spend more money", "Get a bigger loan"], c: 0 } }
-          },
-          {
-            title: "🧾 Paying Back Loans",
-            info: [
-              "Loans often have a schedule that shows how much you owe each month.",
-              "Paying more than the minimum can save you money on interest.",
-              "Try to avoid loans with really high interest."
-            ],
-            quizPool: [{ q: "Paying more than the minimum payment usually...", a: ["Saves you money on interest", "Makes you pay more", "Has no effect"], c: 0, topic: "loan_payments" }],
-            backups: { "loan_payments": { q: "What happens if you only pay the minimum?", a: ["You pay more interest over time", "You pay less interest", "You pay the same"], c: 0 } }
-          }
-        ],
-        adult: [
-          {
-            title: "📉 Credit Utilization & Scores",
-            info: [
-              "Credit utilization is the percent of your available credit you are using.",
-              "Keeping utilization under 30% helps your score.",
-              "Even if you pay off your balance, high utilization can temporarily lower your score."
-            ],
-            quizPool: [{ q: "What is a healthy credit utilization rate?", a: ["90%", "50%", "Under 30%"], c: 2, topic: "utilization" }],
-            backups: { "utilization": { q: "High utilization can...", a: ["Raise your score", "Lower your score", "Not matter"], c: 1 } }
-          },
-          {
-            title: "💳 Choosing the Right Card",
-            info: [
-              "Some cards offer rewards like cash back or travel points.",
-              "Others have lower interest rates or no annual fees.",
-              "Pick a card that matches how you spend and how you pay it off."
-            ],
-            quizPool: [{ q: "A good credit card for you should...", a: ["Have high fees", "Match your spending habits", "Come with a surprise balance"], c: 1, topic: "card_choice" }],
-            backups: { "card_choice": { q: "Why check the interest rate on a card?", a: ["It tells you how quickly debt grows", "It is used for rewards", "It is irrelevant"], c: 0 } }
-          },
-          {
-            title: "🧭 Managing Credit Over Time",
-            info: [
-              "Good credit takes time; paying bills on time is the most important part.",
-              "A small mistake can be fixed by making consistent on-time payments.",
-              "Review your credit report once a year to spot mistakes."
-            ],
-            quizPool: [{ q: "The best way to build credit is to...", a: ["Pay on time consistently", "Open many accounts quickly", "Ignore your bills"], c: 0, topic: "long_term" }],
-            backups: { "long_term": { q: "Checking your credit report helps you...", a: ["Find mistakes", "Increase your balance", "Borrow more"], c: 0 } }
-          }
+        quiz: [
+          { q: 'Which of the following is a financial "need"?', choices: ['Groceries and food', 'A new video game console', 'Designer clothing', 'A vacation package'], a: 0 },
+          { q: 'Before making a major purchase, the smartest move is to:', choices: ['Compare prices across multiple stores', 'Buy immediately to avoid missing out', 'Use a credit card to worry later', 'Ask a friend if it looks cool'], a: 0 },
+          { q: 'Smart, intentional spending leads to:', choices: ['More savings and less financial stress', 'Less money available for necessities', 'No noticeable difference in your life', 'Higher debt levels'], a: 0 },
+          { q: 'Impulse buying is defined as:', choices: ['Unplanned purchases driven by emotion', 'Carefully researched spending decisions', 'Buying only necessities', 'Using a strict shopping list'], a: 0 },
+          { q: 'Waiting for a sale before buying something you want:', choices: ['Saves money and builds patience', 'Is never worth the wait', 'Usually means you miss out', 'Has no financial impact'], a: 0 },
+          { q: '"Wants" in personal finance are best described as:', choices: ['Enjoyable but not essential purchases', 'Things required to function daily', 'Always free or discounted items', 'Emergency expenses'], a: 0 }
         ]
       }
-    }
-  ];
+    ]
+  },
+  {
+    id: 1,
+    title: 'Saving & Planning',
+    emoji: '💰',
+    color: '#059669',
+    gradient: 'linear-gradient(135deg,#059669,#10b981)',
+    tag: 'Planner',
+    tagColor: '#d1fae5',
+    tagText: '#065f46',
+    lessons: [
+      {
+        title: 'Emergency Fund',
+        info: [
+          'An emergency fund is your financial seatbelt — you hope you never need it, but you\'ll be glad it\'s there.',
+          'The standard recommendation: save 3–6 months of living expenses. Start with a goal of just $500 and build from there.',
+          'Keep your emergency fund in a separate high-yield savings account so it\'s accessible but not tempting to touch.'
+        ],
+        quiz: [
+          { q: 'An emergency fund is primarily used for:', choices: ['Unexpected necessary expenses', 'Planned vacations', 'Regular entertainment spending', 'Buying the latest gadgets'], a: 0 },
+          { q: 'The best way to start building an emergency fund is:', choices: ['Small, consistent contributions over time', 'Waiting until you have enough to save a large amount', 'Taking out a loan to fund it', 'Using a credit card as a backup instead'], a: 0 },
+          { q: 'A "rainy day fund" is:', choices: ['A savings buffer for life\'s surprises', 'A plan for a rainy weather vacation', 'A joke people make about saving', 'A type of investment account'], a: 0 },
+          { q: 'Having an emergency fund protects you most against:', choices: ['Sudden job loss or unexpected bills', 'Getting bored on weekends', 'Friend drama and social costs', 'Rising inflation generally'], a: 0 },
+          { q: 'The ideal emergency fund size is:', choices: ['3–6 months of living expenses', 'Exactly $100', 'Your entire savings balance', 'Nothing — insurance covers everything'], a: 0 },
+          { q: 'The best place to keep an emergency fund is:', choices: ['A high-yield savings account', 'Under your mattress', 'Invested in stocks for better returns', 'Spent on things that hold value'], a: 0 }
+        ]
+      },
+      {
+        title: 'Budgeting Tools',
+        info: [
+          'Modern budgeting tools — from apps like YNAB or Mint to a simple spreadsheet — make tracking nearly effortless.',
+          'The 50/30/20 rule: 50% on needs, 30% on wants, 20% on savings and debt. Adjust based on your situation.',
+          'The biggest mistake in budgeting is setting it up once and never revisiting. Review monthly and adjust.'
+        ],
+        quiz: [
+          { q: 'The main purpose of a budget is to:', choices: ['Plan and control your spending intentionally', 'Spend as much as possible freely', 'Track how much money you lose', 'Avoid thinking about finances'], a: 0 },
+          { q: 'Tracking your expenses helps you:', choices: ['Identify patterns and cut unnecessary spending', 'Forget where your money goes', 'Justify every purchase', 'Ignore your financial situation'], a: 0 },
+          { q: 'A good long-term savings habit involves:', choices: ['Consistent contributions on a regular schedule', 'Spending everything daily and saving nothing', 'Borrowing money to fund savings', 'Saving only when you feel like it'], a: 0 },
+          { q: 'In the 50/30/20 rule, 20% represents:', choices: ['Savings and debt repayment', 'Entertainment and dining out', 'Housing and utilities', 'Health and fitness costs'], a: 0 },
+          { q: 'Adjusting your budget monthly means:', choices: ['Updating it to reflect life changes and goals', 'Never changing it once set', 'Ignoring it whenever it\'s inconvenient', 'Only looking at it in emergencies'], a: 0 },
+          { q: 'The most useful digital tools for budgeting include:', choices: ['Dedicated apps and spreadsheets', 'Just guessing based on memory', 'No tools at all', 'Asking friends what they spend'], a: 0 }
+        ]
+      },
+      {
+        title: 'Future You',
+        info: [
+          'Compound interest is the eighth wonder of the world — money you save today earns interest, and that interest earns more interest.',
+          'Starting at 22 instead of 32 can mean hundreds of thousands more at retirement, even with the same contributions.',
+          'Investing in yourself through education and skills is one of the highest-return financial moves you can make.'
+        ],
+        quiz: [
+          { q: 'Financial planning for the future primarily means:', choices: ['Making decisions today that benefit your future self', 'Forgetting about money until retirement', 'Spending freely now and worrying later', 'Investing only in physical possessions'], a: 0 },
+          { q: 'Starting to save early in life is:', choices: ['One of the most powerful financial advantages', 'Pointless because inflation erodes savings', 'Only important for rich people', 'Less effective than starting late with more money'], a: 0 },
+          { q: 'You can improve your financial future most by:', choices: ['Consistently learning and saving over time', 'Spending your entire paycheck each month', 'Ignoring financial education entirely', 'Only focusing on earning more income'], a: 0 },
+          { q: 'Compound interest benefits your savings by:', choices: ['Making your money grow exponentially over time', 'Slowly reducing your savings balance', 'Having no meaningful impact on small amounts', 'Only working in retirement accounts'], a: 0 },
+          { q: 'The best time to begin saving for retirement is:', choices: ['As early as possible in your career', 'At exactly age 65', 'Only after paying off all debt', 'Never — Social Security is enough'], a: 0 },
+          { q: 'Investing in yourself financially means:', choices: ['Building skills and education that increase earning power', 'Buying premium video games and entertainment', 'Taking on high-interest debt for luxuries', 'Spending on appearance to impress others'], a: 0 }
+        ]
+      }
+    ]
+  },
+  {
+    id: 2,
+    title: 'Credit & Smart Borrowing',
+    emoji: '💳',
+    color: '#ef4444',
+    gradient: 'linear-gradient(135deg,#ef4444,#f97316)',
+    tag: 'Credit Pro',
+    tagColor: '#fee2e2',
+    tagText: '#991b1b',
+    lessons: [
+      {
+        title: 'What Is Credit?',
+        info: [
+          'Credit is borrowing money now and promising to repay it later — usually with interest. It\'s a tool, not free money.',
+          'Used wisely, credit helps you build a credit history that unlocks better loan rates, apartment approvals, and even some jobs.',
+          'Used poorly, credit creates a debt spiral that can take years to escape.'
+        ],
+        quiz: [
+          { q: 'Credit is best defined as:', choices: ['Borrowing money now with a promise to repay later', 'Receiving free money from a bank', 'A government gift program', 'Extra income from your employer'], a: 0 },
+          { q: 'Making a late payment on a credit card typically causes:', choices: ['Higher fees and potential credit score damage', 'Lower interest rates as a penalty', 'Nothing — banks don\'t track this', 'An automatic credit limit increase'], a: 0 },
+          { q: 'Good credit history helps you:', choices: ['Qualify for better loan terms and lower interest rates', 'Lose money on transactions', 'Sleep significantly better at night', 'Avoid ever needing to work'], a: 0 },
+          { q: 'Your credit report shows:', choices: ['Your history of borrowing and repayment', 'Your list of personal friends', 'Current weather and financial forecasts', 'Your social media activity'], a: 0 },
+          { q: 'Building strong credit requires:', choices: ['Time and consistent responsible financial behavior', 'No effort at all — it builds automatically', 'Spending as much as possible on credit', 'Closing all your accounts and starting fresh'], a: 0 },
+          { q: 'Credit cards are best described as:', choices: ['Convenient financial tools that carry real risk if misused', 'Completely free money with no consequences', 'Useless compared to cash for all transactions', 'Only for wealthy people with high incomes'], a: 0 }
+        ]
+      },
+      {
+        title: 'Interest Basics',
+        info: [
+          'Interest is the cost of borrowing money. On debt, it grows what you owe. On savings, it grows what you have.',
+          'APR (Annual Percentage Rate) is the yearly cost of carrying debt. Credit card APRs average 20–28%.',
+          'Paying your full balance monthly means you pay $0 in interest — that\'s the goal with credit cards.'
+        ],
+        quiz: [
+          { q: 'Interest on a debt balance means:', choices: ['The amount you owe grows over time', 'Your debt automatically decreases monthly', 'There is no real financial effect', 'The bank pays you for borrowing'], a: 0 },
+          { q: 'When comparing loan options, a lower interest rate is:', choices: ['Always better — it means you pay less over time', 'Worse because it extends your loan term', 'Exactly the same as a higher rate', 'Only important for very large loans'], a: 0 },
+          { q: 'Paying your bills on time is:', choices: ['Critical for your credit score and avoiding fees', 'Completely optional with no real consequences', 'Only necessary for large bills like rent', 'Less important than paying the minimum'], a: 0 },
+          { q: 'APR stands for:', choices: ['Annual Percentage Rate', 'Always Pay on Receipt', 'Automated Payment Reminder', 'Account Premium Reward'], a: 0 },
+          { q: 'High-interest debt is financially:', choices: ['Very expensive and should be paid off as fast as possible', 'Actually cheap if you only pay the minimum', 'Completely free if you have good credit', 'Beneficial for your credit score to carry'], a: 0 },
+          { q: 'Interest on a savings account:', choices: ['Grows your money passively over time', 'Slowly reduces your savings balance', 'Has no meaningful effect on your balance', 'Only applies to investment accounts'], a: 0 }
+        ]
+      },
+      {
+        title: 'Credit Score',
+        info: [
+          'Your credit score (300–850) is calculated from payment history (35%), amounts owed (30%), length of history (15%), new credit (10%), and credit mix (10%).',
+          'A score above 740 is considered excellent and unlocks the best rates on mortgages, auto loans, and credit cards.',
+          'Check your credit report annually at annualcreditreport.com — it\'s free and won\'t hurt your score.'
+        ],
+        quiz: [
+          { q: 'A higher credit score typically results in:', choices: ['Lower interest rates and better loan approvals', 'Higher interest rates on all loans', 'Being denied for all credit applications', 'No difference from a low score'], a: 0 },
+          { q: 'Keeping your credit card balance low relative to your limit is:', choices: ['Beneficial — it improves your credit utilization ratio', 'Harmful — you should max it out monthly', 'Completely neutral — balances don\'t matter', 'Only relevant if you have multiple cards'], a: 0 },
+          { q: 'A strong credit score is primarily built by:', choices: ['Making consistent on-time payments over time', 'Ignoring bills and paying whenever convenient', 'Borrowing as much money as possible', 'Closing old accounts to start fresh'], a: 0 },
+          { q: 'Your credit score can directly affect:', choices: ['Loan approvals, interest rates, and sometimes employment', 'Only your ability to get a mortgage', 'Just your credit card interest rate', 'Nothing outside of borrowing money'], a: 0 },
+          { q: 'Regularly checking your credit report helps you:', choices: ['Monitor for errors and track your progress', 'Waste time on an unimportant task', 'Lower your score by checking too often', 'Nothing — it\'s purely optional information'], a: 0 },
+          { q: 'Improving a low credit score requires:', choices: ['Consistent good habits practiced over months and years', 'A single large payment to fix everything', 'Closing all your existing accounts', 'Zero effort — scores improve automatically'], a: 0 }
+        ]
+      }
+    ]
+  }
+];
 
+const ensureSixQuestions = (questions) => {
+  const q = [...questions];
+  while (q.length < 6) q.push(questions[q.length % questions.length]);
+  return q;
+};
 
+const randomizeQuestion = (question) => {
+  const correctText = question.choices[question.a];
+  const choices = [...question.choices].sort(() => Math.random() - 0.5);
+  const a = choices.indexOf(correctText);
+  return { ...question, choices, a };
+};
 
-  const courseContent = selectedCourse !== null ? courses.find((c) => c.id === selectedCourse) : null;
-  const currentCourse = courseContent ? courseContent.content[userTier] || courseContent.content.adult : [];
-  const lesson = currentCourse[currentLessonIndex] || {};
-  const courseProgress = selectedCourse !== null ? getProgress(selectedCourse) : 0;
+export default function CoursesScreen({ courseProgressMap = {}, setCourseProgressMap, onCourseComplete, username = '', userTier = 'adult' }) {
+  const [page, setPage] = useState('list');
+  const [currentCourseId, setCurrentCourseId] = useState(null);
+  const [currentLesson, setCurrentLesson] = useState(0);
+  const [quiz, setQuiz] = useState(null);
+  const [result, setResult] = useState(null);
+  const [answerFeedback, setAnswerFeedback] = useState(null);
+  const [completedCourseTitle, setCompletedCourseTitle] = useState('');
 
-  const resetToList = () => {
-    setMode('list');
-    setSelectedCourse(null);
-    setCurrentLessonIndex(0);
-    setQuestionIndex(0);
-    setView('article');
-    setIsRetry(false);
-    setShowFeedback(false);
-    setShowCertificate(false);
+  const course = useMemo(() => coursesData.find((c) => c.id === currentCourseId), [currentCourseId]);
+  const lesson = course?.lessons?.[currentLesson];
+
+  const courseLessonDone = (courseId, lessonIdx) =>
+    Boolean(courseProgressMap?.[`course_${courseId}_lesson_${lessonIdx}`]);
+
+  const lessonsCompleted = (courseId) => {
+    const c = coursesData.find((x) => x.id === courseId);
+    if (!c) return 0;
+    return c.lessons.reduce((sum, _, idx) => sum + (courseLessonDone(courseId, idx) ? 1 : 0), 0);
   };
 
-  const startCourse = (courseId) => {
-    const rawProgress = getProgress(courseId);
-    const lessonCount = courses.find((c) => c.id === courseId)?.content[userTier]?.length || 1;
-    const resumeLesson = Math.min(Math.floor(rawProgress * lessonCount), lessonCount - 1);
-
-    setSelectedCourse(courseId);
-    setCurrentLessonIndex(resumeLesson);
-    setQuestionIndex(0);
-    setView('article');
-    setMode('learning');
-    setIsRetry(false);
-    setShowFeedback(false);
+  const courseProgress = (courseId) => {
+    const c = coursesData.find((x) => x.id === courseId);
+    if (!c) return 0;
+    return lessonsCompleted(courseId) / c.lessons.length;
   };
 
-  const getQuestion = () => {
-    const base = lesson.quizPool?.[questionIndex] || {};
-    const backup = lesson.backups?.[base.topic];
-    return isRetry && backup ? backup : base;
+  const totalCoursesFinished = coursesData.filter((c) => lessonsCompleted(c.id) === c.lessons.length).length;
+
+  const startCourse = (id) => {
+    setCurrentCourseId(id);
+    setCurrentLesson(0);
+    setQuiz(null);
+    setResult(null);
+    setPage('lesson');
   };
 
-  const handleQuizAnswer = (idx) => {
-    const q = getQuestion();
-    setIsCorrect(idx === q.c);
-    setShowFeedback(true);
+  const beginQuiz = () => {
+    const set = ensureSixQuestions(lesson.quiz).map(randomizeQuestion);
+    setQuiz({ questions: set, index: 0, correct: 0, wrong: [] });
+    setResult(null);
+    setPage('quiz');
   };
 
-  const onLessonComplete = () => {
-    const nextLessonIndex = currentLessonIndex + 1;
-    const progress = Math.min(nextLessonIndex / currentCourse.length, 1);
-    setCourseProgressMap?.(normalizeCourseKey(selectedCourse), progress);
+  const pickAnswer = (choice) => {
+    if (!quiz || answerFeedback) return;
+    const question = quiz.questions[quiz.index];
+    const isCorrect = choice === question.a;
+    setAnswerFeedback({
+      correct: isCorrect,
+      selected: question.choices[choice],
+      correctAnswer: question.choices[question.a]
+    });
+  };
 
-    if (nextLessonIndex < currentCourse.length) {
-      setCurrentLessonIndex(nextLessonIndex);
-      setQuestionIndex(0);
-      setView('article');
-      setIsRetry(false);
+  const nextQuestion = () => {
+    if (!answerFeedback) return;
+    const question = quiz.questions[quiz.index];
+    const isCorrect = answerFeedback.correct;
+    const nextIndex = quiz.index + 1;
+    const updatedWrong = isCorrect
+      ? quiz.wrong
+      : [...quiz.wrong, { q: question.q, selected: answerFeedback.selected, correctAnswer: answerFeedback.correctAnswer }];
+    const updatedCorrect = quiz.correct + (isCorrect ? 1 : 0);
+
+    if (nextIndex >= quiz.questions.length) {
+      const score = Math.round((updatedCorrect / quiz.questions.length) * 100);
+      const passed = score >= 70;
+      setResult({ score, passed, correct: updatedCorrect, total: quiz.questions.length, wrong: updatedWrong });
+      setQuiz(null);
+      setAnswerFeedback(null);
+      if (passed) {
+        setCourseProgressMap?.(`course_${course.id}_lesson_${currentLesson}`, 1);
+      }
+      setPage('result');
       return;
     }
-
-    setShowCertificate(true);
-    setMode('completed');
-    onCourseComplete?.(selectedCourse);
+    setQuiz({ ...quiz, index: nextIndex, correct: updatedCorrect, wrong: updatedWrong });
+    setAnswerFeedback(null);
   };
 
-  const nextAction = () => {
-    setShowFeedback(false);
-
-    // If first attempt is wrong, show backup question.
-    // After the backup attempt, we move on regardless.
-    if (!isCorrect && !isRetry) {
-      setIsRetry(true);
+  const continueAfterResult = () => {
+    if (!result) return;
+    if (!result.passed) { beginQuiz(); return; }
+    const next = currentLesson + 1;
+    if (next < (course?.lessons?.length || 0)) {
+      setCurrentLesson(next);
+      setResult(null);
+      setPage('lesson');
       return;
     }
-
-    // Proceed to the next quiz question (or finish the lesson)
-    if (questionIndex < (lesson.quizPool?.length || 0) - 1) {
-      setQuestionIndex((prev) => prev + 1);
-      setIsRetry(false);
-      return;
-    }
-
-    onLessonComplete();
+    onCourseComplete?.(course.id);
+    setCompletedCourseTitle(course.title);
+    setPage('certificate');
   };
 
-  const CertificateModal = () => (
-    <div style={styles.modalOverlay} className="no-print">
-      <div style={{ ...styles.certBody, borderColor: userTier === 'elementary' ? '#8b5cf6' : '#065f46' }}>
-        <div style={styles.certDecoration}>{userTier === 'elementary' ? '🚀' : '📈'}</div>
-        <h1 style={{ ...styles.certTitle, color: userTier === 'elementary' ? '#7c3aed' : '#065f46' }}>
-          {courseContent?.title?.toUpperCase() || 'CERTIFICATE'}
-        </h1>
-        <p style={styles.certText}>This certifies that</p>
-        <h2 style={styles.certName}>{username || 'Master Builder'}</h2>
-        <p style={styles.certText}>has successfully completed</p>
-        <h3 style={styles.certCourse}>{courseContent?.title}</h3>
-        <div style={styles.certSeal}>MASTERED</div>
-        <button style={{ ...styles.primaryBtn, marginTop: '20px' }} onClick={resetToList}>
-          Back to Courses
-        </button>
-      </div>
-    </div>
-  );
-
-  const progressLabel = (p) => {
-    if (p >= 1) return 'Completed';
-    if (p >= 0.75) return 'Almost there';
-    if (p >= 0.5) return 'Halfway';
-    if (p > 0) return 'In progress';
-    return 'Not started';
-  };
-
-  if (mode === 'list') {
+  // ─── COURSE LIST ──────────────────────────────────────────────────────────
+  if (page === 'list') {
     return (
-      <div style={styles.dashboard}>
-        {courses.map((course) => {
-          const progress = getProgress(course.id);
-          return (
-            <div key={course.id} style={styles.coursePreviewCard}>
-              <div style={{ ...styles.cardBanner, background: course.color }}>{course.emoji}</div>
-              <div style={styles.cardContent}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                  <div>
-                    <h3 style={styles.cardTitle}>{course.title}</h3>
-                    <p style={styles.cardDesc}>{course.description}</p>
-                  </div>
-                  <span style={{ ...styles.progressTag, background: course.color }}>{progressLabel(progress)}</span>
-                </div>
-                <ProgressBar progress={progress} />
-                <button style={{ ...styles.primaryBtn, marginTop: '15px' }} onClick={() => startCourse(course.id)}>
-                  {progress > 0 ? 'Continue' : 'Start'}
-                </button>
-              </div>
+      <div style={cStyles.container}>
+        <div style={cStyles.header}>
+          <div>
+            <div style={cStyles.headerBadge}>📚 Learning Track</div>
+            <h2 style={cStyles.headerTitle}>
+              Courses{username ? ` for ${username}` : ''}
+            </h2>
+            <p style={cStyles.headerSub}>
+              Learn practical money skills, pass quizzes, and earn certificates.
+            </p>
+          </div>
+          <div style={cStyles.completedPill}>
+            <span style={{ fontSize: '20px' }}>🎓</span>
+            <div>
+              <div style={{ fontWeight: '800', fontSize: '20px' }}>{totalCoursesFinished}/3</div>
+              <div style={{ fontSize: '11px', opacity: 0.8 }}>Completed</div>
             </div>
-          );
-        })}
+          </div>
+        </div>
+
+        <div style={cStyles.grid}>
+          {coursesData.map((c) => {
+            const prog = courseProgress(c.id);
+            const done = lessonsCompleted(c.id);
+            const isFinished = prog >= 1;
+            return (
+              <div key={c.id} style={cStyles.courseCard}>
+                <div style={{ ...cStyles.courseCardTop, background: c.gradient }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                    <span style={{ fontSize: '40px' }}>{c.emoji}</span>
+                    <span style={{ ...cStyles.courseTierTag, background: 'rgba(255,255,255,0.25)', color: '#fff' }}>
+                      {c.tag}
+                    </span>
+                  </div>
+                  <h3 style={cStyles.courseCardTitle}>{c.title}</h3>
+                  <p style={cStyles.courseCardSub}>
+                    {c.lessons.length} lessons · quiz after each
+                  </p>
+                </div>
+
+                <div style={cStyles.courseCardBottom}>
+                  <div style={{ marginBottom: '12px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px', fontSize: '13px', color: '#64748b', fontWeight: '600' }}>
+                      <span>{done}/{c.lessons.length} lessons</span>
+                      <span>{Math.round(prog * 100)}%</span>
+                    </div>
+                    <ProgressBar progress={prog} />
+                  </div>
+                  <button
+                    onClick={() => startCourse(c.id)}
+                    style={{
+                      ...cStyles.startBtn,
+                      background: isFinished ? '#f1f5f9' : c.gradient,
+                      color: isFinished ? '#475569' : '#fff',
+                      border: isFinished ? '2px solid #e2e8f0' : 'none'
+                    }}
+                  >
+                    {isFinished ? '✓ Review Course' : prog > 0 ? '▶ Continue' : '▶ Start Course'}
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
       </div>
     );
   }
 
-  if (mode === 'learning' && courseContent) {
-    const question = getQuestion();
+  // ─── LESSON VIEW ─────────────────────────────────────────────────────────
+  if (page === 'lesson' && course && lesson) {
+    const lessonsDone = lessonsCompleted(course.id);
+    const lessonProg = currentLesson / course.lessons.length;
+
     return (
-      <div style={styles.learningLayout}>
-        {showCertificate && <CertificateModal />}
-        <div style={styles.learningHeader}>
-          <button style={styles.iconBtn} onClick={resetToList}>
-            ← Back
-          </button>
-          <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <span style={{ fontSize: '18px', fontWeight: 700 }}>{courseContent.emoji}</span>
-              <span style={{ fontSize: '18px', fontWeight: 700 }}>{courseContent.title}</span>
+      <div style={cStyles.innerContainer}>
+        <button onClick={() => setPage('list')} style={cStyles.backBtn}>
+          ← Back to courses
+        </button>
+
+        {/* Course header bar */}
+        <div style={{ ...cStyles.courseHeaderBar, background: course.gradient }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '14px' }}>
+            <span style={{ fontSize: '28px' }}>{course.emoji}</span>
+            <div>
+              <h2 style={{ margin: 0, color: '#fff', fontSize: '20px', fontWeight: '800' }}>{course.title}</h2>
+              <p style={{ margin: 0, color: 'rgba(255,255,255,0.8)', fontSize: '13px' }}>
+                Lesson {currentLesson + 1} of {course.lessons.length}
+              </p>
             </div>
-            <small style={{ color: '#64748b' }}>
-              Lesson {currentLessonIndex + 1} of {currentCourse.length}
-            </small>
           </div>
-          <div style={styles.tierTag}>{userTier?.toUpperCase()}</div>
+          <div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', color: 'rgba(255,255,255,0.8)', fontSize: '12px', marginBottom: '6px', fontWeight: '600' }}>
+              <span>Course Progress</span>
+              <span>{lessonsDone}/{course.lessons.length} lessons complete</span>
+            </div>
+            <div style={{ height: '6px', background: 'rgba(255,255,255,0.3)', borderRadius: '999px', overflow: 'hidden' }}>
+              <div style={{ height: '100%', width: `${(lessonsDone / course.lessons.length) * 100}%`, background: '#fff', borderRadius: '999px', transition: 'width 0.4s ease' }} />
+            </div>
+          </div>
         </div>
 
-        <div style={styles.contentCard}>
-          <div style={{ marginBottom: '20px' }}>
-            <ProgressBar progress={courseProgress} />
+        {/* Lesson steps */}
+        <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
+          {course.lessons.map((l, idx) => (
+            <div
+              key={idx}
+              style={{
+                flex: 1, height: '4px', borderRadius: '999px',
+                background: idx < currentLesson ? course.color : idx === currentLesson ? course.color + 'aa' : '#e2e8f0'
+              }}
+            />
+          ))}
+        </div>
+
+        {/* Lesson content card */}
+        <div style={cStyles.lessonCard}>
+          <div style={{ ...cStyles.lessonNumBadge, background: course.gradient }}>
+            Lesson {currentLesson + 1}
+          </div>
+          <h3 style={cStyles.lessonTitle}>{lesson.title}</h3>
+          <div style={cStyles.lessonInfoList}>
+            {lesson.info.map((line, idx) => (
+              <div key={idx} style={cStyles.lessonInfoItem}>
+                <div style={{ ...cStyles.lessonInfoDot, background: course.color }} />
+                <p style={cStyles.lessonInfoText}>{line}</p>
+              </div>
+            ))}
+          </div>
+          <button onClick={beginQuiz} style={{ ...cStyles.quizBtn, background: course.gradient }}>
+            📝 Take the Quiz
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // ─── QUIZ VIEW ────────────────────────────────────────────────────────────
+  if (page === 'quiz' && quiz) {
+    const q = quiz.questions[quiz.index];
+    const progressPct = ((quiz.index) / quiz.questions.length) * 100;
+
+    return (
+      <div style={cStyles.innerContainer}>
+        <button onClick={() => setPage('lesson')} style={cStyles.backBtn}>← Back to lesson</button>
+
+        {/* Quiz progress */}
+        <div style={cStyles.quizHeaderCard}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+            <span style={{ fontWeight: '700', color: '#1e293b', fontSize: '15px' }}>
+              Question {quiz.index + 1} / {quiz.questions.length}
+            </span>
+            <span style={{ ...cStyles.scoreChip, background: course?.gradient }}>
+              ✅ {quiz.correct} correct
+            </span>
+          </div>
+          <div style={{ height: '6px', background: '#e2e8f0', borderRadius: '999px', overflow: 'hidden' }}>
+            <div style={{
+              height: '100%',
+              width: `${progressPct}%`,
+              background: course?.gradient || '#2563eb',
+              borderRadius: '999px',
+              transition: 'width 0.3s ease'
+            }} />
+          </div>
+        </div>
+
+        <div style={cStyles.quizCard}>
+          <div style={{ ...cStyles.questionNumBadge, background: course?.color + '20', color: course?.color }}>
+            Q{quiz.index + 1}
+          </div>
+          <p style={cStyles.questionText}>{q.q}</p>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            {q.choices.map((choice, i) => {
+              let btnStyle = { ...cStyles.choiceBtn };
+              if (answerFeedback) {
+                if (i === question?.a) {
+                  btnStyle = { ...btnStyle, background: '#d1fae5', borderColor: '#22c55e', color: '#065f46' };
+                } else if (i === q.choices.indexOf(answerFeedback.selected) && !answerFeedback.correct) {
+                  btnStyle = { ...btnStyle, background: '#fee2e2', borderColor: '#ef4444', color: '#991b1b' };
+                }
+              }
+              return (
+                <button
+                  key={i}
+                  onClick={() => pickAnswer(i)}
+                  disabled={!!answerFeedback}
+                  style={{
+                    ...cStyles.choiceBtn,
+                    ...(answerFeedback && i === q.a ? { background: '#d1fae5', borderColor: '#22c55e', color: '#065f46', fontWeight: '700' } : {}),
+                    ...(answerFeedback && !answerFeedback.correct && answerFeedback.selected === choice ? { background: '#fee2e2', borderColor: '#ef4444', color: '#991b1b' } : {}),
+                    cursor: answerFeedback ? 'default' : 'pointer'
+                  }}
+                >
+                  <span style={cStyles.choiceLetter}>{['A', 'B', 'C', 'D'][i]}</span>
+                  {choice}
+                </button>
+              );
+            })}
           </div>
 
-          {view === 'article' ? (
-            <>
-              <h1 style={styles.lessonTitle}>{lesson.title}</h1>
-              {lesson.info?.map((p, idx) => (
-                <p key={idx} style={styles.articleText}>
-                  {p}
+          {answerFeedback && (
+            <div style={{
+              ...cStyles.feedbackBox,
+              background: answerFeedback.correct ? '#d1fae5' : '#fee2e2',
+              borderColor: answerFeedback.correct ? '#6ee7b7' : '#fca5a5'
+            }}>
+              <p style={{ fontWeight: '800', margin: '0 0 4px', fontSize: '16px', color: answerFeedback.correct ? '#065f46' : '#991b1b' }}>
+                {answerFeedback.correct ? '✅ Correct!' : '❌ Not quite.'}
+              </p>
+              {!answerFeedback.correct && (
+                <p style={{ margin: '0 0 10px', color: '#475569', fontSize: '14px' }}>
+                  Correct answer: <strong>{answerFeedback.correctAnswer}</strong>
                 </p>
-              ))}
-              <div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
-                <button style={styles.primaryBtn} onClick={() => setView('quiz')}>
-                  Take the Quiz
-                </button>
-                <button style={styles.secondaryBtn} onClick={resetToList}>
-                  Exit
-                </button>
-              </div>
-            </>
-          ) : (
-            <div style={styles.quizSection}>
-              {!showFeedback ? (
-                <>
-                  <p style={styles.quizQuestion}>{question.q}</p>
-                  <div style={styles.optionsGrid}>
-                    {question.a?.map((opt, i) => (
-                      <button key={i} style={styles.optionBtn} onClick={() => handleQuizAnswer(i)}>
-                        {opt}
-                      </button>
-                    ))}
-                  </div>
-                </>
-              ) : (
-                <div style={styles.feedbackArea}>
-                  <h2>{isCorrect ? '✅ Correct!' : '❌ Not quite'}</h2>
-                  <button style={styles.primaryBtn} onClick={nextAction}>
-                    {isCorrect ? 'Continue' : 'Try again'}
-                  </button>
-                </div>
               )}
+              <button
+                onClick={nextQuestion}
+                style={{ ...cStyles.nextBtn, background: course?.gradient || '#2563eb' }}
+              >
+                {quiz.index + 1 >= quiz.questions.length ? 'See Results →' : 'Next Question →'}
+              </button>
             </div>
           )}
         </div>
@@ -622,10 +524,103 @@ export default function CoursesScreen({ courseProgressMap = {}, setCourseProgres
     );
   }
 
-  if (mode === 'completed' && courseContent) {
+  // ─── RESULT VIEW ─────────────────────────────────────────────────────────
+  if (page === 'result' && result) {
     return (
-      <div style={styles.learningLayout}>
-        <CertificateModal />
+      <div style={cStyles.innerContainer}>
+        <div style={{
+          ...cStyles.resultCard,
+          background: result.passed
+            ? 'linear-gradient(135deg,#065f46,#059669)'
+            : 'linear-gradient(135deg,#7f1d1d,#dc2626)'
+        }}>
+          <div style={{ fontSize: '60px', marginBottom: '8px' }}>
+            {result.passed ? '🎉' : '😤'}
+          </div>
+          <h2 style={{ color: '#fff', margin: '0 0 6px', fontSize: '28px', fontWeight: '900' }}>
+            {result.passed ? 'Quiz Passed!' : 'Not Quite!'}
+          </h2>
+          <div style={cStyles.scoreDisplay}>
+            <div style={cStyles.scoreCircle}>
+              <span style={{ fontSize: '28px', fontWeight: '900', color: result.passed ? '#059669' : '#dc2626' }}>
+                {result.score}%
+              </span>
+            </div>
+          </div>
+          <p style={{ color: 'rgba(255,255,255,0.9)', margin: '0 0 4px' }}>
+            {result.correct} / {result.total} correct
+          </p>
+          {!result.passed && (
+            <p style={{ color: '#fca5a5', fontWeight: '700', margin: '4px 0 0' }}>
+              You need 70% to pass — you can do it!
+            </p>
+          )}
+        </div>
+
+        {result.wrong.length > 0 && (
+          <div style={cStyles.wrongAnswersCard}>
+            <h3 style={{ margin: '0 0 14px', fontSize: '16px', color: '#1e293b' }}>📋 Review Your Mistakes</h3>
+            {result.wrong.map((w, i) => (
+              <div key={i} style={cStyles.wrongItem}>
+                <p style={{ margin: '0 0 4px', fontWeight: '600', color: '#1e293b', fontSize: '14px' }}>{w.q}</p>
+                <p style={{ margin: '0 0 2px', color: '#dc2626', fontSize: '13px' }}>❌ Your answer: {w.selected}</p>
+                <p style={{ margin: 0, color: '#059669', fontSize: '13px' }}>✅ Correct: {w.correctAnswer}</p>
+              </div>
+            ))}
+          </div>
+        )}
+
+        <button
+          onClick={continueAfterResult}
+          style={{
+            ...cStyles.continueBtn,
+            background: result.passed
+              ? course?.gradient || '#059669'
+              : 'linear-gradient(135deg,#f59e0b,#d97706)'
+          }}
+        >
+          {result.passed
+            ? currentLesson + 1 < (course?.lessons?.length || 0)
+              ? '▶ Next Lesson'
+              : '🎓 Finish Course'
+            : '🔄 Retry Quiz'}
+        </button>
+      </div>
+    );
+  }
+
+  // ─── CERTIFICATE ─────────────────────────────────────────────────────────
+  if (page === 'certificate') {
+    return (
+      <div style={cStyles.innerContainer}>
+        <div style={cStyles.certCard}>
+          <div style={{ ...cStyles.certTop, background: course?.gradient }}>
+            <div style={{ fontSize: '56px', marginBottom: '8px' }}>🎓</div>
+            <div style={{ fontSize: '12px', fontWeight: '700', letterSpacing: '2px', opacity: 0.8, textTransform: 'uppercase' }}>Certificate of Completion</div>
+          </div>
+          <div style={cStyles.certBody}>
+            <p style={{ color: '#64748b', margin: '0 0 6px', fontSize: '15px' }}>This certifies that</p>
+            <h2 style={{ margin: '0 0 6px', fontSize: '28px', color: '#1e293b', fontWeight: '900' }}>{username || 'Learner'}</h2>
+            <p style={{ color: '#64748b', margin: '0 0 16px' }}>has successfully completed</p>
+            <div style={{ background: '#f8fafc', borderRadius: '12px', padding: '14px 20px', marginBottom: '20px', border: '1px solid #e2e8f0' }}>
+              <p style={{ margin: 0, fontWeight: '700', fontSize: '18px', color: '#1e293b' }}>{completedCourseTitle}</p>
+            </div>
+            <p style={{ color: '#94a3b8', fontSize: '13px', margin: '0 0 24px' }}>
+              Demonstrating financial literacy and commitment to building money skills.
+            </p>
+            <div style={{ display: 'flex', gap: '10px', justifyContent: 'center', flexWrap: 'wrap' }}>
+              <button onClick={() => setPage('list')} style={cStyles.certBtn}>
+                ← Back to Courses
+              </button>
+              <button
+                onClick={() => setPage('list')}
+                style={{ ...cStyles.certBtn, background: course?.gradient, color: '#fff', border: 'none' }}
+              >
+                🏠 Done
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
     );
   }
@@ -633,34 +628,201 @@ export default function CoursesScreen({ courseProgressMap = {}, setCourseProgres
   return null;
 }
 
-const styles = {
-  dashboard: { display: 'flex', flexWrap: 'wrap', gap: '20px', padding: '40px', justifyContent: 'center' },
-  coursePreviewCard: { background: '#fff', borderRadius: '24px', width: '300px', cursor: 'pointer', overflow: 'hidden', boxShadow: '0 10px 30px rgba(0,0,0,0.05)' },
-  cardBanner: { height: '120px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '48px' },
-  cardContent: { padding: '24px' },
-  cardTitle: { fontSize: '20px', margin: '0 0 10px 0', fontWeight: 'bold' },
-  cardDesc: { fontSize: '14px', color: '#64748b', lineHeight: '1.5' },
-  progressTag: { padding: '4px 10px', borderRadius: '999px', fontSize: '11px', fontWeight: '700', color: '#fff' },
-  learningLayout: { maxWidth: '800px', margin: '0 auto', padding: '20px' },
-  learningHeader: { display: 'flex', justifyContent: 'space-between', marginBottom: '20px', alignItems: 'center' },
-  iconBtn: { background: 'none', border: 'none', fontSize: '20px', cursor: 'pointer', color: '#64748b' },
-  tierTag: { background: '#f1f5f9', padding: '4px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: '800' },
-  contentCard: { background: '#fff', padding: '40px', borderRadius: '32px', boxShadow: '0 20px 50px rgba(0,0,0,0.04)' },
-  lessonTitle: { fontSize: '32px', marginBottom: '20px', fontWeight: '800' },
-  articleText: { fontSize: '18px', lineHeight: '1.8', color: '#475569', marginBottom: '20px' },
-  quizSection: { marginTop: '20px' },
-  quizQuestion: { fontSize: '22px', fontWeight: 'bold', marginBottom: '30px' },
-  optionsGrid: { display: 'flex', flexDirection: 'column', gap: '12px' },
-  optionBtn: { padding: '16px', borderRadius: '16px', border: '1px solid #e2e8f0', background: '#fff', textAlign: 'left', cursor: 'pointer', fontSize: '16px' },
-  primaryBtn: { padding: '16px', background: '#2563eb', color: '#fff', border: 'none', borderRadius: '16px', fontWeight: 'bold', cursor: 'pointer', width: '100%' },
-  secondaryBtn: { padding: '16px', background: '#f1f5f9', color: '#334155', border: '1px solid #e2e8f0', borderRadius: '16px', cursor: 'pointer' },
-  feedbackArea: { textAlign: 'center' },
-  modalOverlay: { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 100 },
-  certBody: { background: '#fff', padding: '40px', borderRadius: '20px', textAlign: 'center', width: '320px' },
-  certDecoration: { fontSize: '50px' },
-  certTitle: { margin: '10px 0', fontSize: '24px' },
-  certText: { fontSize: '14px', color: '#475569', margin: '6px 0' },
-  certName: { fontSize: '28px', margin: '4px 0' },
-  certCourse: { fontSize: '18px', margin: '6px 0' },
-  certSeal: { marginTop: '20px', padding: '10px 20px', borderRadius: '40px', background: '#2563eb', color: '#fff', fontWeight: 'bold' }
+const cStyles = {
+  container: {
+    padding: '24px 16px 48px',
+    maxWidth: '1100px',
+    margin: '0 auto',
+    fontFamily: "'Inter', system-ui, sans-serif"
+  },
+  header: {
+    display: 'flex', justifyContent: 'space-between',
+    alignItems: 'flex-start', flexWrap: 'wrap',
+    gap: '16px', marginBottom: '28px'
+  },
+  headerBadge: {
+    display: 'inline-flex', alignItems: 'center',
+    background: '#e0e7ff', color: '#3730a3',
+    borderRadius: '999px', padding: '5px 12px',
+    fontSize: '12px', fontWeight: '700', marginBottom: '8px'
+  },
+  headerTitle: { margin: '0 0 6px', fontSize: '32px', fontWeight: '900', color: '#111827' },
+  headerSub: { margin: 0, color: '#64748b', fontSize: '15px' },
+  completedPill: {
+    display: 'flex', alignItems: 'center', gap: '12px',
+    background: 'linear-gradient(135deg,#6366f1,#2563eb)',
+    color: '#fff', borderRadius: '16px', padding: '14px 20px',
+    boxShadow: '0 8px 24px rgba(99,102,241,0.3)'
+  },
+  grid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(290px, 1fr))',
+    gap: '20px'
+  },
+  courseCard: {
+    borderRadius: '20px', overflow: 'hidden',
+    boxShadow: '0 12px 32px rgba(15,23,42,0.1)',
+    border: '1px solid rgba(0,0,0,0.06)',
+    display: 'flex', flexDirection: 'column'
+  },
+  courseCardTop: {
+    padding: '24px', color: '#fff'
+  },
+  courseCardTitle: {
+    margin: '14px 0 6px', fontSize: '20px',
+    fontWeight: '800', color: '#fff', lineHeight: 1.2
+  },
+  courseCardSub: {
+    margin: 0, fontSize: '13px', color: 'rgba(255,255,255,0.8)'
+  },
+  courseTierTag: {
+    borderRadius: '999px', padding: '4px 12px',
+    fontSize: '11px', fontWeight: '800',
+    letterSpacing: '0.5px', textTransform: 'uppercase'
+  },
+  courseCardBottom: {
+    background: '#fff', padding: '18px', flex: 1
+  },
+  startBtn: {
+    width: '100%', padding: '12px', border: 'none',
+    borderRadius: '12px', fontWeight: '800',
+    fontSize: '14px', cursor: 'pointer',
+    transition: 'opacity 0.2s', fontFamily: 'inherit'
+  },
+  innerContainer: {
+    maxWidth: '780px', margin: '0 auto',
+    padding: '0 16px 40px',
+    fontFamily: "'Inter', system-ui, sans-serif"
+  },
+  backBtn: {
+    border: 'none', background: 'none',
+    color: '#2563eb', cursor: 'pointer',
+    marginBottom: '16px', fontSize: '14px',
+    fontWeight: '600', padding: 0
+  },
+  courseHeaderBar: {
+    padding: '20px 24px', borderRadius: '18px',
+    marginBottom: '16px', color: '#fff'
+  },
+  lessonCard: {
+    background: '#fff', borderRadius: '18px',
+    padding: '28px', boxShadow: '0 8px 24px rgba(0,0,0,0.07)',
+    border: '1px solid #f1f5f9'
+  },
+  lessonNumBadge: {
+    display: 'inline-block', color: '#fff',
+    borderRadius: '999px', padding: '4px 14px',
+    fontSize: '12px', fontWeight: '700',
+    marginBottom: '12px', letterSpacing: '0.5px'
+  },
+  lessonTitle: {
+    margin: '0 0 18px', fontSize: '22px',
+    fontWeight: '800', color: '#111827'
+  },
+  lessonInfoList: { display: 'flex', flexDirection: 'column', gap: '14px', marginBottom: '24px' },
+  lessonInfoItem: { display: 'flex', gap: '12px', alignItems: 'flex-start' },
+  lessonInfoDot: {
+    width: '8px', height: '8px', borderRadius: '50%',
+    marginTop: '6px', flexShrink: 0
+  },
+  lessonInfoText: { margin: 0, color: '#334155', fontSize: '15px', lineHeight: '1.7' },
+  quizBtn: {
+    padding: '13px 28px', border: 'none',
+    borderRadius: '12px', color: '#fff',
+    fontWeight: '800', fontSize: '15px',
+    cursor: 'pointer', fontFamily: 'inherit'
+  },
+  quizHeaderCard: {
+    background: '#fff', borderRadius: '14px',
+    padding: '16px 20px', marginBottom: '16px',
+    boxShadow: '0 4px 12px rgba(0,0,0,0.05)'
+  },
+  scoreChip: {
+    borderRadius: '999px', padding: '4px 12px',
+    color: '#fff', fontSize: '12px', fontWeight: '700'
+  },
+  quizCard: {
+    background: '#fff', borderRadius: '18px',
+    padding: '28px', boxShadow: '0 8px 24px rgba(0,0,0,0.07)'
+  },
+  questionNumBadge: {
+    display: 'inline-block', borderRadius: '8px',
+    padding: '4px 10px', fontSize: '12px',
+    fontWeight: '800', marginBottom: '12px'
+  },
+  questionText: {
+    fontSize: '19px', fontWeight: '700',
+    color: '#1e293b', marginBottom: '20px',
+    lineHeight: '1.5'
+  },
+  choiceBtn: {
+    padding: '14px 16px', textAlign: 'left',
+    border: '2px solid #e2e8f0', borderRadius: '12px',
+    background: '#f8fafc', fontSize: '14px',
+    fontWeight: '500', color: '#334155',
+    display: 'flex', alignItems: 'center', gap: '12px',
+    fontFamily: 'inherit', transition: 'border-color 0.2s'
+  },
+  choiceLetter: {
+    width: '28px', height: '28px', borderRadius: '8px',
+    background: '#e2e8f0', display: 'flex',
+    alignItems: 'center', justifyContent: 'center',
+    fontSize: '12px', fontWeight: '800',
+    color: '#475569', flexShrink: 0
+  },
+  feedbackBox: {
+    marginTop: '18px', padding: '16px 18px',
+    borderRadius: '14px', border: '2px solid'
+  },
+  nextBtn: {
+    padding: '11px 24px', border: 'none',
+    borderRadius: '10px', color: '#fff',
+    fontWeight: '700', cursor: 'pointer',
+    fontSize: '14px', fontFamily: 'inherit'
+  },
+  resultCard: {
+    borderRadius: '20px', padding: '32px 24px',
+    textAlign: 'center', marginBottom: '18px',
+    boxShadow: '0 12px 32px rgba(0,0,0,0.15)'
+  },
+  scoreDisplay: { margin: '16px 0' },
+  scoreCircle: {
+    display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+    width: '90px', height: '90px', borderRadius: '50%',
+    background: '#fff', boxShadow: '0 4px 16px rgba(0,0,0,0.15)'
+  },
+  wrongAnswersCard: {
+    background: '#fff', borderRadius: '18px',
+    padding: '20px', marginBottom: '16px',
+    boxShadow: '0 4px 12px rgba(0,0,0,0.05)'
+  },
+  wrongItem: {
+    padding: '12px', background: '#fef9f9',
+    borderRadius: '10px', marginBottom: '10px',
+    border: '1px solid #fecaca'
+  },
+  continueBtn: {
+    width: '100%', padding: '15px',
+    border: 'none', borderRadius: '14px',
+    color: '#fff', fontWeight: '800',
+    fontSize: '16px', cursor: 'pointer',
+    fontFamily: 'inherit'
+  },
+  certCard: {
+    borderRadius: '24px', overflow: 'hidden',
+    boxShadow: '0 20px 48px rgba(0,0,0,0.12)',
+    border: '1px solid #e2e8f0'
+  },
+  certTop: {
+    padding: '40px 24px', textAlign: 'center', color: '#fff'
+  },
+  certBody: {
+    background: '#fff', padding: '32px 24px', textAlign: 'center'
+  },
+  certBtn: {
+    padding: '12px 24px', borderRadius: '12px',
+    border: '2px solid #e2e8f0', background: '#f8fafc',
+    color: '#475569', fontWeight: '700', cursor: 'pointer',
+    fontSize: '14px', fontFamily: 'inherit'
+  }
 };
