@@ -51,7 +51,7 @@ export default function GamesScreen({ userTier, onGameEnd }) {
         { q: "You found a cool toy for 20⭐! Do you buy it or keep your stars?", optA: ["Buy Toy", 20], optB: ["Save Stars", 0] },
         { q: "You're thirsty! Buy a fancy juice for 10⭐ or drink water for free?", optA: ["Fancy Juice", 10], optB: ["Free Water", 0] },
         { q: "A friend wants to trade stickers. Pay 5⭐ for a rare one or keep your stars?", optA: ["Rare Sticker", 5], optB: ["Keep Stars", 0] },
-        { q: "You lost a library book. Pay 15⭐ to replace it or use your coupon?", optA: ["Pay Stars", 15], optB: ["Use Coupon", 0] },
+        { q: "You found 10⭐ helping clean up! Add it to your pouch?", optA: ["Add Stars", -10], optB: ["Skip", 0] }, // Negative cost = gain
         { q: "Ice cream truck outside! Spend 12⭐ or skip it?", optA: ["Buy Ice Cream", 12], optB: ["Skip It", 0] },
         { q: "New video game for 35⭐ - tempting! Budget it or pass?", optA: ["Buy Game", 35], optB: ["Pass", 0] },
         { q: "Friend's birthday gift - 8⭐ or make something?", optA: ["Nice Gift", 8], optB: ["Homemade", 0] }
@@ -65,6 +65,20 @@ export default function GamesScreen({ userTier, onGameEnd }) {
         { q: "Pool cleaning gig: Spend 8⭐ on tools.", optA: ["Invest", 8], optB: ["Skip", 0] },
         { q: "Final gamble: Use 25⭐ to start your biggest venture yet?", optA: ["Go Big", 25], optB: ["Play Safe", 0] }
       ],
+      marketReasons: {
+        success: [
+          "It was a super sunny day! Everyone wanted a cold drink.",
+          "A group of friends loved your treats and bought them all!",
+          "You did such a great job that customers gave you extra tips!",
+          "Your items were so cool they sold out in minutes!"
+        ],
+        failure: [
+          "Oh no! It rained today and customers stayed home.",
+          "The shop raised the price of your supplies.",
+          "A neighbor opened a similar stand right next to yours.",
+          "You accidentally dropped some supplies and had to buy more."
+        ]
+      },
       savingScenarios: [
         { q: "You found 5⭐ under your pillow. Add to savings or spend it?", optA: ["Spend it", 5], optB: ["Save it", 0] },
         { q: "Your piggy bank is full. Add another 10⭐ or buy a small toy?", optA: ["Buy Toy", 10], optB: ["Add to Savings", 0] },
@@ -297,7 +311,6 @@ export default function GamesScreen({ userTier, onGameEnd }) {
               <p>💸 You didn't quite hit the goal. Every attempt teaches you something new — try again!</p>
             )}
           </div>
-
           <div style={gStyles.resultActions}>
             <button
               style={{ ...gStyles.actionBtn, background: '#fff', color: isWin ? '#059669' : '#dc2626' }}

@@ -85,6 +85,7 @@ function App() {
     setTimeout(() => setAchievementPopup(''), 3500);
   };
 
+  // Listener for Data
   useEffect(() => {
     setPersistence(auth, browserSessionPersistence).catch(() => {});
 
@@ -181,6 +182,7 @@ function App() {
     setStats((prev) => ({
       ...prev,
       ...updates,
+      courseProgressMap: { ...(prev.courseProgressMap || {}), [key]: 1 }
       courseProgressMap: { ...(prev.courseProgressMap || {}), [key]: 1 }
     }));
     updateData(updates);
@@ -413,7 +415,9 @@ function App() {
         <nav style={styles.navBar}>
           {[
             'Home', 'Courses', 'Games', 'Progress', 'Goals', 'Leagues',
+            'Home', 'Courses', 'Games', 'Progress', 'Goals', 'Leagues',
             ...(stats.tier !== 'elementary' ? ['Discussion'] : []),
+            'Salary', 'Settings'
             'Salary', 'Settings'
           ].map((tab) => (
             <button

@@ -109,7 +109,7 @@ export default function DiscussionScreen({ currentUser, streak = 0, db, userId }
           value={newPost}
           onChange={(e) => setNewPost(e.target.value)}
         />
-        <button type="submit" style={dStyles.postBtn}>Post</button>
+        <button type="submit" style={dStyles.postBtn}>Post as {currentUser || "Ava"}</button>
       </form>
 
       <div style={dStyles.feed}>

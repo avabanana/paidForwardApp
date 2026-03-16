@@ -221,11 +221,12 @@ export default function ProgressScreen({
         <div style={{ ...styles.statCard, background: "#f0fdf4" }}>
           <span style={styles.icon}>💎</span>
           <h4 style={styles.statLabel}>Total XP</h4>
+          <h4 style={styles.statLabel}>Total XP</h4>
           <h2 style={styles.statValue}>{xp}</h2>
         </div>
         <div style={{ ...styles.statCard, background: "#fffaf0" }}>
           <span style={styles.icon}>🔥</span>
-          <h4 style={styles.statLabel}>Day Streak</h4>
+          <h4 style={styles.statLabel}>Streak</h4>
           <h2 style={styles.statValue}>{streak}</h2>
         </div>
       </div>
@@ -258,6 +259,16 @@ export default function ProgressScreen({
     </div>
   );
 }
+
+const Badge = ({ icon, title, color }) => (
+  <div style={{ 
+    minWidth: '90px', padding: '15px', borderRadius: '16px', 
+    background: color, textAlign: 'center', border: '1px solid rgba(0,0,0,0.05)' 
+  }}>
+    <div style={{ fontSize: '30px', marginBottom: '5px' }}>{icon}</div>
+    <div style={{ fontSize: '11px', fontWeight: 'bold' }}>{title}</div>
+  </div>
+);
 
 const styles = {
   levelCard: {
