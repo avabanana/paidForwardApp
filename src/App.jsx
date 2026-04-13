@@ -183,7 +183,6 @@ function App() {
       ...prev,
       ...updates,
       courseProgressMap: { ...(prev.courseProgressMap || {}), [key]: 1 }
-      courseProgressMap: { ...(prev.courseProgressMap || {}), [key]: 1 }
     }));
     updateData(updates);
   };
@@ -417,7 +416,6 @@ function App() {
             'Home', 'Courses', 'Games', 'Progress', 'Goals', 'Leagues',
             'Home', 'Courses', 'Games', 'Progress', 'Goals', 'Leagues',
             ...(stats.tier !== 'elementary' ? ['Discussion'] : []),
-            'Salary', 'Settings'
             'Salary', 'Settings'
           ].map((tab) => (
             <button
