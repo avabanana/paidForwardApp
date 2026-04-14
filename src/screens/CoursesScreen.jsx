@@ -472,7 +472,7 @@ export default function CoursesScreen({ courseProgressMap = {}, setCourseProgres
             {q.choices.map((choice, i) => {
               let btnStyle = { ...cStyles.choiceBtn };
               if (answerFeedback) {
-                if (i === question?.a) {
+                if (i === q.a) {
                   btnStyle = { ...btnStyle, background: '#d1fae5', borderColor: '#22c55e', color: '#065f46' };
                 } else if (i === q.choices.indexOf(answerFeedback.selected) && !answerFeedback.correct) {
                   btnStyle = { ...btnStyle, background: '#fee2e2', borderColor: '#ef4444', color: '#991b1b' };

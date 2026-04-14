@@ -14,6 +14,8 @@ export default function SettingsScreen({ currentUser, stats, updateData, signOut
   const [newPassword, setNewPassword] = useState("");
   const [deletePassword, setDeletePassword] = useState("");
   const [message, setMessage] = useState({ text: "", type: "info" });
+  const [savingName, setSavingName] = useState(false);
+  const [updatingPassword, setUpdatingPassword] = useState(false);
   const [loading, setLoading] = useState(false);
 
   const showMsg = (text, type = "info") => setMessage({ text, type });
@@ -27,7 +29,7 @@ export default function SettingsScreen({ currentUser, stats, updateData, signOut
       showMsg("Not logged in.", "error");
       return;
     }
-    setLoading(true);
+    setSavingName(true);
     try {
       // Update Firebase Auth displayName
       await updateProfile(currentUser, { displayName: newUsername.trim() });
@@ -40,7 +42,7 @@ export default function SettingsScreen({ currentUser, stats, updateData, signOut
     } catch (err) {
       showMsg(err.message || "Could not update display name.", "error");
     } finally {
-      setLoading(false);
+      setSavingName(false);
     }
   };
 
@@ -53,7 +55,7 @@ export default function SettingsScreen({ currentUser, stats, updateData, signOut
       showMsg("New password must be at least 6 characters.", "error");
       return;
     }
-    setLoading(true);
+    setUpdatingPassword(true);
     try {
       const credential = EmailAuthProvider.credential(currentUser.email, currentPassword);
       await reauthenticateWithCredential(currentUser, credential);
@@ -64,7 +66,7 @@ export default function SettingsScreen({ currentUser, stats, updateData, signOut
     } catch (err) {
       showMsg(err.message || "Could not update password.", "error");
     } finally {
-      setLoading(false);
+      setUpdatingPassword(false);
     }
   };
 
@@ -122,11 +124,11 @@ export default function SettingsScreen({ currentUser, stats, updateData, signOut
               onKeyDown={(e) => e.key === "Enter" && handleUsernameSave()}
             />
             <button
-              style={{ ...styles.button, opacity: loading ? 0.6 : 1 }}
+              style={{ ...styles.button, opacity: savingName ? 0.6 : 1 }}
               onClick={handleUsernameSave}
-              disabled={loading}
+              disabled={savingName}
             >
-              {loading ? "Saving…" : "Save"}
+              {savingName ? "Saving…" : "Save"}
             </button>
           </div>
         </div>
@@ -153,11 +155,11 @@ export default function SettingsScreen({ currentUser, stats, updateData, signOut
             placeholder="New password (min. 6 characters)"
           />
           <button
-            style={{ ...styles.button, opacity: loading ? 0.6 : 1 }}
+            style={{ ...styles.button, opacity: updatingPassword ? 0.6 : 1 }}
             onClick={handlePasswordChange}
-            disabled={loading}
+            disabled={updatingPassword}
           >
-            {loading ? "Updating…" : "Update Password"}
+            {updatingPassword ? "Updating…" : "Update Password"}
           </button>
         </div>
       </div>

@@ -128,14 +128,32 @@ export default function ProgressScreen({
   db,
   achievements = [],
   updateData,
-  onAchievementUnlocked
+  onAchievementUnlocked,
+  onNavigate
 }) {
   const currentLevel = Math.floor(xp / 1000) + 1;
   const xpIntoLevel = xp % 1000;
   const levelProgress = xpIntoLevel / 1000;
 
   // Track which achievements have already been popped so we don't re-pop on re-render
-  const poppedRef = useRef(new Set(achievements));
+  const storageKey = `paidforward-progress-achievements-${userId || 'guest'}`;
+  const poppedRef = useRef(new Set());
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      const saved = window.localStorage.getItem(storageKey);
+      if (saved) {
+        JSON.parse(saved).forEach((id) => poppedRef.current.add(id));
+      }
+    } catch (err) {
+      // ignore storage failures
+    }
+  }, [storageKey]);
+
+  useEffect(() => {
+    achievements.forEach((id) => poppedRef.current.add(id));
+  }, [achievements]);
 
   const stats = { coursesCompleted, gameWins, gamesPlayed, xp, streak };
 
@@ -143,7 +161,7 @@ export default function ProgressScreen({
     if (!updateData || !onAchievementUnlocked) return;
 
     const newlyUnlocked = ACHIEVEMENT_DEFS.filter(
-      (def) => def.check(stats) && !achievements.includes(def.id)
+      (def) => def.check(stats) && !achievements.includes(def.id) && !poppedRef.current.has(def.id)
     );
 
     if (newlyUnlocked.length === 0) return;
@@ -154,16 +172,21 @@ export default function ProgressScreen({
     // Save to Firestore (account-scoped)
     updateData({ achievements: updated });
 
-    // Show popup for each new achievement with slight delay between them
     newlyUnlocked.forEach((a, i) => {
-      if (!poppedRef.current.has(a.id)) {
-        poppedRef.current.add(a.id);
-        setTimeout(() => {
-          onAchievementUnlocked(`${a.icon} ${a.title} unlocked!`);
-        }, i * 1200);
-      }
+      poppedRef.current.add(a.id);
+      setTimeout(() => {
+        onAchievementUnlocked(`${a.icon} ${a.title} unlocked!`);
+      }, i * 1200);
     });
-  }, [xp, gamesPlayed, gameWins, coursesCompleted, streak]);
+
+    if (typeof window !== 'undefined') {
+      try {
+        window.localStorage.setItem(storageKey, JSON.stringify(Array.from(poppedRef.current)));
+      } catch (err) {
+        // ignore storage failures
+      }
+    }
+  }, [xp, gamesPlayed, gameWins, coursesCompleted, streak, achievements, updateData, onAchievementUnlocked, storageKey]);
 
   const achievementList = ACHIEVEMENT_DEFS.map((def) => ({
     ...def,
@@ -256,6 +279,36 @@ export default function ProgressScreen({
           </div>
         ))}
       </div>
+
+      <div style={styles.goalsSection}>
+        <div style={styles.goalsHeader}>
+          <div>
+            <h3 style={styles.goalsTitle}>🎯 Savings & Goal Planning</h3>
+            <p style={styles.goalsSubtitle}>
+              Your progress now includes goal ideas and planning notes to help you save smarter.
+            </p>
+          </div>
+          {onNavigate && (
+            <button style={styles.goalsButton} onClick={() => onNavigate('Goals')}>
+              Open Goal Planner
+            </button>
+          )}
+        </div>
+        <div style={styles.goalsGrid}>
+          <div style={styles.goalCardSmall}>
+            <strong>Emergency Fund</strong>
+            <p>Save a small amount each week until you have 3-6 months of living costs covered.</p>
+          </div>
+          <div style={styles.goalCardSmall}>
+            <strong>Retirement Habit</strong>
+            <p>Commit to automatic saving so your future self gets a steady boost over time.</p>
+          </div>
+          <div style={styles.goalCardSmall}>
+            <strong>Investment Idea</strong>
+            <p>Consider a diversified low-cost ETF or index fund to start growing your excess cash.</p>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
@@ -303,5 +356,22 @@ const styles = {
   categoryLabel: {
     fontSize: "13px", fontWeight: "700", color: "#475569",
     marginBottom: "10px", textTransform: "uppercase", letterSpacing: "0.5px"
+  },
+  goalsSection: {
+    marginTop: "26px", background: "#f8fafc", borderRadius: "20px", padding: "22px", border: "1px solid #e2e8f0"
+  },
+  goalsHeader: {
+    display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "16px", marginBottom: "18px"
+  },
+  goalsTitle: { margin: 0, fontSize: "18px", color: "#111827" },
+  goalsSubtitle: { margin: "6px 0 0", color: "#475569", fontSize: "14px", lineHeight: "1.6", maxWidth: "560px" },
+  goalsButton: {
+    padding: "12px 16px", borderRadius: "14px", border: "none", background: "#2563eb", color: "#fff", cursor: "pointer", fontWeight: "700", fontSize: "14px"
+  },
+  goalsGrid: {
+    display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "16px"
+  },
+  goalCardSmall: {
+    background: "#fff", borderRadius: "18px", padding: "18px", border: "1px solid #e2e8f0", color: "#1f2937", lineHeight: "1.6"
   }
 };

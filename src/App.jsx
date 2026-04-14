@@ -150,6 +150,21 @@ function App() {
       // doc might not exist yet on first write
       await setDoc(doc(db, "users", user.uid), updates, { merge: true });
     }
+
+    setStats((prev) => {
+      const next = { ...prev };
+      Object.entries(updates).forEach(([key, value]) => {
+        if (key === 'courseProgressMap' && typeof value === 'object') {
+          next.courseProgressMap = { ...(prev.courseProgressMap || {}), ...value };
+        } else if (key.startsWith('courseProgressMap.')) {
+          const field = key.replace('courseProgressMap.', '');
+          next.courseProgressMap = { ...(prev.courseProgressMap || {}), [field]: value };
+        } else {
+          next[key] = value;
+        }
+      });
+      return next;
+    });
   };
 
   const handleGameEnd = (status) => {
@@ -236,7 +251,7 @@ function App() {
   const renderScreen = () => {
     switch (activeTab) {
       case 'Home':
-        return <HomeScreen onNavigate={(tab) => setActiveTab(tab)} />;
+        return <HomeScreen userTier={stats.tier} onNavigate={(tab) => setActiveTab(tab)} />;
       case 'Courses':
         return (
           <CoursesScreen
@@ -248,7 +263,13 @@ function App() {
           />
         );
       case 'Games':
-        return <GamesScreen userTier={stats.tier} onGameEnd={handleGameEnd} />;
+        return (
+          <GamesScreen
+            userTier={stats.tier}
+            onGameEnd={handleGameEnd}
+            onNavigate={(tab) => setActiveTab(tab)}
+          />
+        );
       case 'Discussion':
         return (
           <DiscussionScreen
@@ -272,6 +293,7 @@ function App() {
             achievements={stats.achievements || []}
             updateData={updateData}
             onAchievementUnlocked={triggerAchievementPopup}
+            onNavigate={(tab) => setActiveTab(tab)}
           />
         );
       case 'Goals':
@@ -418,9 +440,8 @@ function App() {
         </h1>
         <nav style={styles.navBar}>
           {[
-            'Home', 'Courses', 'Games', 'Progress', 'Goals', 'Leagues',
-            ...(stats.tier !== 'elementary' ? ['Discussion'] : []),
-            'Salary', 'Settings'
+            'Home', 'Courses', 'Games', 'Progress',
+            ...(stats.tier !== 'elementary' ? ['Discussion'] : [])
           ].map((tab) => (
             <button
               key={tab}
@@ -436,6 +457,16 @@ function App() {
           ))}
         </nav>
         <div style={styles.headerRight}>
+          <button
+            onClick={() => setActiveTab('Settings')}
+            style={{
+              ...styles.settingsIconButton,
+              color: activeTab === 'Settings' ? '#2563eb' : '#64748b'
+            }}
+            aria-label="Settings"
+          >
+            ⚙️
+          </button>
           <div style={styles.userChip}>
             <span style={styles.userAvatar}>
               {(stats.username || 'G')[0].toUpperCase()}
@@ -580,6 +611,14 @@ const styles = {
   },
   usernameText: { fontWeight: '700', fontSize: '14px', color: '#111827' },
   streakText: { fontSize: '11px', color: '#6b7280' },
+  settingsIconButton: {
+    background: 'transparent',
+    border: 'none',
+    fontSize: '22px',
+    padding: '8px 10px',
+    cursor: 'pointer',
+    borderRadius: '999px'
+  },
   logoutBtn: {
     padding: '8px 16px', background: '#dc2626', color: '#fff',
     border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '600', fontSize: '13px'

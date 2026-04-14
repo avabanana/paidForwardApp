@@ -27,7 +27,7 @@ const STOCK_WIN_REASONS = [
   "A prominent hedge fund disclosed a large stake. Retail investors followed the signal."
 ];
 
-export default function GamesScreen({ userTier, onGameEnd }) {
+export default function GamesScreen({ userTier, onGameEnd, onNavigate }) {
   const [activeGame, setActiveGame] = useState(null);
   const [playing, setPlaying] = useState(false);
   const [money, setMoney] = useState(0);
@@ -493,6 +493,33 @@ export default function GamesScreen({ userTier, onGameEnd }) {
           </div>
         ))}
       </div>
+
+      <div style={gStyles.extraRow}>
+        <div style={gStyles.cardPromo}>
+          <div style={gStyles.promoTitle}>💼 Salary Simulator</div>
+          <p style={gStyles.promoText}>
+            Input a salary and view taxes, take-home pay, and savings ideas.
+          </p>
+          <button
+            style={gStyles.promoBtn}
+            onClick={() => onNavigate?.('Salary')}
+          >
+            Open Salary Planner
+          </button>
+        </div>
+        <div style={gStyles.cardPromo}>
+          <div style={gStyles.promoTitle}>🏆 Classroom Leagues</div>
+          <p style={gStyles.promoText}>
+            Join leagues, answer challenges, and compete in friendly finance matches.
+          </p>
+          <button
+            style={{ ...gStyles.promoBtn, background: '#8b5cf6' }}
+            onClick={() => onNavigate?.('Leagues')}
+          >
+            Open Leagues
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
@@ -602,5 +629,20 @@ const gStyles = {
     padding: '14px', border: 'none', borderRadius: '14px',
     fontWeight: '800', cursor: 'pointer', fontSize: '15px',
     fontFamily: 'inherit'
+  },
+  extraRow: {
+    display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
+    gap: '18px', marginTop: '24px'
+  },
+  cardPromo: {
+    background: '#fff', borderRadius: '20px', padding: '22px',
+    boxShadow: '0 12px 28px rgba(15,23,42,0.08)', border: '1px solid #e2e8f0'
+  },
+  promoTitle: { fontSize: '18px', fontWeight: '800', marginBottom: '10px' },
+  promoText: { color: '#475569', fontSize: '14px', lineHeight: '1.65', marginBottom: '18px' },
+  promoBtn: {
+    width: '100%', padding: '12px 16px', borderRadius: '14px',
+    border: 'none', background: '#2563eb', color: '#fff', cursor: 'pointer',
+    fontWeight: '700', fontSize: '14px'
   }
 };
