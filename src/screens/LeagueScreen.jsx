@@ -137,7 +137,7 @@ export default function LeagueScreen({ currentUser, userId, db }) {
       createdBy: currentUser,
       createdAt: serverTimestamp(),
       members: {
-        [currentUser]: { score: 0, answered: 0 }
+        [userId]: { name: currentUser, score: 0, answered: 0 }
       }
     };
     await setDoc(doc(db, "leagues", code), leagueData);
@@ -160,9 +160,9 @@ export default function LeagueScreen({ currentUser, userId, db }) {
       return;
     }
     const data = snap.data();
-    if (!data.members[currentUser]) {
+    if (!data.members?.[userId]) {
       await updateDoc(ref, {
-        [`members.${currentUser}`]: { score: 0, answered: 0 }
+        [`members.${userId}`]: { name: currentUser, score: 0, answered: 0 }
       });
     }
     const userRef = doc(db, "users", userId);
@@ -181,17 +181,23 @@ export default function LeagueScreen({ currentUser, userId, db }) {
     setAnswered(true);
     setLastAnswer(option);
     const ref = doc(db, "leagues", activeCode);
-    const current = activeLeague.members?.[currentUser] || { score: 0, answered: 0 };
+    const current = activeLeague.members?.[userId] || { score: 0, answered: 0 };
     await updateDoc(ref, {
-      [`members.${currentUser}.score`]: (current.score || 0) + option.points,
-      [`members.${currentUser}.answered`]: (current.answered || 0) + 1
+      [`members.${userId}.name`]: currentUser,
+      [`members.${userId}.score`]: (current.score || 0) + option.points,
+      [`members.${userId}.answered`]: (current.answered || 0) + 1
     });
   };
 
   const leaderboard = useMemo(() => {
     if (!activeLeague?.members) return [];
     return Object.entries(activeLeague.members)
-      .map(([name, data]) => ({ name, score: data.score || 0, answered: data.answered || 0 }))
+      .map(([key, data]) => ({
+        key,
+        name: data?.name || key,
+        score: data?.score || 0,
+        answered: data?.answered || 0
+      }))
       .sort((a, b) => b.score - a.score);
   }, [activeLeague]);
 

@@ -179,6 +179,10 @@ export default function GamesScreen({ userTier, onGameEnd, onNavigate }) {
       updated = cost === 0
         ? money + Math.max(10, Math.round(config.startingCash * 0.05))
         : money - cost;
+    } else if (activeGame === 'Budget') {
+      updated = cost === 0
+        ? money + Math.max(15, Math.round(config.startingCash * 0.03))
+        : money - Math.round(cost * 1.1);
     } else {
       updated = cost === 0 ? money + 10 : money - cost;
     }

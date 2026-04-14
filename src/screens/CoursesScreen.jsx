@@ -206,6 +206,12 @@ export default function CoursesScreen({ courseProgressMap = {}, setCourseProgres
   const [answerFeedback, setAnswerFeedback] = useState(null);
   const [completedCourseTitle, setCompletedCourseTitle] = useState('');
 
+  const isElementary = userTier === 'elementary';
+  const courseHeading = isElementary ? 'Money Adventures' : 'Courses';
+  const courseSubtitle = isElementary
+    ? 'Fun lessons, easy quizzes, and helpful tips for younger learners.'
+    : 'Learn practical money skills, pass quizzes, and earn certificates.';
+
   const course = useMemo(() => coursesData.find((c) => c.id === currentCourseId), [currentCourseId]);
   const lesson = course?.lessons?.[currentLesson];
 
@@ -226,9 +232,18 @@ export default function CoursesScreen({ courseProgressMap = {}, setCourseProgres
 
   const totalCoursesFinished = coursesData.filter((c) => lessonsCompleted(c.id) === c.lessons.length).length;
 
+  const firstIncompleteLesson = (courseId) => {
+    const c = coursesData.find((x) => x.id === courseId);
+    if (!c) return 0;
+    for (let idx = 0; idx < c.lessons.length; idx += 1) {
+      if (!courseLessonDone(courseId, idx)) return idx;
+    }
+    return c.lessons.length - 1;
+  };
+
   const startCourse = (id) => {
     setCurrentCourseId(id);
-    setCurrentLesson(0);
+    setCurrentLesson(firstIncompleteLesson(id));
     setQuiz(null);
     setResult(null);
     setPage('lesson');
@@ -299,13 +314,11 @@ export default function CoursesScreen({ courseProgressMap = {}, setCourseProgres
       <div style={cStyles.container}>
         <div style={cStyles.header}>
           <div>
-            <div style={cStyles.headerBadge}>📚 Learning Track</div>
+            <div style={cStyles.headerBadge}>{isElementary ? '🧠 Money Adventures' : '📚 Learning Track'}</div>
             <h2 style={cStyles.headerTitle}>
-              Courses{username ? ` for ${username}` : ''}
+              {courseHeading}{username ? ` for ${username}` : ''}
             </h2>
-            <p style={cStyles.headerSub}>
-              Learn practical money skills, pass quizzes, and earn certificates.
-            </p>
+            <p style={cStyles.headerSub}>{courseSubtitle}</p>
           </div>
           <div style={cStyles.completedPill}>
             <span style={{ fontSize: '20px' }}>🎓</span>
@@ -470,25 +483,24 @@ export default function CoursesScreen({ courseProgressMap = {}, setCourseProgres
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
             {q.choices.map((choice, i) => {
-              let btnStyle = { ...cStyles.choiceBtn };
-              if (answerFeedback) {
-                if (i === q.a) {
-                  btnStyle = { ...btnStyle, background: '#d1fae5', borderColor: '#22c55e', color: '#065f46' };
-                } else if (i === q.choices.indexOf(answerFeedback.selected) && !answerFeedback.correct) {
-                  btnStyle = { ...btnStyle, background: '#fee2e2', borderColor: '#ef4444', color: '#991b1b' };
-                }
-              }
+              const isCorrect = i === q.a;
+              const isSelectedWrong = answerFeedback && !answerFeedback.correct && answerFeedback.selected === choice;
+              const btnStyle = {
+                ...cStyles.choiceBtn,
+                cursor: answerFeedback ? 'default' : 'pointer',
+                background: '#f8fafc',
+                borderColor: '#e2e8f0',
+                color: '#334155',
+                fontWeight: 500,
+                ...(answerFeedback && isCorrect ? { background: '#d1fae5', borderColor: '#22c55e', color: '#065f46', fontWeight: 700 } : {}),
+                ...(answerFeedback && isSelectedWrong ? { background: '#fee2e2', borderColor: '#ef4444', color: '#991b1b', fontWeight: 700 } : {})
+              };
               return (
                 <button
                   key={i}
                   onClick={() => pickAnswer(i)}
                   disabled={!!answerFeedback}
-                  style={{
-                    ...cStyles.choiceBtn,
-                    ...(answerFeedback && i === q.a ? { background: '#d1fae5', borderColor: '#22c55e', color: '#065f46', fontWeight: '700' } : {}),
-                    ...(answerFeedback && !answerFeedback.correct && answerFeedback.selected === choice ? { background: '#fee2e2', borderColor: '#ef4444', color: '#991b1b' } : {}),
-                    cursor: answerFeedback ? 'default' : 'pointer'
-                  }}
+                  style={btnStyle}
                 >
                   <span style={cStyles.choiceLetter}>{['A', 'B', 'C', 'D'][i]}</span>
                   {choice}
@@ -633,7 +645,9 @@ const cStyles = {
     padding: '24px 16px 48px',
     maxWidth: '1100px',
     margin: '0 auto',
-    fontFamily: "'Inter', system-ui, sans-serif"
+    fontFamily: "'Inter', system-ui, sans-serif",
+    background: 'radial-gradient(circle at top left, rgba(59,130,246,0.08), transparent 28%), radial-gradient(circle at bottom right, rgba(16,185,129,0.08), transparent 24%), #f8fafc',
+    borderRadius: '28px'
   },
   header: {
     display: 'flex', justifyContent: 'space-between',

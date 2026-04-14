@@ -11,7 +11,18 @@ const dailyTips = [
   "Review your subscriptions monthly and cancel what you don't use."
 ];
 
-export default function HomeScreen({ onNavigate }) {
+export default function HomeScreen({ onNavigate, userTier }) {
+  const isElementary = userTier === 'elementary';
+  const heroBadgeText = isElementary
+    ? '🌟 Learning money is fun and easy'
+    : '🚀 Your financial journey starts here';
+  const heroTitleText = isElementary
+    ? 'Build smart money habits with games and goals'
+    : 'Build a Future You’re Proud Of';
+  const heroSubtitleText = isElementary
+    ? 'Play simple money games, level up your savings, and feel great about good choices.'
+    : 'Learn real money skills, play games that test your knowledge, and track your growth — all in one place.';
+
   // Deterministic daily tip: pick by day-of-year so it changes daily but is consistent across tabs/refreshes
   const tip = useMemo(() => {
     const dayOfYear = Math.floor(
@@ -25,11 +36,9 @@ export default function HomeScreen({ onNavigate }) {
       {/* Hero */}
       <div style={styles.hero}>
         <div style={styles.heroContent}>
-          <div style={styles.heroBadge}>🚀 Your financial journey starts here</div>
-          <h1 style={styles.heroTitle}>Build a Future You're Proud Of</h1>
-          <p style={styles.heroSubtitle}>
-            Learn real money skills, play games that test your knowledge, and track your growth — all in one place.
-          </p>
+          <div style={styles.heroBadge}>{heroBadgeText}</div>
+          <h1 style={styles.heroTitle}>{heroTitleText}</h1>
+          <p style={styles.heroSubtitle}>{heroSubtitleText}</p>
           <div style={styles.dailyTip}>
             <span style={styles.tipLabel}>💡 Daily Tip</span>
             <span style={styles.tipText}>{tip}</span>
@@ -103,7 +112,10 @@ const styles = {
     padding: "4px 0 32px",
     fontFamily: "'Inter', system-ui, sans-serif",
     maxWidth: "1100px",
-    margin: "0 auto"
+    margin: "0 auto",
+    background: "radial-gradient(circle at top left, rgba(99,102,241,0.08), transparent 35%), radial-gradient(circle at bottom right, rgba(16,185,129,0.08), transparent 30%), #f8fafc",
+    borderRadius: "24px",
+    overflow: "hidden"
   },
   hero: {
     background: "linear-gradient(135deg, #312e81 0%, #4f46e5 50%, #7c3aed 100%)",
