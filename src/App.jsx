@@ -318,7 +318,12 @@ function App() {
         <div style={styles.blob1} />
         <div style={styles.blob2} />
         <div style={styles.blob3} />
-
+        <style>{`
+      input::placeholder {
+        color: rgba(255, 255, 255, 0.9) !important;
+        opacity: 1; /* Ensures it isn't faded out by the browser */
+      }
+    `}</style>
         <div style={styles.authCard}>
           <div style={styles.brandBar}>
             <div style={styles.logoWrap}>
@@ -413,7 +418,6 @@ function App() {
         </h1>
         <nav style={styles.navBar}>
           {[
-            'Home', 'Courses', 'Games', 'Progress', 'Goals', 'Leagues',
             'Home', 'Courses', 'Games', 'Progress', 'Goals', 'Leagues',
             ...(stats.tier !== 'elementary' ? ['Discussion'] : []),
             'Salary', 'Settings'
