@@ -244,7 +244,6 @@ export default function ProgressScreen({
         <div style={{ ...styles.statCard, background: "#f0fdf4" }}>
           <span style={styles.icon}>💎</span>
           <h4 style={styles.statLabel}>Total XP</h4>
-          <h4 style={styles.statLabel}>Total XP</h4>
           <h2 style={styles.statValue}>{xp}</h2>
         </div>
         <div style={{ ...styles.statCard, background: "#fffaf0" }}>

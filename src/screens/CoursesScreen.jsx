@@ -215,59 +215,60 @@ export default function CoursesScreen({ courseProgressMap = {}, setCourseProgres
   const course = useMemo(() => coursesData.find((c) => c.id === currentCourseId), [currentCourseId]);
   const lesson = course?.lessons?.[currentLesson];
 
-  const courseLessonDone = (courseId, lessonIdx) =>
+  // PERSISTENT PROGRESS LOGIC
+  const courseLessonDone = (courseId, lessonIdx) => 
     Boolean(courseProgressMap?.[`course_${courseId}_lesson_${lessonIdx}`]);
 
-  const lessonsCompleted = (courseId) => {
+  const lessonsCompletedCount = (courseId) => {
     const c = coursesData.find((x) => x.id === courseId);
     if (!c) return 0;
     return c.lessons.reduce((sum, _, idx) => sum + (courseLessonDone(courseId, idx) ? 1 : 0), 0);
   };
 
-  const courseProgress = (courseId) => {
+  const getCourseProgressPct = (courseId) => {
     const c = coursesData.find((x) => x.id === courseId);
     if (!c) return 0;
-    return lessonsCompleted(courseId) / c.lessons.length;
+    return lessonsCompletedCount(courseId) / c.lessons.length;
   };
 
-  const totalCoursesFinished = coursesData.filter((c) => lessonsCompleted(c.id) === c.lessons.length).length;
+  const totalCoursesFinished = coursesData.filter((c) => lessonsCompletedCount(c.id) === c.lessons.length).length;
 
-  const firstIncompleteLesson = (courseId) => {
+  const getFirstIncompleteLessonIdx = (courseId) => {
     const c = coursesData.find((x) => x.id === courseId);
     if (!c) return 0;
     for (let idx = 0; idx < c.lessons.length; idx += 1) {
       if (!courseLessonDone(courseId, idx)) return idx;
     }
-    return c.lessons.length - 1;
+    return 0; // If all complete, start at 0 for review
   };
 
-  const startCourse = (id) => {
+  const handleStartCourse = (id) => {
     setCurrentCourseId(id);
-    setCurrentLesson(firstIncompleteLesson(id));
+    setCurrentLesson(getFirstIncompleteLessonIdx(id));
     setQuiz(null);
     setResult(null);
     setPage('lesson');
   };
 
-  const beginQuiz = () => {
+  const handleBeginQuiz = () => {
     const set = ensureSixQuestions(lesson.quiz).map(randomizeQuestion);
     setQuiz({ questions: set, index: 0, correct: 0, wrong: [] });
     setResult(null);
     setPage('quiz');
   };
 
-  const pickAnswer = (choice) => {
+  const handlePickAnswer = (choiceIdx) => {
     if (!quiz || answerFeedback) return;
     const question = quiz.questions[quiz.index];
-    const isCorrect = choice === question.a;
+    const isCorrect = choiceIdx === question.a;
     setAnswerFeedback({
       correct: isCorrect,
-      selected: question.choices[choice],
+      selected: question.choices[choiceIdx],
       correctAnswer: question.choices[question.a]
     });
   };
 
-  const nextQuestion = () => {
+  const handleNextQuestion = () => {
     if (!answerFeedback) return;
     const question = quiz.questions[quiz.index];
     const isCorrect = answerFeedback.correct;
@@ -280,12 +281,15 @@ export default function CoursesScreen({ courseProgressMap = {}, setCourseProgres
     if (nextIndex >= quiz.questions.length) {
       const score = Math.round((updatedCorrect / quiz.questions.length) * 100);
       const passed = score >= 70;
+      
+      if (passed) {
+        // ESSENTIAL: Push the specific lesson completion to the parent map
+        setCourseProgressMap?.(`course_${course.id}_lesson_${currentLesson}`, 1);
+      }
+
       setResult({ score, passed, correct: updatedCorrect, total: quiz.questions.length, wrong: updatedWrong });
       setQuiz(null);
       setAnswerFeedback(null);
-      if (passed) {
-        setCourseProgressMap?.(`course_${course.id}_lesson_${currentLesson}`, 1);
-      }
       setPage('result');
       return;
     }
@@ -293,31 +297,32 @@ export default function CoursesScreen({ courseProgressMap = {}, setCourseProgres
     setAnswerFeedback(null);
   };
 
-  const continueAfterResult = () => {
+  const handleContinueAfterResult = () => {
     if (!result) return;
-    if (!result.passed) { beginQuiz(); return; }
-    const next = currentLesson + 1;
-    if (next < (course?.lessons?.length || 0)) {
-      setCurrentLesson(next);
+    if (!result.passed) { handleBeginQuiz(); return; }
+    
+    const nextLessonIdx = currentLesson + 1;
+    if (nextLessonIdx < (course?.lessons?.length || 0)) {
+      setCurrentLesson(nextLessonIdx);
       setResult(null);
       setPage('lesson');
       return;
     }
+    
+    // Course finalized
     onCourseComplete?.(course.id);
     setCompletedCourseTitle(course.title);
     setPage('certificate');
   };
 
-  // ─── COURSE LIST ──────────────────────────────────────────────────────────
+  // UI - LIST VIEW
   if (page === 'list') {
     return (
       <div style={cStyles.container}>
         <div style={cStyles.header}>
           <div>
             <div style={cStyles.headerBadge}>{isElementary ? '🧠 Money Adventures' : '📚 Learning Track'}</div>
-            <h2 style={cStyles.headerTitle}>
-              {courseHeading}{username ? ` for ${username}` : ''}
-            </h2>
+            <h2 style={cStyles.headerTitle}>{courseHeading}{username ? ` for ${username}` : ''}</h2>
             <p style={cStyles.headerSub}>{courseSubtitle}</p>
           </div>
           <div style={cStyles.completedPill}>
@@ -331,34 +336,31 @@ export default function CoursesScreen({ courseProgressMap = {}, setCourseProgres
 
         <div style={cStyles.grid}>
           {coursesData.map((c) => {
-            const prog = courseProgress(c.id);
-            const done = lessonsCompleted(c.id);
-            const isFinished = prog >= 1;
+            const progressValue = getCourseProgressPct(c.id);
+            const lessonsDoneCount = lessonsCompletedCount(c.id);
+            const isFinished = progressValue >= 1;
+            const hasStarted = lessonsDoneCount > 0 && !isFinished;
+
             return (
               <div key={c.id} style={cStyles.courseCard}>
                 <div style={{ ...cStyles.courseCardTop, background: c.gradient }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                     <span style={{ fontSize: '40px' }}>{c.emoji}</span>
-                    <span style={{ ...cStyles.courseTierTag, background: 'rgba(255,255,255,0.25)', color: '#fff' }}>
-                      {c.tag}
-                    </span>
+                    <span style={{ ...cStyles.courseTierTag, background: 'rgba(255,255,255,0.25)', color: '#fff' }}>{c.tag}</span>
                   </div>
                   <h3 style={cStyles.courseCardTitle}>{c.title}</h3>
-                  <p style={cStyles.courseCardSub}>
-                    {c.lessons.length} lessons · quiz after each
-                  </p>
+                  <p style={cStyles.courseCardSub}>{c.lessons.length} lessons · quiz after each</p>
                 </div>
-
                 <div style={cStyles.courseCardBottom}>
                   <div style={{ marginBottom: '12px' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px', fontSize: '13px', color: '#64748b', fontWeight: '600' }}>
-                      <span>{done}/{c.lessons.length} lessons</span>
-                      <span>{Math.round(prog * 100)}%</span>
+                      <span>{lessonsDoneCount}/{c.lessons.length} lessons</span>
+                      <span>{Math.round(progressValue * 100)}%</span>
                     </div>
-                    <ProgressBar progress={prog} />
+                    <ProgressBar progress={progressValue} />
                   </div>
                   <button
-                    onClick={() => startCourse(c.id)}
+                    onClick={() => handleStartCourse(c.id)}
                     style={{
                       ...cStyles.startBtn,
                       background: isFinished ? '#f1f5f9' : c.gradient,
@@ -366,7 +368,7 @@ export default function CoursesScreen({ courseProgressMap = {}, setCourseProgres
                       border: isFinished ? '2px solid #e2e8f0' : 'none'
                     }}
                   >
-                    {isFinished ? '✓ Review Course' : prog > 0 ? '▶ Continue' : '▶ Start Course'}
+                    {isFinished ? '✓ Review Course' : hasStarted ? `▶ Resume (Lesson ${lessonsDoneCount + 1})` : '▶ Start Course'}
                   </button>
                 </div>
               </div>
@@ -377,57 +379,32 @@ export default function CoursesScreen({ courseProgressMap = {}, setCourseProgres
     );
   }
 
-  // ─── LESSON VIEW ─────────────────────────────────────────────────────────
+  // UI - LESSON VIEW
   if (page === 'lesson' && course && lesson) {
-    const lessonsDone = lessonsCompleted(course.id);
-    const lessonProg = currentLesson / course.lessons.length;
-
+    const currentCompleted = lessonsCompletedCount(course.id);
     return (
       <div style={cStyles.innerContainer}>
-        <button onClick={() => setPage('list')} style={cStyles.backBtn}>
-          ← Back to courses
-        </button>
-
-        {/* Course header bar */}
+        <button onClick={() => setPage('list')} style={cStyles.backBtn}>← Back to courses</button>
         <div style={{ ...cStyles.courseHeaderBar, background: course.gradient }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '14px' }}>
             <span style={{ fontSize: '28px' }}>{course.emoji}</span>
             <div>
               <h2 style={{ margin: 0, color: '#fff', fontSize: '20px', fontWeight: '800' }}>{course.title}</h2>
-              <p style={{ margin: 0, color: 'rgba(255,255,255,0.8)', fontSize: '13px' }}>
-                Lesson {currentLesson + 1} of {course.lessons.length}
-              </p>
+              <p style={{ margin: 0, color: 'rgba(255,255,255,0.8)', fontSize: '13px' }}>Lesson {currentLesson + 1} of {course.lessons.length}</p>
             </div>
           </div>
           <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', color: 'rgba(255,255,255,0.8)', fontSize: '12px', marginBottom: '6px', fontWeight: '600' }}>
               <span>Course Progress</span>
-              <span>{lessonsDone}/{course.lessons.length} lessons complete</span>
+              <span>{currentCompleted}/{course.lessons.length} lessons complete</span>
             </div>
             <div style={{ height: '6px', background: 'rgba(255,255,255,0.3)', borderRadius: '999px', overflow: 'hidden' }}>
-              <div style={{ height: '100%', width: `${(lessonsDone / course.lessons.length) * 100}%`, background: '#fff', borderRadius: '999px', transition: 'width 0.4s ease' }} />
+              <div style={{ height: '100%', width: `${(currentCompleted / course.lessons.length) * 100}%`, background: '#fff', borderRadius: '999px', transition: 'width 0.4s ease' }} />
             </div>
           </div>
         </div>
-
-        {/* Lesson steps */}
-        <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
-          {course.lessons.map((l, idx) => (
-            <div
-              key={idx}
-              style={{
-                flex: 1, height: '4px', borderRadius: '999px',
-                background: idx < currentLesson ? course.color : idx === currentLesson ? course.color + 'aa' : '#e2e8f0'
-              }}
-            />
-          ))}
-        </div>
-
-        {/* Lesson content card */}
         <div style={cStyles.lessonCard}>
-          <div style={{ ...cStyles.lessonNumBadge, background: course.gradient }}>
-            Lesson {currentLesson + 1}
-          </div>
+          <div style={{ ...cStyles.lessonNumBadge, background: course.gradient }}>Lesson {currentLesson + 1}</div>
           <h3 style={cStyles.lessonTitle}>{lesson.title}</h3>
           <div style={cStyles.lessonInfoList}>
             {lesson.info.map((line, idx) => (
@@ -437,50 +414,30 @@ export default function CoursesScreen({ courseProgressMap = {}, setCourseProgres
               </div>
             ))}
           </div>
-          <button onClick={beginQuiz} style={{ ...cStyles.quizBtn, background: course.gradient }}>
-            📝 Take the Quiz
-          </button>
+          <button onClick={handleBeginQuiz} style={{ ...cStyles.quizBtn, background: course.gradient }}>📝 Take the Quiz</button>
         </div>
       </div>
     );
   }
 
-  // ─── QUIZ VIEW ────────────────────────────────────────────────────────────
+  // UI - QUIZ VIEW
   if (page === 'quiz' && quiz) {
     const q = quiz.questions[quiz.index];
     const progressPct = ((quiz.index) / quiz.questions.length) * 100;
-
     return (
       <div style={cStyles.innerContainer}>
-        <button onClick={() => setPage('lesson')} style={cStyles.backBtn}>← Back to lesson</button>
-
-        {/* Quiz progress */}
         <div style={cStyles.quizHeaderCard}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-            <span style={{ fontWeight: '700', color: '#1e293b', fontSize: '15px' }}>
-              Question {quiz.index + 1} / {quiz.questions.length}
-            </span>
-            <span style={{ ...cStyles.scoreChip, background: course?.gradient }}>
-              ✅ {quiz.correct} correct
-            </span>
+            <span style={{ fontWeight: '700', color: '#1e293b', fontSize: '15px' }}>Question {quiz.index + 1} / {quiz.questions.length}</span>
+            <span style={{ ...cStyles.scoreChip, background: course?.gradient }}>✅ {quiz.correct} correct</span>
           </div>
           <div style={{ height: '6px', background: '#e2e8f0', borderRadius: '999px', overflow: 'hidden' }}>
-            <div style={{
-              height: '100%',
-              width: `${progressPct}%`,
-              background: course?.gradient || '#2563eb',
-              borderRadius: '999px',
-              transition: 'width 0.3s ease'
-            }} />
+            <div style={{ height: '100%', width: `${progressPct}%`, background: course?.gradient || '#2563eb', borderRadius: '999px', transition: 'width 0.3s ease' }} />
           </div>
         </div>
-
         <div style={cStyles.quizCard}>
-          <div style={{ ...cStyles.questionNumBadge, background: course?.color + '20', color: course?.color }}>
-            Q{quiz.index + 1}
-          </div>
+          <div style={{ ...cStyles.questionNumBadge, background: course?.color + '20', color: course?.color }}>Q{quiz.index + 1}</div>
           <p style={cStyles.questionText}>{q.q}</p>
-
           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
             {q.choices.map((choice, i) => {
               const isCorrect = i === q.a;
@@ -495,40 +452,14 @@ export default function CoursesScreen({ courseProgressMap = {}, setCourseProgres
                 ...(answerFeedback && isCorrect ? { background: '#d1fae5', borderColor: '#22c55e', color: '#065f46', fontWeight: 700 } : {}),
                 ...(answerFeedback && isSelectedWrong ? { background: '#fee2e2', borderColor: '#ef4444', color: '#991b1b', fontWeight: 700 } : {})
               };
-              return (
-                <button
-                  key={i}
-                  onClick={() => pickAnswer(i)}
-                  disabled={!!answerFeedback}
-                  style={btnStyle}
-                >
-                  <span style={cStyles.choiceLetter}>{['A', 'B', 'C', 'D'][i]}</span>
-                  {choice}
-                </button>
-              );
+              return <button key={i} onClick={() => handlePickAnswer(i)} disabled={!!answerFeedback} style={btnStyle}><span style={cStyles.choiceLetter}>{['A', 'B', 'C', 'D'][i]}</span>{choice}</button>;
             })}
           </div>
-
           {answerFeedback && (
-            <div style={{
-              ...cStyles.feedbackBox,
-              background: answerFeedback.correct ? '#d1fae5' : '#fee2e2',
-              borderColor: answerFeedback.correct ? '#6ee7b7' : '#fca5a5'
-            }}>
-              <p style={{ fontWeight: '800', margin: '0 0 4px', fontSize: '16px', color: answerFeedback.correct ? '#065f46' : '#991b1b' }}>
-                {answerFeedback.correct ? '✅ Correct!' : '❌ Not quite.'}
-              </p>
-              {!answerFeedback.correct && (
-                <p style={{ margin: '0 0 10px', color: '#475569', fontSize: '14px' }}>
-                  Correct answer: <strong>{answerFeedback.correctAnswer}</strong>
-                </p>
-              )}
-              <button
-                onClick={nextQuestion}
-                style={{ ...cStyles.nextBtn, background: course?.gradient || '#2563eb' }}
-              >
-                {quiz.index + 1 >= quiz.questions.length ? 'See Results →' : 'Next Question →'}
-              </button>
+            <div style={{ ...cStyles.feedbackBox, background: answerFeedback.correct ? '#d1fae5' : '#fee2e2', borderColor: answerFeedback.correct ? '#6ee7b7' : '#fca5a5' }}>
+              <p style={{ fontWeight: '800', margin: '0 0 4px', fontSize: '16px', color: answerFeedback.correct ? '#065f46' : '#991b1b' }}>{answerFeedback.correct ? '✅ Correct!' : '❌ Not quite.'}</p>
+              {!answerFeedback.correct && <p style={{ margin: '0 0 10px', color: '#475569', fontSize: '14px' }}>Correct answer: <strong>{answerFeedback.correctAnswer}</strong></p>}
+              <button onClick={handleNextQuestion} style={{ ...cStyles.nextBtn, background: course?.gradient || '#2563eb' }}>{quiz.index + 1 >= quiz.questions.length ? 'See Results →' : 'Next Question →'}</button>
             </div>
           )}
         </div>
@@ -536,39 +467,17 @@ export default function CoursesScreen({ courseProgressMap = {}, setCourseProgres
     );
   }
 
-  // ─── RESULT VIEW ─────────────────────────────────────────────────────────
+  // UI - RESULT VIEW
   if (page === 'result' && result) {
     return (
       <div style={cStyles.innerContainer}>
-        <div style={{
-          ...cStyles.resultCard,
-          background: result.passed
-            ? 'linear-gradient(135deg,#065f46,#059669)'
-            : 'linear-gradient(135deg,#7f1d1d,#dc2626)'
-        }}>
-          <div style={{ fontSize: '60px', marginBottom: '8px' }}>
-            {result.passed ? '🎉' : '😤'}
-          </div>
-          <h2 style={{ color: '#fff', margin: '0 0 6px', fontSize: '28px', fontWeight: '900' }}>
-            {result.passed ? 'Quiz Passed!' : 'Not Quite!'}
-          </h2>
-          <div style={cStyles.scoreDisplay}>
-            <div style={cStyles.scoreCircle}>
-              <span style={{ fontSize: '28px', fontWeight: '900', color: result.passed ? '#059669' : '#dc2626' }}>
-                {result.score}%
-              </span>
-            </div>
-          </div>
-          <p style={{ color: 'rgba(255,255,255,0.9)', margin: '0 0 4px' }}>
-            {result.correct} / {result.total} correct
-          </p>
-          {!result.passed && (
-            <p style={{ color: '#fca5a5', fontWeight: '700', margin: '4px 0 0' }}>
-              You need 70% to pass — you can do it!
-            </p>
-          )}
+        <div style={{ ...cStyles.resultCard, background: result.passed ? 'linear-gradient(135deg,#065f46,#059669)' : 'linear-gradient(135deg,#7f1d1d,#dc2626)' }}>
+          <div style={{ fontSize: '60px', marginBottom: '8px' }}>{result.passed ? '🎉' : '😤'}</div>
+          <h2 style={{ color: '#fff', margin: '0 0 6px', fontSize: '28px', fontWeight: '900' }}>{result.passed ? 'Quiz Passed!' : 'Not Quite!'}</h2>
+          <div style={cStyles.scoreDisplay}><div style={cStyles.scoreCircle}><span style={{ fontSize: '28px', fontWeight: '900', color: result.passed ? '#059669' : '#dc2626' }}>{result.score}%</span></div></div>
+          <p style={{ color: 'rgba(255,255,255,0.9)', margin: '0 0 4px' }}>{result.correct} / {result.total} correct</p>
+          {!result.passed && <p style={{ color: '#fca5a5', fontWeight: '700', margin: '4px 0 0' }}>You need 70% to pass — you can do it!</p>}
         </div>
-
         {result.wrong.length > 0 && (
           <div style={cStyles.wrongAnswersCard}>
             <h3 style={{ margin: '0 0 14px', fontSize: '16px', color: '#1e293b' }}>📋 Review Your Mistakes</h3>
@@ -581,27 +490,12 @@ export default function CoursesScreen({ courseProgressMap = {}, setCourseProgres
             ))}
           </div>
         )}
-
-        <button
-          onClick={continueAfterResult}
-          style={{
-            ...cStyles.continueBtn,
-            background: result.passed
-              ? course?.gradient || '#059669'
-              : 'linear-gradient(135deg,#f59e0b,#d97706)'
-          }}
-        >
-          {result.passed
-            ? currentLesson + 1 < (course?.lessons?.length || 0)
-              ? '▶ Next Lesson'
-              : '🎓 Finish Course'
-            : '🔄 Retry Quiz'}
-        </button>
+        <button onClick={handleContinueAfterResult} style={{ ...cStyles.continueBtn, background: result.passed ? course?.gradient || '#059669' : 'linear-gradient(135deg,#f59e0b,#d97706)' }}>{result.passed ? (currentLesson + 1 < (course?.lessons?.length || 0) ? '▶ Next Lesson' : '🎓 Finish Course') : '🔄 Retry Quiz'}</button>
       </div>
     );
   }
 
-  // ─── CERTIFICATE ─────────────────────────────────────────────────────────
+  // UI - CERTIFICATE
   if (page === 'certificate') {
     return (
       <div style={cStyles.innerContainer}>
@@ -617,20 +511,7 @@ export default function CoursesScreen({ courseProgressMap = {}, setCourseProgres
             <div style={{ background: '#f8fafc', borderRadius: '12px', padding: '14px 20px', marginBottom: '20px', border: '1px solid #e2e8f0' }}>
               <p style={{ margin: 0, fontWeight: '700', fontSize: '18px', color: '#1e293b' }}>{completedCourseTitle}</p>
             </div>
-            <p style={{ color: '#94a3b8', fontSize: '13px', margin: '0 0 24px' }}>
-              Demonstrating financial literacy and commitment to building money skills.
-            </p>
-            <div style={{ display: 'flex', gap: '10px', justifyContent: 'center', flexWrap: 'wrap' }}>
-              <button onClick={() => setPage('list')} style={cStyles.certBtn}>
-                ← Back to Courses
-              </button>
-              <button
-                onClick={() => setPage('list')}
-                style={{ ...cStyles.certBtn, background: course?.gradient, color: '#fff', border: 'none' }}
-              >
-                🏠 Done
-              </button>
-            </div>
+            <button onClick={() => setPage('list')} style={cStyles.certBtn}>← Back to Courses</button>
           </div>
         </div>
       </div>
@@ -641,202 +522,48 @@ export default function CoursesScreen({ courseProgressMap = {}, setCourseProgres
 }
 
 const cStyles = {
-  container: {
-    padding: '24px 16px 48px',
-    maxWidth: '1100px',
-    margin: '0 auto',
-    fontFamily: "'Inter', system-ui, sans-serif",
-    background: 'radial-gradient(circle at top left, rgba(59,130,246,0.08), transparent 28%), radial-gradient(circle at bottom right, rgba(16,185,129,0.08), transparent 24%), #f8fafc',
-    borderRadius: '28px'
-  },
-  header: {
-    display: 'flex', justifyContent: 'space-between',
-    alignItems: 'flex-start', flexWrap: 'wrap',
-    gap: '16px', marginBottom: '28px'
-  },
-  headerBadge: {
-    display: 'inline-flex', alignItems: 'center',
-    background: '#e0e7ff', color: '#3730a3',
-    borderRadius: '999px', padding: '5px 12px',
-    fontSize: '12px', fontWeight: '700', marginBottom: '8px'
-  },
+  container: { padding: '24px 16px 48px', maxWidth: '1100px', margin: '0 auto', fontFamily: "'Inter', system-ui, sans-serif" },
+  header: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px', marginBottom: '28px' },
+  headerBadge: { display: 'inline-flex', alignItems: 'center', background: '#e0e7ff', color: '#3730a3', borderRadius: '999px', padding: '5px 12px', fontSize: '12px', fontWeight: '700', marginBottom: '8px' },
   headerTitle: { margin: '0 0 6px', fontSize: '32px', fontWeight: '900', color: '#111827' },
   headerSub: { margin: 0, color: '#64748b', fontSize: '15px' },
-  completedPill: {
-    display: 'flex', alignItems: 'center', gap: '12px',
-    background: 'linear-gradient(135deg,#6366f1,#2563eb)',
-    color: '#fff', borderRadius: '16px', padding: '14px 20px',
-    boxShadow: '0 8px 24px rgba(99,102,241,0.3)'
-  },
-  grid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(290px, 1fr))',
-    gap: '20px'
-  },
-  courseCard: {
-    borderRadius: '20px', overflow: 'hidden',
-    boxShadow: '0 12px 32px rgba(15,23,42,0.1)',
-    border: '1px solid rgba(0,0,0,0.06)',
-    display: 'flex', flexDirection: 'column'
-  },
-  courseCardTop: {
-    padding: '24px', color: '#fff'
-  },
-  courseCardTitle: {
-    margin: '14px 0 6px', fontSize: '20px',
-    fontWeight: '800', color: '#fff', lineHeight: 1.2
-  },
-  courseCardSub: {
-    margin: 0, fontSize: '13px', color: 'rgba(255,255,255,0.8)'
-  },
-  courseTierTag: {
-    borderRadius: '999px', padding: '4px 12px',
-    fontSize: '11px', fontWeight: '800',
-    letterSpacing: '0.5px', textTransform: 'uppercase'
-  },
-  courseCardBottom: {
-    background: '#fff', padding: '18px', flex: 1
-  },
-  startBtn: {
-    width: '100%', padding: '12px', border: 'none',
-    borderRadius: '12px', fontWeight: '800',
-    fontSize: '14px', cursor: 'pointer',
-    transition: 'opacity 0.2s', fontFamily: 'inherit'
-  },
-  innerContainer: {
-    maxWidth: '780px', margin: '0 auto',
-    padding: '0 16px 40px',
-    fontFamily: "'Inter', system-ui, sans-serif"
-  },
-  backBtn: {
-    border: 'none', background: 'none',
-    color: '#2563eb', cursor: 'pointer',
-    marginBottom: '16px', fontSize: '14px',
-    fontWeight: '600', padding: 0
-  },
-  courseHeaderBar: {
-    padding: '20px 24px', borderRadius: '18px',
-    marginBottom: '16px', color: '#fff'
-  },
-  lessonCard: {
-    background: '#fff', borderRadius: '18px',
-    padding: '28px', boxShadow: '0 8px 24px rgba(0,0,0,0.07)',
-    border: '1px solid #f1f5f9'
-  },
-  lessonNumBadge: {
-    display: 'inline-block', color: '#fff',
-    borderRadius: '999px', padding: '4px 14px',
-    fontSize: '12px', fontWeight: '700',
-    marginBottom: '12px', letterSpacing: '0.5px'
-  },
-  lessonTitle: {
-    margin: '0 0 18px', fontSize: '22px',
-    fontWeight: '800', color: '#111827'
-  },
+  completedPill: { display: 'flex', alignItems: 'center', gap: '12px', background: 'linear-gradient(135deg,#6366f1,#2563eb)', color: '#fff', borderRadius: '16px', padding: '14px 20px', boxShadow: '0 8px 24px rgba(99,102,241,0.3)' },
+  grid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(290px, 1fr))', gap: '20px' },
+  courseCard: { borderRadius: '20px', overflow: 'hidden', boxShadow: '0 12px 32px rgba(15,23,42,0.1)', border: '1px solid rgba(0,0,0,0.06)', display: 'flex', flexDirection: 'column' },
+  courseCardTop: { padding: '24px', color: '#fff' },
+  courseCardTitle: { margin: '14px 0 6px', fontSize: '20px', fontWeight: '800', color: '#fff', lineHeight: 1.2 },
+  courseCardSub: { margin: 0, fontSize: '13px', color: 'rgba(255,255,255,0.8)' },
+  courseTierTag: { borderRadius: '999px', padding: '4px 12px', fontSize: '11px', fontWeight: '800', letterSpacing: '0.5px', textTransform: 'uppercase' },
+  courseCardBottom: { background: '#fff', padding: '18px', flex: 1 },
+  startBtn: { width: '100%', padding: '12px', border: 'none', borderRadius: '12px', fontWeight: '800', fontSize: '14px', cursor: 'pointer', transition: 'opacity 0.2s', fontFamily: 'inherit' },
+  innerContainer: { maxWidth: '780px', margin: '0 auto', padding: '0 16px 40px', fontFamily: "'Inter', system-ui, sans-serif" },
+  backBtn: { border: 'none', background: 'none', color: '#2563eb', cursor: 'pointer', marginBottom: '16px', fontSize: '14px', fontWeight: '600', padding: 0 },
+  courseHeaderBar: { padding: '20px 24px', borderRadius: '18px', marginBottom: '16px', color: '#fff' },
+  lessonCard: { background: '#fff', borderRadius: '18px', padding: '28px', boxShadow: '0 8px 24px rgba(0,0,0,0.07)', border: '1px solid #f1f5f9' },
+  lessonNumBadge: { display: 'inline-block', color: '#fff', borderRadius: '999px', padding: '4px 14px', fontSize: '12px', fontWeight: '700', marginBottom: '12px', letterSpacing: '0.5px' },
+  lessonTitle: { margin: '0 0 18px', fontSize: '22px', fontWeight: '800', color: '#111827' },
   lessonInfoList: { display: 'flex', flexDirection: 'column', gap: '14px', marginBottom: '24px' },
   lessonInfoItem: { display: 'flex', gap: '12px', alignItems: 'flex-start' },
-  lessonInfoDot: {
-    width: '8px', height: '8px', borderRadius: '50%',
-    marginTop: '6px', flexShrink: 0
-  },
+  lessonInfoDot: { width: '8px', height: '8px', borderRadius: '50%', marginTop: '6px', flexShrink: 0 },
   lessonInfoText: { margin: 0, color: '#334155', fontSize: '15px', lineHeight: '1.7' },
-  quizBtn: {
-    padding: '13px 28px', border: 'none',
-    borderRadius: '12px', color: '#fff',
-    fontWeight: '800', fontSize: '15px',
-    cursor: 'pointer', fontFamily: 'inherit'
-  },
-  quizHeaderCard: {
-    background: '#fff', borderRadius: '14px',
-    padding: '16px 20px', marginBottom: '16px',
-    boxShadow: '0 4px 12px rgba(0,0,0,0.05)'
-  },
-  scoreChip: {
-    borderRadius: '999px', padding: '4px 12px',
-    color: '#fff', fontSize: '12px', fontWeight: '700'
-  },
-  quizCard: {
-    background: '#fff', borderRadius: '18px',
-    padding: '28px', boxShadow: '0 8px 24px rgba(0,0,0,0.07)'
-  },
-  questionNumBadge: {
-    display: 'inline-block', borderRadius: '8px',
-    padding: '4px 10px', fontSize: '12px',
-    fontWeight: '800', marginBottom: '12px'
-  },
-  questionText: {
-    fontSize: '19px', fontWeight: '700',
-    color: '#1e293b', marginBottom: '20px',
-    lineHeight: '1.5'
-  },
-  choiceBtn: {
-    padding: '14px 16px', textAlign: 'left',
-    border: '2px solid #e2e8f0', borderRadius: '12px',
-    background: '#f8fafc', fontSize: '14px',
-    fontWeight: '500', color: '#334155',
-    display: 'flex', alignItems: 'center', gap: '12px',
-    fontFamily: 'inherit', transition: 'border-color 0.2s'
-  },
-  choiceLetter: {
-    width: '28px', height: '28px', borderRadius: '8px',
-    background: '#e2e8f0', display: 'flex',
-    alignItems: 'center', justifyContent: 'center',
-    fontSize: '12px', fontWeight: '800',
-    color: '#475569', flexShrink: 0
-  },
-  feedbackBox: {
-    marginTop: '18px', padding: '16px 18px',
-    borderRadius: '14px', border: '2px solid'
-  },
-  nextBtn: {
-    padding: '11px 24px', border: 'none',
-    borderRadius: '10px', color: '#fff',
-    fontWeight: '700', cursor: 'pointer',
-    fontSize: '14px', fontFamily: 'inherit'
-  },
-  resultCard: {
-    borderRadius: '20px', padding: '32px 24px',
-    textAlign: 'center', marginBottom: '18px',
-    boxShadow: '0 12px 32px rgba(0,0,0,0.15)'
-  },
+  quizBtn: { padding: '13px 28px', border: 'none', borderRadius: '12px', color: '#fff', fontWeight: '800', fontSize: '15px', cursor: 'pointer', fontFamily: 'inherit' },
+  quizHeaderCard: { background: '#fff', borderRadius: '14px', padding: '16px 20px', marginBottom: '16px', boxShadow: '0 4px 12px rgba(0,0,0,0.05)' },
+  scoreChip: { borderRadius: '999px', padding: '4px 12px', color: '#fff', fontSize: '12px', fontWeight: '700' },
+  quizCard: { background: '#fff', borderRadius: '18px', padding: '28px', boxShadow: '0 8px 24px rgba(0,0,0,0.07)' },
+  questionNumBadge: { display: 'inline-block', borderRadius: '8px', padding: '4px 10px', fontSize: '12px', fontWeight: '800', marginBottom: '12px' },
+  questionText: { fontSize: '19px', fontWeight: '700', color: '#1e293b', marginBottom: '20px', lineHeight: '1.5' },
+  choiceBtn: { padding: '14px 16px', textAlign: 'left', border: '2px solid #e2e8f0', borderRadius: '12px', background: '#f8fafc', fontSize: '14px', fontWeight: '500', color: '#334155', display: 'flex', alignItems: 'center', gap: '12px', fontFamily: 'inherit', transition: 'border-color 0.2s' },
+  choiceLetter: { width: '28px', height: '28px', borderRadius: '8px', background: '#e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: '800', color: '#475569', flexShrink: 0 },
+  feedbackBox: { marginTop: '18px', padding: '16px 18px', borderRadius: '14px', border: '2px solid' },
+  nextBtn: { padding: '11px 24px', border: 'none', borderRadius: '10px', color: '#fff', fontWeight: '700', cursor: 'pointer', fontSize: '14px', fontFamily: 'inherit' },
+  resultCard: { borderRadius: '20px', padding: '32px 24px', textAlign: 'center', marginBottom: '18px', boxShadow: '0 12px 32px rgba(0,0,0,0.15)' },
   scoreDisplay: { margin: '16px 0' },
-  scoreCircle: {
-    display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-    width: '90px', height: '90px', borderRadius: '50%',
-    background: '#fff', boxShadow: '0 4px 16px rgba(0,0,0,0.15)'
-  },
-  wrongAnswersCard: {
-    background: '#fff', borderRadius: '18px',
-    padding: '20px', marginBottom: '16px',
-    boxShadow: '0 4px 12px rgba(0,0,0,0.05)'
-  },
-  wrongItem: {
-    padding: '12px', background: '#fef9f9',
-    borderRadius: '10px', marginBottom: '10px',
-    border: '1px solid #fecaca'
-  },
-  continueBtn: {
-    width: '100%', padding: '15px',
-    border: 'none', borderRadius: '14px',
-    color: '#fff', fontWeight: '800',
-    fontSize: '16px', cursor: 'pointer',
-    fontFamily: 'inherit'
-  },
-  certCard: {
-    borderRadius: '24px', overflow: 'hidden',
-    boxShadow: '0 20px 48px rgba(0,0,0,0.12)',
-    border: '1px solid #e2e8f0'
-  },
-  certTop: {
-    padding: '40px 24px', textAlign: 'center', color: '#fff'
-  },
-  certBody: {
-    background: '#fff', padding: '32px 24px', textAlign: 'center'
-  },
-  certBtn: {
-    padding: '12px 24px', borderRadius: '12px',
-    border: '2px solid #e2e8f0', background: '#f8fafc',
-    color: '#475569', fontWeight: '700', cursor: 'pointer',
-    fontSize: '14px', fontFamily: 'inherit'
-  }
+  scoreCircle: { display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '90px', height: '90px', borderRadius: '50%', background: '#fff', boxShadow: '0 4px 16px rgba(0,0,0,0.15)' },
+  wrongAnswersCard: { background: '#fff', borderRadius: '18px', padding: '20px', marginBottom: '16px', boxShadow: '0 4px 12px rgba(0,0,0,0.05)' },
+  wrongItem: { padding: '12px', background: '#fef9f9', borderRadius: '10px', marginBottom: '10px', border: '1px solid #fecaca' },
+  continueBtn: { width: '100%', padding: '15px', border: 'none', borderRadius: '14px', color: '#fff', fontWeight: '800', fontSize: '16px', cursor: 'pointer', fontFamily: 'inherit' },
+  certCard: { borderRadius: '24px', overflow: 'hidden', boxShadow: '0 20px 48px rgba(0,0,0,0.12)', border: '1px solid #e2e8f0' },
+  certTop: { padding: '40px 24px', textAlign: 'center', color: '#fff' },
+  certBody: { background: '#fff', padding: '32px 24px', textAlign: 'center' },
+  certBtn: { padding: '12px 24px', borderRadius: '12px', border: '2px solid #e2e8f0', background: '#f8fafc', color: '#475569', fontWeight: '700', cursor: 'pointer', fontSize: '14px', fontFamily: 'inherit' }
 };
