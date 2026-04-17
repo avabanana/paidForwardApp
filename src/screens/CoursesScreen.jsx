@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import ProgressBar from '../components/ProgressBar';
 
 const coursesData = [
@@ -205,6 +205,14 @@ export default function CoursesScreen({ courseProgressMap = {}, setCourseProgres
   const [result, setResult] = useState(null);
   const [answerFeedback, setAnswerFeedback] = useState(null);
   const [completedCourseTitle, setCompletedCourseTitle] = useState('');
+  const [localProgressMap, setLocalProgressMap] = useState(courseProgressMap);
+  const [courseCompleteMarked, setCourseCompleteMarked] = useState(false);
+
+  useEffect(() => {
+    setLocalProgressMap(courseProgressMap);
+  }, [courseProgressMap]);
+
+  const effectiveProgressMap = { ...(courseProgressMap || {}), ...(localProgressMap || {}) };
 
   const isElementary = userTier === 'elementary';
   const courseHeading = isElementary ? 'Money Adventures' : 'Courses';
@@ -217,7 +225,7 @@ export default function CoursesScreen({ courseProgressMap = {}, setCourseProgres
 
   // PERSISTENT PROGRESS LOGIC
   const courseLessonDone = (courseId, lessonIdx) => 
-    Boolean(courseProgressMap?.[`course_${courseId}_lesson_${lessonIdx}`]);
+    Boolean(effectiveProgressMap?.[`course_${courseId}_lesson_${lessonIdx}`]);
 
   const lessonsCompletedCount = (courseId) => {
     const c = coursesData.find((x) => x.id === courseId);
@@ -242,11 +250,17 @@ export default function CoursesScreen({ courseProgressMap = {}, setCourseProgres
     return 0; // If all complete, start at 0 for review
   };
 
-  const handleStartCourse = (id) => {
+  const handleStartCourse = (id, isFinished = false) => {
     setCurrentCourseId(id);
-    setCurrentLesson(getFirstIncompleteLessonIdx(id));
     setQuiz(null);
     setResult(null);
+    setCourseCompleteMarked(false);
+    if (isFinished) {
+      setCurrentLesson(0);
+      setPage('review');
+      return;
+    }
+    setCurrentLesson(getFirstIncompleteLessonIdx(id));
     setPage('lesson');
   };
 
@@ -281,16 +295,23 @@ export default function CoursesScreen({ courseProgressMap = {}, setCourseProgres
     if (nextIndex >= quiz.questions.length) {
       const score = Math.round((updatedCorrect / quiz.questions.length) * 100);
       const passed = score >= 70;
-      
+      const progressKey = `course_${course.id}_lesson_${currentLesson}`;
+
       if (passed) {
-        // ESSENTIAL: Push the specific lesson completion to the parent map
-        setCourseProgressMap?.(`course_${course.id}_lesson_${currentLesson}`, 1);
+        setLocalProgressMap((prev) => ({ ...prev, [progressKey]: 1 }));
+        setCourseProgressMap?.(progressKey, 1);
       }
 
       setResult({ score, passed, correct: updatedCorrect, total: quiz.questions.length, wrong: updatedWrong });
       setQuiz(null);
       setAnswerFeedback(null);
       setPage('result');
+
+      if (passed && currentLesson + 1 >= (course?.lessons?.length || 0) && !courseCompleteMarked) {
+        setCourseCompleteMarked(true);
+        onCourseComplete?.(course.id);
+        setCompletedCourseTitle(course.title);
+      }
       return;
     }
     setQuiz({ ...quiz, index: nextIndex, correct: updatedCorrect, wrong: updatedWrong });
@@ -310,7 +331,10 @@ export default function CoursesScreen({ courseProgressMap = {}, setCourseProgres
     }
     
     // Course finalized
-    onCourseComplete?.(course.id);
+    if (!courseCompleteMarked) {
+      onCourseComplete?.(course.id);
+      setCourseCompleteMarked(true);
+    }
     setCompletedCourseTitle(course.title);
     setPage('certificate');
   };
@@ -360,11 +384,11 @@ export default function CoursesScreen({ courseProgressMap = {}, setCourseProgres
                     <ProgressBar progress={progressValue} />
                   </div>
                   <button
-                    onClick={() => handleStartCourse(c.id)}
+                    onClick={() => handleStartCourse(c.id, isFinished)}
                     style={{
                       ...cStyles.startBtn,
-                      background: isFinished ? '#f1f5f9' : c.gradient,
-                      color: isFinished ? '#475569' : '#fff',
+                      background: isFinished ? '#f8fafc' : c.gradient,
+                      color: isFinished ? '#334155' : '#fff',
                       border: isFinished ? '2px solid #e2e8f0' : 'none'
                     }}
                   >
@@ -467,6 +491,37 @@ export default function CoursesScreen({ courseProgressMap = {}, setCourseProgres
     );
   }
 
+  // UI - REVIEW VIEW
+  if (page === 'review' && course) {
+    return (
+      <div style={cStyles.innerContainer}>
+        <button onClick={() => setPage('list')} style={cStyles.backBtn}>← Back to courses</button>
+        <div style={{ ...cStyles.courseHeaderBar, background: course.gradient, padding: '24px 28px' }}>
+          <h2 style={{ margin: 0, color: '#fff', fontSize: '28px', fontWeight: '900' }}>100% Complete Review</h2>
+          <p style={{ margin: '10px 0 0', color: 'rgba(255,255,255,0.9)', fontSize: '15px' }}>Well done! Here's everything you learned in this course.</p>
+        </div>
+        <div style={cStyles.reviewCard}>
+          <div style={cStyles.reviewSummary}>
+            <span style={cStyles.reviewBadge}>Course Complete</span>
+            <div style={cStyles.reviewScore}>100%</div>
+            <p style={{ margin: '0', color: '#475569', fontSize: '14px' }}>You have finished every lesson and are ready to review the key ideas.</p>
+          </div>
+          {course.lessons.map((lesson, idx) => (
+            <div key={idx} style={cStyles.reviewItem}>
+              <div style={cStyles.reviewLessonTitle}>Lesson {idx + 1}: {lesson.title}</div>
+              <ul style={cStyles.reviewList}>
+                {lesson.info.map((line, index) => (
+                  <li key={index} style={cStyles.reviewListItem}>{line}</li>
+                ))}
+              </ul>
+            </div>
+          ))}
+          <button onClick={() => setPage('list')} style={{ ...cStyles.continueBtn, background: course.gradient, marginTop: '20px' }}>← Back to Courses</button>
+        </div>
+      </div>
+    );
+  }
+
   // UI - RESULT VIEW
   if (page === 'result' && result) {
     return (
@@ -522,9 +577,9 @@ export default function CoursesScreen({ courseProgressMap = {}, setCourseProgres
 }
 
 const cStyles = {
-  container: { padding: '24px 16px 48px', maxWidth: '1100px', margin: '0 auto', fontFamily: "'Inter', system-ui, sans-serif" },
+  container: { padding: '28px 18px 48px', maxWidth: '1100px', margin: '0 auto', fontFamily: "'Inter', system-ui, sans-serif", background: 'linear-gradient(180deg, #eef2ff 0%, #ffffff 60%)', borderRadius: '32px', boxShadow: '0 24px 80px rgba(15,23,42,0.08)' },
   header: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px', marginBottom: '28px' },
-  headerBadge: { display: 'inline-flex', alignItems: 'center', background: '#e0e7ff', color: '#3730a3', borderRadius: '999px', padding: '5px 12px', fontSize: '12px', fontWeight: '700', marginBottom: '8px' },
+  headerBadge: { display: 'inline-flex', alignItems: 'center', background: '#fef3c7', color: '#92400e', borderRadius: '999px', padding: '7px 14px', fontSize: '12px', fontWeight: '700', marginBottom: '8px' },
   headerTitle: { margin: '0 0 6px', fontSize: '32px', fontWeight: '900', color: '#111827' },
   headerSub: { margin: 0, color: '#64748b', fontSize: '15px' },
   completedPill: { display: 'flex', alignItems: 'center', gap: '12px', background: 'linear-gradient(135deg,#6366f1,#2563eb)', color: '#fff', borderRadius: '16px', padding: '14px 20px', boxShadow: '0 8px 24px rgba(99,102,241,0.3)' },

@@ -25,18 +25,17 @@ export default function SettingsScreen({ currentUser, stats, updateData, signOut
     if (!trimmed) { showMsg("Please enter a valid display name.", "error"); return; }
     if (!currentUser) { showMsg("Not logged in.", "error"); return; }
 
-    // Optimistic update — header changes instantly
-    if (onUsernameUpdate) onUsernameUpdate(trimmed);
     setSavingName(true);
-    showMsg("✅ Display name updated!", "success");
+    showMsg("Saving display name…", "info");
 
     try {
       await updateProfile(currentUser, { displayName: trimmed });
       const userRef = doc(db, "users", currentUser.uid);
       await updateDoc(userRef, { username: trimmed });
       await updateData({ username: trimmed });
+      if (onUsernameUpdate) onUsernameUpdate(trimmed);
+      showMsg("✅ Display name updated!", "success");
     } catch (err) {
-      // Roll back optimistic update on failure
       if (onUsernameUpdate) onUsernameUpdate(stats?.username || "");
       showMsg(err.message || "Could not update display name.", "error");
     } finally {
@@ -49,14 +48,14 @@ export default function SettingsScreen({ currentUser, stats, updateData, signOut
     if (newPassword.length < 6) { showMsg("New password must be at least 6 characters.", "error"); return; }
 
     setUpdatingPassword(true);
-    // Optimistic feedback
-    showMsg("✅ Password updated successfully!", "success");
+    showMsg("Updating password…", "info");
     try {
       const credential = EmailAuthProvider.credential(currentUser.email, currentPassword);
       await reauthenticateWithCredential(currentUser, credential);
       await updatePassword(currentUser, newPassword);
       setCurrentPassword("");
       setNewPassword("");
+      showMsg("✅ Password updated successfully!", "success");
     } catch (err) {
       showMsg(err.message || "Could not update password.", "error");
     } finally {
@@ -76,16 +75,15 @@ export default function SettingsScreen({ currentUser, stats, updateData, signOut
       const credential = EmailAuthProvider.credential(currentUser.email, deletePassword);
       await reauthenticateWithCredential(currentUser, credential);
 
-      // Delete Firestore doc first, then the auth user
       if (db && currentUser.uid) {
         await deleteDoc(doc(db, "users", currentUser.uid));
       }
       await deleteUser(currentUser);
 
-      // signOutCallback clears local state
       if (signOutCallback) await signOutCallback();
     } catch (err) {
       showMsg(err.message || "Could not delete account.", "error");
+    } finally {
       setDeletingAccount(false);
     }
   };

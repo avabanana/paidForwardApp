@@ -87,6 +87,8 @@ export default function LeagueScreen({ currentUser, userId, db }) {
   const [newLeagueName, setNewLeagueName] = useState("");
   const [joinCode, setJoinCode] = useState("");
   const [message, setMessage] = useState("");
+  const [savingLeague, setSavingLeague] = useState(false);
+  const [joiningLeague, setJoiningLeague] = useState(false);
   const [challenge, setChallenge] = useState(null);
   const [answered, setAnswered] = useState(false);
   const [lastAnswer, setLastAnswer] = useState(null);
@@ -129,51 +131,85 @@ export default function LeagueScreen({ currentUser, userId, db }) {
   const activeLeague = activeCode ? leagues[activeCode] : null;
 
   const createLeague = async () => {
-    if (!newLeagueName.trim() || !db || !userId) return;
-    const code = makeCode();
-    const leagueData = {
-      code,
-      name: newLeagueName.trim(),
-      createdBy: currentUser,
-      createdAt: serverTimestamp(),
-      members: {
-        [userId]: { name: currentUser, score: 0, answered: 0 }
-      }
-    };
-    await setDoc(doc(db, "leagues", code), leagueData);
-    const userRef = doc(db, "users", userId);
-    const snap = await getDoc(userRef);
-    const existing = snap.data()?.leagueCodes || [];
-    await updateDoc(userRef, { leagueCodes: [...existing, code] });
-    setNewLeagueName("");
-    setActiveCode(code);
-    setMessage(`✅ League created! Share code: ${code}`);
+    if (!newLeagueName.trim()) {
+      setMessage("Please type a league name before creating one.");
+      return;
+    }
+    if (!db || !userId) {
+      setMessage("Unable to create league. Please sign in again.");
+      return;
+    }
+
+    setSavingLeague(true);
+    setMessage("Creating your league…");
+
+    try {
+      const code = makeCode();
+      const leagueData = {
+        code,
+        name: newLeagueName.trim(),
+        createdBy: currentUser,
+        createdAt: serverTimestamp(),
+        members: {
+          [userId]: { name: currentUser, score: 0, answered: 0 }
+        }
+      };
+      await setDoc(doc(db, "leagues", code), leagueData);
+      const userRef = doc(db, "users", userId);
+      const snap = await getDoc(userRef);
+      const existing = snap.data()?.leagueCodes || [];
+      await updateDoc(userRef, { leagueCodes: [...existing, code] });
+      setNewLeagueName("");
+      setActiveCode(code);
+      setMessage(`✅ League created! Share code: ${code}`);
+    } catch (err) {
+      setMessage(err.message || "Could not create league. Try again.");
+    } finally {
+      setSavingLeague(false);
+    }
   };
 
   const joinLeague = async () => {
     const code = joinCode.trim().toUpperCase();
-    if (!code || !db || !userId) return;
-    const ref = doc(db, "leagues", code);
-    const snap = await getDoc(ref);
-    if (!snap.exists()) {
-      setMessage("❌ League not found. Check the code.");
+    if (!code) {
+      setMessage("Please enter a league code.");
       return;
     }
-    const data = snap.data();
-    if (!data.members?.[userId]) {
-      await updateDoc(ref, {
-        [`members.${userId}`]: { name: currentUser, score: 0, answered: 0 }
-      });
+    if (!db || !userId) {
+      setMessage("Unable to join league. Please sign in again.");
+      return;
     }
-    const userRef = doc(db, "users", userId);
-    const userSnap = await getDoc(userRef);
-    const existing = userSnap.data()?.leagueCodes || [];
-    if (!existing.includes(code)) {
-      await updateDoc(userRef, { leagueCodes: [...existing, code] });
+
+    setJoiningLeague(true);
+    setMessage("Checking league code…");
+
+    try {
+      const ref = doc(db, "leagues", code);
+      const snap = await getDoc(ref);
+      if (!snap.exists()) {
+        setMessage("❌ League not found. Check the code.");
+        return;
+      }
+      const data = snap.data();
+      if (!data.members?.[userId]) {
+        await updateDoc(ref, {
+          [`members.${userId}`]: { name: currentUser, score: 0, answered: 0 }
+        });
+      }
+      const userRef = doc(db, "users", userId);
+      const userSnap = await getDoc(userRef);
+      const existing = userSnap.data()?.leagueCodes || [];
+      if (!existing.includes(code)) {
+        await updateDoc(userRef, { leagueCodes: [...existing, code] });
+      }
+      setJoinCode("");
+      setActiveCode(code);
+      setMessage(`🎉 Joined league: ${data.name}!`);
+    } catch (err) {
+      setMessage(err.message || "Could not join league. Please try again.");
+    } finally {
+      setJoiningLeague(false);
     }
-    setJoinCode("");
-    setActiveCode(code);
-    setMessage(`🎉 Joined league: ${data.name}!`);
   };
 
   const answerChallenge = async (option) => {
@@ -222,7 +258,7 @@ export default function LeagueScreen({ currentUser, userId, db }) {
             onChange={(e) => setNewLeagueName(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && createLeague()}
           />
-          <button style={styles.button} onClick={createLeague}>Create League</button>
+          <button type="button" style={styles.button} onClick={createLeague} disabled={savingLeague}>{savingLeague ? 'Creating…' : 'Create League'}</button>
         </div>
 
         <div style={styles.card}>
@@ -236,7 +272,7 @@ export default function LeagueScreen({ currentUser, userId, db }) {
             onKeyDown={(e) => e.key === "Enter" && joinLeague()}
             maxLength={6}
           />
-          <button style={styles.button} onClick={joinLeague}>Join League</button>
+          <button type="button" style={styles.button} onClick={joinLeague} disabled={joiningLeague}>{joiningLeague ? 'Joining…' : 'Join League'}</button>
         </div>
       </div>
 

@@ -31,11 +31,18 @@ export default function DiscussionScreen({ currentUser, streak = 0, db, userId }
     return () => unsub();
   }, [db]);
 
+  useEffect(() => {
+    setShowMine(false);
+  }, [currentUser]);
+
+  const actorId = userId || currentUser || "Guest";
+  const currentUserDisplayName = currentUser || "Guest";
+
   const handlePost = async (e) => {
     e.preventDefault();
     if (!newPost.trim() || !db) return;
     await addDoc(collection(db, "discussion_posts"), {
-      user: currentUser || "Guest",
+      user: currentUserDisplayName,
       userId: userId || "",
       text: newPost.trim(),
       createdAt: serverTimestamp(),
@@ -58,9 +65,9 @@ export default function DiscussionScreen({ currentUser, streak = 0, db, userId }
     const arr = type === "like"
       ? (currentReactions.likes || [])
       : (currentReactions.reactions?.[type] || []);
-    const hasReacted = arr.includes(currentUser);
+    const hasReacted = arr.includes(actorId);
     await updateDoc(postRef, {
-      [field]: hasReacted ? arrayRemove(currentUser) : arrayUnion(currentUser)
+      [field]: hasReacted ? arrayRemove(actorId) : arrayUnion(actorId)
     });
   };
 
@@ -87,7 +94,9 @@ export default function DiscussionScreen({ currentUser, streak = 0, db, userId }
     });
   };
 
-  const visiblePosts = showMine ? posts.filter((p) => p.user === currentUser) : posts;
+  const visiblePosts = showMine
+    ? posts.filter((p) => userId ? p.userId === userId : p.user === currentUserDisplayName)
+    : posts;
 
   return (
     <div style={dStyles.container}>
@@ -101,7 +110,7 @@ export default function DiscussionScreen({ currentUser, streak = 0, db, userId }
 
       <form onSubmit={handlePost} style={dStyles.postBox}>
         <div style={dStyles.postInputHeader}>
-          <span style={dStyles.postingAs}>Posting as <strong>{currentUser || "Guest"}</strong></span>
+          <span style={dStyles.postingAs}>Posting as <strong>{currentUserDisplayName}</strong></span>
         </div>
         <textarea
           style={dStyles.textarea}
@@ -109,7 +118,7 @@ export default function DiscussionScreen({ currentUser, streak = 0, db, userId }
           value={newPost}
           onChange={(e) => setNewPost(e.target.value)}
         />
-        <button type="submit" style={dStyles.postBtn}>Post as {currentUser || "Ava"}</button>
+        <button type="submit" style={dStyles.postBtn}>Post as {currentUserDisplayName}</button>
       </form>
 
       <div style={dStyles.feed}>
@@ -130,10 +139,10 @@ export default function DiscussionScreen({ currentUser, streak = 0, db, userId }
                   <span style={dStyles.userAvatar}>{(post.user || "G")[0].toUpperCase()}</span>
                   <div>
                     <span style={dStyles.userName}>{post.user}</span>
-                    {post.user === currentUser && streak > 1 && (
+                    {(post.userId && userId ? post.userId === userId : post.user === currentUserDisplayName) && streak > 1 && (
                       <span style={dStyles.streakTag}>🔥 {streak}</span>
                     )}
-                    {post.user === currentUser && (
+                    {(post.userId && userId ? post.userId === userId : post.user === currentUserDisplayName) && (
                       <span style={dStyles.youBadge}>you</span>
                     )}
                   </div>
@@ -152,7 +161,7 @@ export default function DiscussionScreen({ currentUser, streak = 0, db, userId }
                   onClick={() => toggleReaction(post.id, "like", post)}
                   style={{
                     ...dStyles.actionLink,
-                    color: (post.likes || []).includes(currentUser) ? "#e11d48" : "#64748b"
+                    color: (post.likes || []).includes(actorId) ? "#e11d48" : "#64748b"
                   }}
                 >
                   ❤️ {(post.likes || []).length}
@@ -161,7 +170,7 @@ export default function DiscussionScreen({ currentUser, streak = 0, db, userId }
                   onClick={() => toggleReaction(post.id, "thumbs", post)}
                   style={{
                     ...dStyles.actionLink,
-                    color: (post.reactions?.thumbs || []).includes(currentUser) ? "#2563eb" : "#64748b"
+                    color: (post.reactions?.thumbs || []).includes(actorId) ? "#2563eb" : "#64748b"
                   }}
                 >
                   👍 {(post.reactions?.thumbs || []).length}
@@ -170,12 +179,12 @@ export default function DiscussionScreen({ currentUser, streak = 0, db, userId }
                   onClick={() => toggleReaction(post.id, "laugh", post)}
                   style={{
                     ...dStyles.actionLink,
-                    color: (post.reactions?.laugh || []).includes(currentUser) ? "#d97706" : "#64748b"
+                    color: (post.reactions?.laugh || []).includes(actorId) ? "#d97706" : "#64748b"
                   }}
                 >
                   😂 {(post.reactions?.laugh || []).length}
                 </button>
-                {post.user === currentUser && (
+                {(post.userId && userId ? post.userId === userId : post.user === currentUserDisplayName) && (
                   <button onClick={() => deletePost(post.id)} style={dStyles.deleteBtn}>
                     🗑 Delete
                   </button>
@@ -186,12 +195,12 @@ export default function DiscussionScreen({ currentUser, streak = 0, db, userId }
                 {(post.replies || []).map((reply) => (
                   <div key={reply.id} style={dStyles.replyItem}>
                     <span style={dStyles.replyUser}>{reply.user}</span>
-                    {reply.user === currentUser && (
+                    {(reply.userId && userId ? reply.userId === userId : reply.user === currentUserDisplayName) && (
                       <span style={dStyles.youBadgeSmall}>you</span>
                     )}
                     <span style={dStyles.replySep}>·</span>
                     <span style={dStyles.replyText}>{reply.text}</span>
-                    {reply.user === currentUser && (
+                    {(reply.userId && userId ? reply.userId === userId : reply.user === currentUserDisplayName) && (
                       <button
                         onClick={() => deleteReply(post.id, reply.id, post.replies)}
                         style={dStyles.replyDeleteBtn}
@@ -205,7 +214,7 @@ export default function DiscussionScreen({ currentUser, streak = 0, db, userId }
                 <div style={dStyles.replyInputRow}>
                   <input
                     style={dStyles.replyInput}
-                    placeholder={`Reply as ${currentUser || "Guest"}...`}
+                    placeholder={`Reply as ${currentUserDisplayName}...`}
                     value={replyText[post.id] || ""}
                     onChange={(e) =>
                       setReplyText((prev) => ({ ...prev, [post.id]: e.target.value }))

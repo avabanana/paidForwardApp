@@ -138,12 +138,14 @@ export default function HomeScreen({ onNavigate, userTier }) {
     );
   }
 
+  const heroStyle = isElementary ? { ...styles.hero, background: 'linear-gradient(135deg, #eff6ff 0%, #f6d6ff 45%, #fef3c7 100%)' } : styles.hero;
+
   return (
     <div style={styles.outerWrapper}>
       <div style={styles.bgLayer} />
 
       <div style={styles.container}>
-        <div style={styles.hero}>
+        <div style={heroStyle}>
           <div style={styles.heroContent}>
             <div style={styles.heroBadge}>{heroBadgeText}</div>
             <h1 style={styles.heroTitle}>{heroTitleText}</h1>
@@ -153,7 +155,7 @@ export default function HomeScreen({ onNavigate, userTier }) {
               <span style={styles.tipText}>{tip}</span>
             </div>
           </div>
-          <div style={styles.heroDecor}>💸</div>
+          <div style={styles.heroDecor}>{isElementary ? '🌈' : '💸'}</div>
         </div>
 
         <div style={styles.sectionLabel}>What you can do</div>
@@ -191,6 +193,11 @@ export default function HomeScreen({ onNavigate, userTier }) {
           <button onClick={() => onNavigate("Progress")} style={styles.mainBtn}>🔥 View Your Progress & Achievements</button>
           <button onClick={() => onNavigate("Goals")} style={styles.secondaryBtn}>🎯 Set Financial Goals</button>
         </div>
+        {isElementary && (
+          <div style={styles.kidTipBox}>
+            <strong>Kid-friendly challenge:</strong> Try one course this week and tell a friend one new money fact you learned.
+          </div>
+        )}
       </div>
     </div>
   );
@@ -216,9 +223,10 @@ const styles = {
   featureTitle: { margin: '0 0 8px', fontSize: '18px', fontWeight: '800' },
   featureDesc: { color: '#64748b', fontSize: '14px', lineHeight: '1.6', margin: '0 0 16px' },
   featureBtn: { border: 'none', fontWeight: '700', cursor: 'pointer', padding: '8px 14px', fontSize: '13px', borderRadius: '10px' },
-  ctaSection: { display: 'flex', gap: '14px', justifyContent: 'center' },
+  ctaSection: { display: 'flex', gap: '14px', justifyContent: 'center', flexWrap: 'wrap' },
   mainBtn: { padding: '16px 32px', background: 'linear-gradient(135deg, #4338ca, #6366f1)', color: '#fff', border: 'none', borderRadius: '14px', fontWeight: '800', cursor: 'pointer' },
   secondaryBtn: { padding: '16px 32px', background: '#fff', color: '#6366f1', border: '2px solid #6366f1', borderRadius: '14px', fontWeight: '800', cursor: 'pointer' },
+  kidTipBox: { marginTop: '22px', borderRadius: '18px', background: 'rgba(255,255,255,0.9)', border: '2px dashed #f59e0b', padding: '18px 20px', color: '#334155', fontWeight: '700', textAlign: 'center' },
 
   // MAP PAGE SPECIFIC
   mapHeader: { display: 'flex', alignItems: 'center', gap: '20px', marginBottom: '24px' },

@@ -79,6 +79,8 @@ function App() {
   const [achievementPopup, setAchievementPopup] = useState('');
   const [stats, setStats] = useState(EMPTY_STATS);
 
+  const displayName = stats.username || user?.displayName || user?.email?.split('@')[0] || 'Guest';
+
   const triggerAchievementPopup = (label) => {
     setAchievementPopup(label);
     setTimeout(() => setAchievementPopup(''), 3500);
@@ -217,13 +219,13 @@ function App() {
   const renderScreen = () => {
     switch (activeTab) {
       case 'Home': return <HomeScreen userTier={stats.tier} onNavigate={(tab) => setActiveTab(tab)} />;
-      case 'Courses': return <CoursesScreen courseProgressMap={stats.courseProgressMap} setCourseProgressMap={(id, prog) => updateData({ [`courseProgressMap.${id}`]: prog })} onCourseComplete={handleCourseComplete} userTier={stats.tier} username={stats.username} />;
+      case 'Courses': return <CoursesScreen courseProgressMap={stats.courseProgressMap} setCourseProgressMap={(id, prog) => updateData({ [`courseProgressMap.${id}`]: prog })} onCourseComplete={handleCourseComplete} userTier={stats.tier} username={displayName} />;
       case 'Games': return <GamesScreen userTier={stats.tier} onGameEnd={handleGameEnd} onNavigate={(tab) => setActiveTab(tab)} />;
-      case 'Discussion': return <DiscussionScreen currentUser={stats.username} streak={stats.streak} db={db} userId={user?.uid} />;
+      case 'Discussion': return <DiscussionScreen currentUser={displayName} streak={stats.streak} db={db} userId={user?.uid} />;
       case 'Progress': return <ProgressScreen xp={stats.xp} gameWins={stats.gameWins} gamesPlayed={stats.gamesPlayed} streak={stats.streak} coursesCompleted={stats.coursesCompleted} userTier={stats.tier} userId={user?.uid} db={db} achievements={stats.achievements || []} updateData={updateData} onAchievementUnlocked={triggerAchievementPopup} onNavigate={(tab) => setActiveTab(tab)} />;
-      case 'Goals': return <GoalScreen currentUser={stats.username} userTier={stats.tier} userId={user?.uid} db={db} onAchievementUnlocked={triggerAchievementPopup} />;
+      case 'Goals': return <GoalScreen currentUser={displayName} userTier={stats.tier} userId={user?.uid} db={db} onAchievementUnlocked={triggerAchievementPopup} />;
       case 'Map': return <MapScreen />;
-      case 'Leagues': return <LeagueScreen currentUser={stats.username} userId={user?.uid} db={db} />;
+      case 'Leagues': return <LeagueScreen currentUser={displayName} userId={user?.uid} db={db} />;
       case 'Salary': return <SalaryScreen />;
       case 'Settings': return <SettingsScreen currentUser={user} stats={stats} updateData={updateData} signOutCallback={handleSignOut} onUsernameUpdate={handleUsernameUpdate} db={db} />;
       default: return <HomeScreen onNavigate={(tab) => setActiveTab(tab)} />;
@@ -292,9 +294,9 @@ function App() {
         <div style={styles.headerRight}>
           <button onClick={() => setActiveTab('Settings')} style={{ ...styles.settingsIconButton, background: activeTab === 'Settings' ? '#fff' : 'transparent' }}>⚙️</button>
           <div style={styles.userChip}>
-            <span style={styles.userAvatar}>{(stats.username || 'G')[0].toUpperCase()}</span>
+            <span style={styles.userAvatar}>{(displayName || 'G')[0].toUpperCase()}</span>
             <div style={{ textAlign: 'left' }}>
-              <div style={styles.usernameText}>{stats.username || 'Guest'}</div>
+              <div style={styles.usernameText}>{displayName}</div>
               <div style={styles.streakText}>🔥 {stats.streak || 1} day streak</div>
             </div>
           </div>
@@ -329,21 +331,20 @@ const styles = {
   achievementToast: { position:'fixed', top:'70px', right:'20px', background:'linear-gradient(135deg,#1f2937,#374151)', color:'#fff', borderRadius:'14px', padding:'14px 20px', boxShadow:'0 8px 24px rgba(0,0,0,0.3)', zIndex:9999, fontWeight:'700', fontSize:'15px', border:'1px solid rgba(255,255,255,0.1)', animation:'fadeInDown 0.3s ease' },
   
   // THEMED NAV BAR
-  container: { minHeight:'100vh', background:'#f8fafc', fontFamily:"'Inter', system-ui, sans-serif" },
+  container: { minHeight:'100vh', background:'linear-gradient(180deg, #eef7ff 0%, #f8fafc 35%, #ffffff 100%)', fontFamily:"'Inter', system-ui, sans-serif", paddingTop:'12px' },
   header: { 
     display: 'flex', 
     justifyContent: 'space-between', 
     alignItems: 'center', 
-    padding: '12px 24px', 
-    margin: '12px 12px 0 12px',
+    padding: '16px 24px', 
+    margin: '0 12px 0 12px',
     borderRadius: '24px',
-    // Theme-matching gradient shift
-    background: 'linear-gradient(90deg, rgba(240,240,255,0.7), rgba(232,245,240,0.7), rgba(255,248,232,0.7), rgba(255,240,240,0.7))',
+    background: 'linear-gradient(90deg, rgba(240,240,255,0.85), rgba(232,245,240,0.85), rgba(255,248,232,0.85), rgba(255,240,240,0.85))',
     backdropFilter: 'blur(20px)',
-    border: '1px solid rgba(255,255,255,0.6)',
+    border: '1px solid rgba(255,255,255,0.7)',
     boxShadow: '0 10px 30px -10px rgba(0,0,0,0.05)',
     position: 'sticky', 
-    top: '12px', 
+    top: '0', 
     zIndex: 100 
   },
   headerLeft: { display: 'flex', alignItems: 'center', gap: '8px' },
@@ -352,10 +353,10 @@ const styles = {
   navBar: { 
     display: 'flex', 
     gap: '4px', 
-    background: 'rgba(255,255,255,0.3)', 
-    padding: '4px', 
-    borderRadius: '16px',
-    border: '1px solid rgba(255,255,255,0.4)'
+    background: 'rgba(255,255,255,0.55)', 
+    padding: '6px', 
+    borderRadius: '18px',
+    border: '1px solid rgba(255,255,255,0.55)'
   },
   navItem: { 
     background: 'none', border: 'none', borderRadius: '12px', fontSize: '14px', 
@@ -377,7 +378,7 @@ const styles = {
   usernameText: { fontWeight: '800', fontSize: '13px', color: '#1e1b4b' },
   streakText: { fontSize: '10px', color: '#64748b', fontWeight: '600' },
   settingsIconButton: { 
-    border: 'none', fontSize: '20px', padding: '6px', 
+    fontSize: '20px', padding: '6px', 
     cursor: 'pointer', borderRadius: '10px', transition: 'all 0.2s',
     border: '1px solid rgba(255,255,255,0.4)'
   },
