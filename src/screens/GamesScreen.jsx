@@ -52,7 +52,7 @@ export default function GamesScreen({ userTier, onGameEnd, onNavigate }) {
   const [blitzStocks, setBlitzStocks] = useState(INITIAL_STOCKS);
   const [portfolio, setPortfolio] = useState({ GIGA: 0, VOY: 0, MART: 0, SPY: 0, GLD: 0 });
   const [selectedStock, setSelectedStock] = useState(INITIAL_STOCKS[0]);
-  const [timeLeft, setTimeLeft] = useState(600); // 10 minutes
+  const [timeLeft, setTimeLeft] = useState(600); 
   const [opponents, setOpponents] = useState([]);
   const [leagueFeed, setLeagueFeed] = useState([]);
 
@@ -63,7 +63,6 @@ export default function GamesScreen({ userTier, onGameEnd, onNavigate }) {
     let interval;
     if (playing && activeGame === 'Blitz' && timeLeft > 0) {
       interval = setInterval(() => {
-        // 1. Update Market Prices
         setBlitzStocks(current => current.map(s => {
           const volatility = s.id === 'GIGA' ? 12 : (s.id === 'SPY' ? 3 : 8);
           const change = (Math.random() - 0.49) * volatility;
@@ -71,15 +70,14 @@ export default function GamesScreen({ userTier, onGameEnd, onNavigate }) {
           return { ...s, price: next, history: [...s.history.slice(-14), next] };
         }));
 
-        // 2. Random Opponent Trades
-        if (Math.random() > 0.8) {
+        if (Math.random() > 0.85) {
           const randomOpp = opponents[Math.floor(Math.random() * opponents.length)];
           const randomStock = blitzStocks[Math.floor(Math.random() * blitzStocks.length)];
           const action = Math.random() > 0.5 ? 'bought' : 'sold';
-          const qty = Math.floor(Math.random() * 10) + 1;
+          const qty = Math.floor(Math.random() * 5) + 1;
           
-          setLeagueFeed(prev => [`${randomOpp?.name} ${action} ${qty} shares of ${randomStock.id}`, ...prev.slice(0, 5)]);
-          setOpponents(prev => prev.map(o => o.name === randomOpp?.name ? { ...o, wealth: o.wealth * (1 + (Math.random() - 0.48) * 0.01) } : o));
+          setLeagueFeed(prev => [`${randomOpp?.name || 'Bot'} ${action} ${qty} shares of ${randomStock.id}`, ...prev.slice(0, 5)]);
+          setOpponents(prev => prev.map(o => o.name === randomOpp?.name ? { ...o, wealth: o.wealth * (1 + (Math.random() - 0.48) * 0.012) } : o));
         }
 
         setTimeLeft(t => t - 1);
@@ -110,23 +108,17 @@ export default function GamesScreen({ userTier, onGameEnd, onNavigate }) {
   const endBlitzCompetition = () => {
     const finalWealth = calculateTotalWealth();
     setMoney(finalWealth);
-    const leadOpponent = opponents.reduce((prev, current) => (prev.wealth > current.wealth) ? prev : current, {wealth: 0});
+    const leadOpponent = opponents.reduce((prev, current) => (prev.wealth > current.wealth) ? prev : current, {wealth: 0, name: 'Opponent'});
     const won = finalWealth > leadOpponent.wealth;
     setGameResult(won ? 'won' : 'lost');
-    setTradeMessage(`League Winner: ${won ? 'You' : leadOpponent.name} with $${Math.round(won ? finalWealth : leadOpponent.wealth)}`);
+    setTradeMessage(`League Result: ${won ? 'You Won' : leadOpponent.name + ' Won'} ($${Math.round(won ? finalWealth : leadOpponent.wealth)})`);
     if (onGameEnd) onGameEnd(won ? 'won' : 'lost');
   };
 
   const tierSettings = {
     elementary: {
-      currencySymbol: "⭐",
-      startingCash: 50,
-      icon: "🦁",
-      themeColor: "#f59e0b",
-      gradient: "linear-gradient(135deg,#f59e0b,#f97316)",
-      winMultiplier: 0.75,
-      saveWinMultiplier: 1.2,
-      marketWinMultiplier: 1.1,
+      currencySymbol: "⭐", startingCash: 50, icon: "🦁", themeColor: "#f59e0b", gradient: "linear-gradient(135deg,#f59e0b,#f97316)",
+      winMultiplier: 0.75, saveWinMultiplier: 1.2, marketWinMultiplier: 1.1,
       scenarios: [
         { q: "You found a cool toy for 5⭐! Buy it or keep your stars?", optA: ["Buy Toy", 5], optB: ["Save Stars", 0] },
         { q: "You're thirsty! Buy fancy juice for 4⭐ or drink water for free?", optA: ["Fancy Juice", 4], optB: ["Free Water", 0] },
@@ -145,26 +137,14 @@ export default function GamesScreen({ userTier, onGameEnd, onNavigate }) {
         { q: "Pool cleaning gig: Spend 8⭐ on tools.", optA: ["Invest", 8], optB: ["Skip", 0] },
         { q: "Final gamble: Use 12⭐ to start your biggest venture yet?", optA: ["Go Big", 12], optB: ["Play Safe", 0] }
       ],
-      marketReasons: {
-        success: ["Super sunny day! Everyone wanted a cold drink.", "Friends loved your treats and bought them all!", "Customers gave you extra tips!", "Your items sold out in minutes!"],
-        failure: ["It rained and customers stayed home.", "The shop raised prices on your supplies.", "A neighbor opened a similar stand nearby.", "You dropped some supplies and had to buy more."]
-      },
       savingScenarios: [
         { q: "You found 5⭐ under your pillow. Save it or spend?", optA: ["Spend it", 5], optB: ["Save it", 0] },
         { q: "Your piggy bank is full. Add 10⭐ or buy a small toy?", optA: ["Buy Toy", 10], optB: ["Add to Savings", 0] },
-        { q: "A neighbor offers 5⭐ for chores. Keep or save?", optA: ["Keep it", 5], optB: ["Save it", 0] },
-        { q: "Your allowance comes in. Spend it or save?", optA: ["Spend it", 8], optB: ["Save it", 0] }
       ]
     },
     adult: {
-      currencySymbol: "$",
-      startingCash: 1000,
-      icon: "💼",
-      themeColor: "#6366f1",
-      gradient: "linear-gradient(135deg,#6366f1,#4f46e5)",
-      winMultiplier: 0.7, 
-      saveWinMultiplier: 1.4,
-      marketWinMultiplier: 1.25,
+      currencySymbol: "$", startingCash: 1000, icon: "💼", themeColor: "#6366f1", gradient: "linear-gradient(135deg,#6366f1,#4f46e5)",
+      winMultiplier: 0.7, saveWinMultiplier: 1.4, marketWinMultiplier: 1.25,
       scenarios: [
         { q: "Housing: $400 studio or $200 shared house?", optA: ["Luxury Studio", 400], optB: ["Shared House", 200] },
         { q: "Commute: $140 Uber budget or $60 monthly bus pass?", optA: ["Uber Habits", 140], optB: ["Bus Pass", 60] },
@@ -198,71 +178,36 @@ export default function GamesScreen({ userTier, onGameEnd, onNavigate }) {
       savingScenarios: [
         { q: "Bonus: $200 Christmas bonus. Save or Spend?", optA: ["Splurge", 200], optB: ["Save It", 0] },
         { q: "Found Cash: $50 in a jacket. Treat or Piggy Bank?", optA: ["Fancy Meal", 50], optB: ["Save It", 0] },
-        { q: "Tax Refund: $300 back from the IRS.", optA: ["Buy Gear", 300], optB: ["Save It", 0] },
-        { q: "Side Gig: $150 earned from mowing lawns.", optA: ["New Games", 150], optB: ["Save It", 0] }
       ],
       creditScenarios: [
         { q: "Credit Score: Pay $100 off your card to boost your score?", optA: ["Keep Cash", 0], optB: ["Pay Card", 100] },
         { q: "Bad Debt: A friend wants a $200 loan for a 'sure thing'.", optA: ["Lend It", 200], optB: ["Decline", 0] },
-        { q: "Interest: $60 card interest just hit. Pay it now?", optA: ["Min Pay", 10], optB: ["Full Pay", 60] },
-        { q: "Credit Limit: Store offers a $500 limit. Use it?", optA: ["Max It", 500], optB: ["Decline", 0] }
       ],
       hustleScenarios: [
         { q: "Equipment: $300 for a pro camera to start photography.", optA: ["Buy Pro", 300], optB: ["Use Phone", 0] },
         { q: "Ads: $100 for Instagram ads for your shop.", optA: ["Run Ads", 100], optB: ["Organic", 0] },
-        { q: "Inventory: $250 for wholesale vintage clothes.", optA: ["Stock Up", 250], optB: ["Drop Ship", 0] },
-        { q: "Website: $80 for a custom domain and host.", optA: ["Custom", 80], optB: ["Free URL", 0] }
       ]
     }
   };
 
   const config = tierSettings[userTier] || tierSettings.adult;
-
-  const scenarios =
-    activeGame === 'Market' ? config.marketScenarios
-    : activeGame === 'Crypto' ? config.cryptoScenarios
-    : activeGame === 'Save'  ? config.savingScenarios
-    : activeGame === 'Credit' ? config.creditScenarios
-    : activeGame === 'Hustle' ? config.hustleScenarios
-    : config.scenarios;
+  const scenarios = activeGame === 'Market' ? config.marketScenarios : activeGame === 'Crypto' ? config.cryptoScenarios : activeGame === 'Save' ? config.savingScenarios : activeGame === 'Credit' ? config.creditScenarios : activeGame === 'Hustle' ? config.hustleScenarios : config.scenarios;
 
   const resetGame = (countAsPlayed = false) => {
     if (countAsPlayed && onGameEnd) onGameEnd('lost');
-    setPlaying(false);
-    setGameResult(null);
-    setActiveGame(null);
-    setMoney(0);
-    moneyRef.current = 0;
-    setDay(1);
-    setTradeMessage(null);
-    setWaitingNext(false);
-    setView('menu');
+    setPlaying(false); setGameResult(null); setActiveGame(null); setMoney(0); moneyRef.current = 0; setDay(1); setTradeMessage(null); setWaitingNext(false); setView('menu');
   };
 
   const endGame = (finalMoney) => {
-    const winThreshold =
-      activeGame === 'Market' || activeGame === 'Crypto' ? config.startingCash * config.marketWinMultiplier
-      : activeGame === 'Save'  ? config.startingCash * config.saveWinMultiplier
-      : config.startingCash * config.winMultiplier;
-
+    const winThreshold = (activeGame === 'Market' || activeGame === 'Crypto') ? config.startingCash * config.marketWinMultiplier : activeGame === 'Save' ? config.startingCash * config.saveWinMultiplier : config.startingCash * config.winMultiplier;
     const won = finalMoney >= winThreshold;
-    setMoney(finalMoney);
-    setGameResult(won ? 'won' : 'lost');
+    setMoney(finalMoney); setGameResult(won ? 'won' : 'lost');
     if (onGameEnd) onGameEnd(won ? 'won' : 'lost');
   };
 
   const handleChoice = (cost) => {
-    let updated = money;
-    if (activeGame === 'Save') {
-      updated = cost === 0 ? money + Math.max(10, Math.round(config.startingCash * 0.1)) : money - cost;
-    } else {
-      updated = money - cost;
-    }
-
-    if (updated <= 0) {
-      setMoney(0); setGameResult('lost');
-      if (onGameEnd) onGameEnd('lost'); return;
-    }
+    let updated = (activeGame === 'Save') ? (cost === 0 ? money + Math.max(10, Math.round(config.startingCash * 0.1)) : money - cost) : money - cost;
+    if (updated <= 0) { setMoney(0); setGameResult('lost'); if (onGameEnd) onGameEnd('lost'); return; }
     if (day >= scenarios.length) { endGame(updated); return; }
     setMoney(updated); setDay(d => d + 1);
   };
@@ -270,119 +215,29 @@ export default function GamesScreen({ userTier, onGameEnd, onNavigate }) {
   const handleMarketChoice = (opt) => {
     if (waitingNext) return;
     const amount = opt[1];
-    if (amount === 0) {
-      setDay(d => d + 1);
-      setTradeMessage(`⏭ Skipped trade. Balance: ${config.currencySymbol}${moneyRef.current}`);
-      if (day >= scenarios.length) { endGame(moneyRef.current); }
-      return;
-    }
-
-    const winChance = activeGame === 'Crypto' ? 0.35 : 0.48; 
-    const success = Math.random() < winChance;
+    if (amount === 0) { setDay(d => d + 1); setTradeMessage(`⏭ Skipped trade. Balance: ${config.currencySymbol}${moneyRef.current}`); if (day >= scenarios.length) { endGame(moneyRef.current); } return; }
+    const success = Math.random() < (activeGame === 'Crypto' ? 0.35 : 0.48);
     const currentMoney = moneyRef.current;
     let newMoney, msg;
-
     if (success) {
-      const mult = activeGame === 'Crypto' ? 2.5 : 1.8;
-      const profit = Math.max(10, Math.round(amount * (0.5 + Math.random() * mult)));
-      newMoney = currentMoney + profit;
-      msg = `✅ +${config.currencySymbol}${profit} PROFIT! ${STOCK_WIN_REASONS[Math.floor(Math.random() * STOCK_WIN_REASONS.length)]}`;
+      const profit = Math.max(10, Math.round(amount * (0.5 + Math.random() * (activeGame === 'Crypto' ? 2.5 : 1.8))));
+      newMoney = currentMoney + profit; msg = `✅ +${config.currencySymbol}${profit} PROFIT! ${STOCK_WIN_REASONS[Math.floor(Math.random() * STOCK_WIN_REASONS.length)]}`;
     } else {
-      const lossMult = activeGame === 'Crypto' ? 1.0 : 0.8;
-      const loss = Math.round(amount * (0.6 + Math.random() * lossMult));
-      newMoney = Math.max(0, currentMoney - loss);
-      msg = `❌ -${config.currencySymbol}${loss} LOSS. ${STOCK_FAIL_REASONS[Math.floor(Math.random() * STOCK_FAIL_REASONS.length)]}`;
+      const loss = Math.round(amount * (0.6 + Math.random() * (activeGame === 'Crypto' ? 1.0 : 0.8)));
+      newMoney = Math.max(0, currentMoney - loss); msg = `❌ -${config.currencySymbol}${loss} LOSS. ${STOCK_FAIL_REASONS[Math.floor(Math.random() * STOCK_FAIL_REASONS.length)]}`;
     }
-
     moneyRef.current = newMoney; setMoney(newMoney); setTradeMessage(msg); setWaitingNext(true);
-
-    if (newMoney <= 0) {
-      setTimeout(() => { setGameResult('lost'); if (onGameEnd) onGameEnd('lost'); setWaitingNext(false); }, 1800);
-    } else if (day >= scenarios.length) {
-      setTimeout(() => { endGame(newMoney); setWaitingNext(false); }, 1800);
-    } else {
-      setTimeout(() => { setDay(d => d + 1); setTradeMessage(null); setWaitingNext(false); }, 1800);
-    }
+    if (newMoney <= 0) { setTimeout(() => { setGameResult('lost'); setWaitingNext(false); }, 1800); } 
+    else if (day >= scenarios.length) { setTimeout(() => { endGame(newMoney); setWaitingNext(false); }, 1800); } 
+    else { setTimeout(() => { setDay(d => d + 1); setTradeMessage(null); setWaitingNext(false); }, 1800); }
   };
 
   const handleJoinLeague = () => {
     const found = leagues.find(l => l.code.toUpperCase() === joinCode.toUpperCase());
-    if (found) {
-      setSelectedLeague(found);
-      setView('leagueDetail');
-    } else {
-      alert("Invalid Code! Leagues usually have codes like ECON1 or WOLF8.");
-    }
+    if (found) { setSelectedLeague(found); setView('leagueDetail'); } else { alert("Invalid Code!"); }
   };
 
-  // --- RENDER SCREENS ---
-
-  if (view === 'leagues') {
-    return (
-      <div style={gS.menuContainer}>
-        <div style={gS.menuHeader}>
-          <button onClick={() => setView('menu')} style={gS.backBtn}>← Back</button>
-          <h2 style={gS.menuTitle}>🏆 Classroom Leagues</h2>
-          <p style={gS.menuSub}>Join your friends and compete for the top portfolio.</p>
-        </div>
-        
-        <div style={gS.joinBox}>
-          <input style={gS.joinInput} placeholder="Enter League Code (e.g. ECON1)" value={joinCode} onChange={(e) => setJoinCode(e.target.value)} />
-          <button style={gS.joinBtn} onClick={handleJoinLeague}>Join League</button>
-        </div>
-
-        <div style={gS.gamesGrid}>
-          {leagues.map(l => (
-            <div key={l.id} style={gS.leagueCard} onClick={() => { setSelectedLeague(l); setView('leagueDetail'); }}>
-              <div style={gS.leagueIcon}>🏫</div>
-              <div style={{flex:1}}>
-                <div style={{fontWeight:'900', fontSize:'18px'}}>{l.name}</div>
-                <div style={{color:'#64748b', fontSize:'13px'}}>{l.players.length} members • Code: {l.code}</div>
-              </div>
-              {l.activeMatch && <div style={gS.liveBadge}>LIVE MATCH</div>}
-            </div>
-          ))}
-        </div>
-      </div>
-    );
-  }
-
-  if (view === 'leagueDetail') {
-    return (
-      <div style={gS.menuContainer}>
-        <button onClick={() => setView('leagues')} style={gS.backBtn}>← All Leagues</button>
-        <div style={gS.leagueBanner}>
-          <h1 style={{margin:0}}>{selectedLeague.name}</h1>
-          <p>League Leaderboard & Active Sessions</p>
-        </div>
-        
-        <div style={gS.leagueLayout}>
-          <div style={gS.leaderboard}>
-            <h3 style={{marginTop:0}}>Leaderboard</h3>
-            {selectedLeague.players.map((p, i) => (
-              <div key={p} style={gS.leaderRow}>
-                <span>{i+1}. {p}</span>
-                <span style={{fontWeight:'bold'}}>{config.currencySymbol}{Math.floor(Math.random()*5000 + 1000)}</span>
-              </div>
-            ))}
-          </div>
-          
-          <div style={gS.leagueActions}>
-            <div style={gS.activeMatchCard}>
-              <h3>Blitz Stock Simulation</h3>
-              <p>10 minutes. Trade multiple stocks with live data. Beat the league bots to win.</p>
-              <button style={{...gS.playBtn, background: '#6366f1'}} onClick={() => {
-                setMoney(config.startingCash); moneyRef.current = config.startingCash;
-                setPortfolio({ GIGA: 0, VOY: 0, MART: 0, SPY: 0, GLD: 0 });
-                setOpponents(selectedLeague.players.filter(p => p !== 'You').map(name => ({ name, wealth: config.startingCash })));
-                setTimeLeft(600); setActiveGame('Blitz'); setPlaying(true);
-              }}>🚀 Start Competitions</button>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  // --- RENDER LOGIC ---
 
   if (gameResult) {
     const isWin = gameResult === 'won';
@@ -391,10 +246,7 @@ export default function GamesScreen({ userTier, onGameEnd, onNavigate }) {
         <div style={{ ...gS.resultCard, background: isWin ? 'linear-gradient(135deg,#064e3b,#059669)' : 'linear-gradient(135deg,#4c0519,#be123c)' }}>
           <div style={gS.resultEmoji}>{isWin ? '🏆🎉' : '💔😤'}</div>
           <h1 style={gS.resultTitle}>{isWin ? 'YOU WON!' : 'GAME OVER'}</h1>
-          <div style={gS.resultDetails}>
-            <div style={gS.statRow}><span>Final Wealth</span><strong style={{ fontSize:'22px' }}>${Math.round(money)}</strong></div>
-            <div style={gS.statRow}><span>Result</span><strong>{tradeMessage || "Session Complete"}</strong></div>
-          </div>
+          <div style={gS.resultDetails}><div style={gS.statRow}><span>Final Wealth</span><strong style={{ fontSize:'22px' }}>${Math.round(money)}</strong></div><div style={gS.statRow}><span>Result</span><strong>{tradeMessage || "Session Complete"}</strong></div></div>
           <button style={{ ...gS.actionBtn, background:'#fff', color: isWin ? '#059669' : '#be123c' }} onClick={() => resetGame()}>Continue</button>
         </div>
       </div>
@@ -406,174 +258,91 @@ export default function GamesScreen({ userTier, onGameEnd, onNavigate }) {
       return (
         <div style={{ ...gS.pageWrapper, padding: '20px', background: '#0f172a' }}>
           <div style={{ maxWidth: '1200px', margin: '0 auto', display: 'grid', gridTemplateColumns: '250px 1fr 300px', gap: '20px' }}>
-            
-            {/* LEFT: LEADERBOARD & FEED */}
             <div style={{ background: '#1e293b', borderRadius: '16px', padding: '20px', color: '#fff' }}>
               <h3 style={{ margin: '0 0 15px', color: '#6366f1' }}>🏆 Standings</h3>
               <div style={gS.leaderRow}><span style={{color:'#facc15'}}>1. You</span> <span>${Math.round(calculateTotalWealth())}</span></div>
-              {opponents.sort((a,b)=>b.wealth-a.wealth).map((o, i)=>(
-                <div key={o.name} style={{...gS.leaderRow, borderBottom:'1px solid #334155'}}><span>{i+2}. {o.name}</span> <span>${Math.round(o.wealth)}</span></div>
-              ))}
+              {opponents.sort((a,b)=>b.wealth-a.wealth).map((o, i)=>(<div key={o.name} style={{...gS.leaderRow, borderBottom:'1px solid #334155'}}><span>{i+2}. {o.name}</span> <span>${Math.round(o.wealth)}</span></div>))}
               <h3 style={{ margin: '30px 0 15px', color: '#10b981' }}>📡 Activity Feed</h3>
               {leagueFeed.map((f, i) => <div key={i} style={{fontSize:'11px', marginBottom:'10px', color: '#94a3b8'}}>{f}</div>)}
             </div>
-
-            {/* CENTER: MARKET & TRADING */}
             <div style={{ background: '#fff', borderRadius: '16px', padding: '24px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '20px' }}>
-                <h2 style={{margin:0}}>Market Dashboard</h2>
-                <div style={{fontSize:'20px', fontWeight:'900', color: '#ef4444'}}>⏳ {Math.floor(timeLeft/60)}:{String(timeLeft%60).padStart(2,'0')}</div>
-              </div>
-              
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '20px' }}><h2 style={{margin:0}}>Market Dashboard</h2><div style={{fontSize:'20px', fontWeight:'900', color: '#ef4444'}}>⏳ {Math.floor(timeLeft/60)}:{String(timeLeft%60).padStart(2,'0')}</div></div>
               <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '30px' }}>
                 <thead><tr style={{ textAlign: 'left', color: '#64748b', fontSize: '13px' }}><th>Ticker</th><th>Price</th><th>Sentiment</th><th>Sector</th></tr></thead>
-                <tbody>
-                  {blitzStocks.map(s => (
-                    <tr key={s.id} onClick={()=>setSelectedStock(s)} style={{ borderBottom: '1px solid #f1f5f9', cursor: 'pointer', background: selectedStock.id === s.id ? '#f8fafc' : 'none' }}>
-                      <td style={{ padding: '15px 0', fontWeight: 'bold' }}>{s.id}</td>
-                      <td>${s.price.toFixed(2)}</td>
-                      <td style={{ color: s.sentiment === 'Bullish' ? '#10b981' : (s.sentiment === 'Bearish' ? '#ef4444' : '#64748b') }}>{s.sentiment}</td>
-                      <td>{s.sector}</td>
-                    </tr>
-                  ))}
-                </tbody>
+                <tbody>{blitzStocks.map(s => (<tr key={s.id} onClick={()=>setSelectedStock(s)} style={{ borderBottom: '1px solid #f1f5f9', cursor: 'pointer', background: selectedStock.id === s.id ? '#f8fafc' : 'none' }}><td style={{ padding: '15px 0', fontWeight: 'bold' }}>{s.id}</td><td>${s.price.toFixed(2)}</td><td style={{ color: s.sentiment === 'Bullish' ? '#10b981' : (s.sentiment === 'Bearish' ? '#ef4444' : '#64748b') }}>{s.sentiment}</td><td>{s.sector}</td></tr>))}</tbody>
               </table>
-
-              <div style={{ background: '#f8fafc', padding: '20px', borderRadius: '12px' }}>
-                <h3 style={{margin:'0 0 15px'}}>{selectedStock.name} Analysis</h3>
-                <div style={{ display: 'flex', gap: '30px', marginBottom: '20px', fontSize: '14px' }}>
-                  <span>P/E Ratio: <b>{selectedStock.pe}</b></span>
-                  <span>Div Yield: <b>{selectedStock.yield}</b></span>
-                  <span>Owned: <b>{portfolio[selectedStock.id]}</b></span>
-                </div>
-                <div style={{ display: 'flex', gap: '10px' }}>
-                  <button onClick={() => handleBlitzTrade(selectedStock.id, 'buy')} style={{ ...gS.playBtn, background: '#10b981', flex: 1 }}>BUY 1 SHARE</button>
-                  <button onClick={() => handleBlitzTrade(selectedStock.id, 'sell')} style={{ ...gS.playBtn, background: '#ef4444', flex: 1 }}>SELL 1 SHARE</button>
-                </div>
+              <div style={{ background: '#f8fafc', padding: '20px', borderRadius: '12px' }}><h3 style={{margin:'0 0 15px'}}>{selectedStock.name} Analysis</h3><div style={{ display: 'flex', gap: '30px', marginBottom: '20px', fontSize: '14px' }}><span>P/E Ratio: <b>{selectedStock.pe}</b></span><span>Div Yield: <b>{selectedStock.yield}</b></span><span>Owned: <b>{portfolio[selectedStock.id]}</b></span></div>
+                <div style={{ display: 'flex', gap: '10px' }}><button onClick={() => handleBlitzTrade(selectedStock.id, 'buy')} style={{ ...gS.playBtn, background: '#10b981', flex: 1 }}>BUY</button><button onClick={() => handleBlitzTrade(selectedStock.id, 'sell')} style={{ ...gS.playBtn, background: '#ef4444', flex: 1 }}>SELL</button></div>
               </div>
             </div>
-
-            {/* RIGHT: PORTFOLIO SUMMARY */}
             <div style={{ background: '#1e293b', borderRadius: '16px', padding: '20px', color: '#fff' }}>
-              <h3 style={{ margin: '0 0 15px', color: '#6366f1' }}>💼 Portfolio</h3>
-              <div style={{fontSize: '24px', fontWeight: '900', marginBottom: '20px'}}>${Math.round(calculateTotalWealth())}</div>
-              <div style={{ color: '#94a3b8', fontSize: '12px', marginBottom: '5px' }}>AVAILABLE CASH</div>
-              <div style={{ color: '#10b981', fontSize: '18px', fontWeight: 'bold', marginBottom: '20px' }}>${Math.round(money)}</div>
-              
-              <div style={{ borderTop: '1px solid #334155', paddingTop: '15px' }}>
-                {Object.entries(portfolio).map(([id, qty]) => qty > 0 && (
-                  <div key={id} style={{display:'flex', justifyContent:'space-between', marginBottom:'10px', fontSize:'13px'}}>
-                    <span>{id} ({qty})</span>
-                    <span>${Math.round(qty * blitzStocks.find(s=>s.id===id).price)}</span>
-                  </div>
-                ))}
-              </div>
-              <button onClick={endBlitzCompetition} style={{ width:'100%', marginTop:'40px', background:'#ef4444', color:'#fff', border:'none', padding:'12px', borderRadius:'8px', cursor:'pointer', fontWeight:'bold' }}>Close Positions & End</button>
+              <h3 style={{ margin: '0 0 15px', color: '#6366f1' }}>💼 Portfolio</h3><div style={{fontSize: '24px', fontWeight: '900', marginBottom: '20px'}}>${Math.round(calculateTotalWealth())}</div>
+              <div style={{ color: '#94a3b8', fontSize: '12px', marginBottom: '5px' }}>AVAILABLE CASH</div><div style={{ color: '#10b981', fontSize: '18px', fontWeight: 'bold', marginBottom: '20px' }}>${Math.round(money)}</div>
+              <div style={{ borderTop: '1px solid #334155', paddingTop: '15px' }}>{Object.entries(portfolio).map(([id, qty]) => qty > 0 && (<div key={id} style={{display:'flex', justifyContent:'space-between', marginBottom:'10px', fontSize:'13px'}}><span>{id} ({qty})</span><span>${Math.round(qty * blitzStocks.find(s=>s.id===id).price)}</span></div>))}</div>
+              <button onClick={endBlitzCompetition} style={{ width:'100%', marginTop:'40px', background:'#ef4444', color:'#fff', border:'none', padding:'12px', borderRadius:'8px', cursor:'pointer', fontWeight:'bold' }}>End Competition</button>
             </div>
-
           </div>
         </div>
       );
     }
-
     const currentScenario = scenarios[Math.min(day - 1, scenarios.length - 1)];
     const themeGradient = (activeGame === 'Market' || activeGame === 'Crypto') ? 'linear-gradient(135deg,#7c3aed,#6366f1)' : config.gradient;
-    const progressPct = ((day - 1) / scenarios.length) * 100;
-
     return (
       <div style={gS.gameContainer}>
-        <div style={{ ...gS.gameHeader, borderTop: `5px solid ${config.themeColor}` }}>
-          <div>
-            <div style={{ fontSize:'11px', fontWeight:'800', color:'#94a3b8', textTransform:'uppercase' }}>{activeGame} MODE</div>
-            <div style={{ fontWeight:'900', fontSize:'17px', color:'#1e293b' }}>Day {day} / {scenarios.length}</div>
-          </div>
-          <div style={{ ...gS.balanceChip, background: money < 200 ? '#fee2e2' : '#d1fae5' }}>
-            <span style={{ fontSize:'11px', fontWeight:'600', opacity:0.7 }}>BALANCE</span>
-            <span style={{ fontWeight:'900', fontSize:'18px', display:'block' }}>{config.currencySymbol}{money}</span>
-          </div>
+        <div style={{ ...gS.gameHeader, borderTop: `5px solid ${config.themeColor}` }}><div><div style={{ fontSize:'11px', fontWeight:'800', color:'#94a3b8', textTransform:'uppercase' }}>{activeGame} MODE</div><div style={{ fontWeight:'900', fontSize:'17px', color:'#1e293b' }}>Day {day} / {scenarios.length}</div></div>
+          <div style={{ ...gS.balanceChip, background: money < 200 ? '#fee2e2' : '#d1fae5' }}><span style={{ fontSize:'11px', fontWeight:'600', opacity:0.7 }}>BALANCE</span><span style={{ fontWeight:'900', fontSize:'18px', display:'block' }}>{config.currencySymbol}{money}</span></div>
         </div>
-
-        <div style={gS.progressTrack}><div style={{ ...gS.progressBar, width:`${progressPct}%`, background: themeGradient }} /></div>
-
-        <div style={gS.scenarioCard} className="scenario-entry">
-          <p style={gS.scenarioText}>{currentScenario.q}</p>
-          {tradeMessage && (
-            <div style={{
-              ...gS.tradeMsg,
-              background: tradeMessage.includes('✅') ? '#d1fae5' : tradeMessage.includes('⏭') ? '#f1f5f9' : '#fee2e2',
-              borderColor: tradeMessage.includes('✅') ? '#6ee7b7' : '#fca5a5'
-            }}>{tradeMessage}</div>
-          )}
-          {!waitingNext && (
-            <div style={gS.choiceRow}>
-              <button style={{ ...gS.choiceBtn, background: themeGradient }} onClick={() => (activeGame === 'Market' || activeGame === 'Crypto') ? handleMarketChoice(currentScenario.optA) : handleChoice(currentScenario.optA[1])}>
-                <span>{currentScenario.optA[0]}</span>
-                <b>{config.currencySymbol}{currentScenario.optA[1]}</b>
-              </button>
-              <button style={gS.choiceBtnSecondary} onClick={() => (activeGame === 'Market' || activeGame === 'Crypto') ? handleMarketChoice(currentScenario.optB) : handleChoice(currentScenario.optB[1])}>
-                <span>{currentScenario.optB[0]}</span>
-                <span style={{color:'#64748b'}}>{currentScenario.optB[1] > 0 ? `${config.currencySymbol}${currentScenario.optB[1]}` : 'FREE'}</span>
-              </button>
-            </div>
-          )}
+        <div style={gS.progressTrack}><div style={{ ...gS.progressBar, width:`${((day - 1) / scenarios.length) * 100}%`, background: themeGradient }} /></div>
+        <div style={gS.scenarioCard} className="scenario-entry"><p style={gS.scenarioText}>{currentScenario.q}</p>
+          {tradeMessage && (<div style={{ ...gS.tradeMsg, background: tradeMessage.includes('✅') ? '#d1fae5' : tradeMessage.includes('⏭') ? '#f1f5f9' : '#fee2e2', borderColor: tradeMessage.includes('✅') ? '#6ee7b7' : '#fca5a5' }}>{tradeMessage}</div>)}
+          {!waitingNext && (<div style={gS.choiceRow}><button style={{ ...gS.choiceBtn, background: themeGradient }} onClick={() => (activeGame === 'Market' || activeGame === 'Crypto') ? handleMarketChoice(currentScenario.optA) : handleChoice(currentScenario.optA[1])}><span>{currentScenario.optA[0]}</span><b>{config.currencySymbol}{currentScenario.optA[1]}</b></button><button style={gS.choiceBtnSecondary} onClick={() => (activeGame === 'Market' || activeGame === 'Crypto') ? handleMarketChoice(currentScenario.optB) : handleChoice(currentScenario.optB[1])}><span>{currentScenario.optB[0]}</span><span style={{color:'#64748b'}}>{currentScenario.optB[1] > 0 ? `${config.currencySymbol}${currentScenario.optB[1]}` : 'FREE'}</span></button></div>)}
         </div>
         <button onClick={() => resetGame(true)} style={gS.quitBtn}>Quit game</button>
       </div>
     );
   }
 
+  if (view === 'leagues') {
+    return (
+      <div style={gS.menuContainer}><div style={gS.menuHeader}><button onClick={() => setView('menu')} style={gS.backBtn}>← Back</button><h2 style={gS.menuTitle}>🏆 Classroom Leagues</h2></div>
+        <div style={gS.joinBox}><input style={gS.joinInput} placeholder="Code (e.g. ECON1)" value={joinCode} onChange={(e) => setJoinCode(e.target.value)} /><button style={gS.joinBtn} onClick={handleJoinLeague}>Join</button></div>
+        <div style={gS.gamesGrid}>{leagues.map(l => (<div key={l.id} style={gS.leagueCard} onClick={() => { setSelectedLeague(l); setView('leagueDetail'); }}><div style={gS.leagueIcon}>🏫</div><div style={{flex:1}}><div style={{fontWeight:'900', fontSize:'18px'}}>{l.name}</div><div style={{color:'#64748b', fontSize:'13px'}}>{l.players.length} members • Code: {l.code}</div></div>{l.activeMatch && <div style={gS.liveBadge}>LIVE</div>}</div>))}</div>
+      </div>
+    );
+  }
+
+  if (view === 'leagueDetail') {
+    return (
+      <div style={gS.menuContainer}><button onClick={() => setView('leagues')} style={gS.backBtn}>← All Leagues</button><div style={gS.leagueBanner}><h1 style={{margin:0}}>{selectedLeague.name}</h1><p>Competition Hub</p></div>
+        <div style={gS.leagueLayout}><div style={gS.leaderboard}><h3 style={{marginTop:0}}>Leaderboard</h3>{selectedLeague.players.map((p, i) => (<div key={p} style={gS.leaderRow}><span>{i+1}. {p}</span><span style={{fontWeight:'bold'}}>{config.currencySymbol}{Math.floor(Math.random()*5000 + 1000)}</span></div>))}</div>
+          <div style={gS.leagueActions}><div style={gS.activeMatchCard}><h3>Blitz Stock Simulation</h3><p>Live trading. Beat the league bots to win.</p>
+              <button style={{...gS.playBtn, background: '#6366f1'}} onClick={() => {
+                setMoney(config.startingCash); moneyRef.current = config.startingCash;
+                setPortfolio({ GIGA: 0, VOY: 0, MART: 0, SPY: 0, GLD: 0 });
+                setOpponents(selectedLeague.players.filter(p => p !== 'You').map(name => ({ name, wealth: config.startingCash })));
+                setTimeLeft(600); setActiveGame('Blitz'); setPlaying(true); setView('menu');
+              }}>🚀 Start Competitions</button>
+            </div></div>
+        </div>
+      </div>
+    );
+  }
+
   const games = [
-    { id:'Budget', icon:'📊', title:'Survival Budget', desc:'Keep 70% of your starting cash through real-life expenses.', grad:'linear-gradient(135deg,#6366f1,#4f46e5)' },
-    { id:'Market', icon:'📈', title:'Stock Master', desc:'Trade volatile stocks and blue chips to grow your wealth.', grad:'linear-gradient(135deg,#7c3aed,#6366f1)' },
-    { id:'Crypto', icon:'🪙', title:'Crypto King', desc:'High risk, 10x reward. Be careful of the rug pulls!', grad:'linear-gradient(135deg,#0f172a,#334155)' },
-    { id:'Save',   icon:'💰', title:'Savings Sprint', desc:'A race to grow your savings by making smart frugality choices.', grad:'linear-gradient(135deg,#10b981,#059669)' },
-    { id:'Credit', icon:'💳', title:'Credit Crush', desc:'Balance your credit card payments and debt to survive.', grad:'linear-gradient(135deg,#f43f5e,#e11d48)' },
-    { id:'Hustle', icon:'🚀', title:'Side Hustle', desc:'Launch a business and invest in marketing to win big.', grad:'linear-gradient(135deg,#f59e0b,#d97706)' },
+    { id:'Budget', icon:'📊', title:'Survival Budget', desc:'Keep 70% of your starting cash.', grad:'linear-gradient(135deg,#6366f1,#4f46e5)' },
+    { id:'Market', icon:'📈', title:'Stock Master', desc:'Trade volatile stocks.', grad:'linear-gradient(135deg,#7c3aed,#6366f1)' },
+    { id:'Crypto', icon:'🪙', title:'Crypto King', desc:'High risk, 10x reward.', grad:'linear-gradient(135deg,#0f172a,#334155)' },
+    { id:'Save',   icon:'💰', title:'Savings Sprint', desc:'Smart frugality choices.', grad:'linear-gradient(135deg,#10b981,#059669)' },
+    { id:'Credit', icon:'💳', title:'Credit Crush', desc:'Balance debt to survive.', grad:'linear-gradient(135deg,#f43f5e,#e11d48)' },
+    { id:'Hustle', icon:'🚀', title:'Side Hustle', desc:'Launch a business.', grad:'linear-gradient(135deg,#f59e0b,#d97706)' },
   ];
 
   return (
-    <div style={gS.pageWrapper}>
-      <style>{`
-        @keyframes float { 0% { transform: translateY(0px); } 50% { transform: translateY(-8px); } 100% { transform: translateY(0px); } }
-        .game-card:hover { transform: translateY(-10px); transition: 0.3s; }
-        .scenario-entry { animation: slideUp 0.4s ease-out; }
-        @keyframes slideUp { from { opacity:0; transform: translateY(20px); } to { opacity:1; transform: translateY(0); } }
-      `}</style>
-      <div style={gS.menuContainer}>
-        <div style={gS.menuHeader}>
-          <h2 style={gS.menuTitle}>🎮 Financial Games</h2>
-          <p style={gS.menuSub}>Choose your path to financial freedom.</p>
-        </div>
-
-        <div style={gS.gamesGrid}>
-          {games.map(g => (
-            <div key={g.id} className="game-card" style={gS.gameCard}>
-              <div style={{ ...gS.gameCardTop, background: g.grad }}>
-                <div style={{ fontSize:'42px', animation:'float 3s ease-in-out infinite' }}>{g.icon}</div>
-                <h3 style={{ margin:'12px 0 0', color:'#fff', fontSize:'20px', fontWeight:'900' }}>{g.title}</h3>
-              </div>
-              <div style={gS.gameCardBottom}>
-                <p style={gS.gameCardDesc}>{g.desc}</p>
-                <button style={{ ...gS.playBtn, background: g.grad }} onClick={() => {
-                   setMoney(config.startingCash); moneyRef.current = config.startingCash;
-                   setDay(1); setActiveGame(g.id); setPlaying(true);
-                }}>Play Mode</button>
-              </div>
-            </div>
-          ))}
-        </div>
-
-        <div style={gS.extraRow}>
-          <div style={gS.cardPromo} onClick={() => setView('leagues')}>
-            <div style={gS.promoTitle}>🏆 Classroom Leagues</div>
-            <p style={gS.promoText}>Compete with classmates in live stock trading tournaments.</p>
-            <button style={gS.promoBtn}>Enter Leagues</button>
-          </div>
-          <div style={gS.cardPromo}>
-            <div style={gS.promoTitle}>💼 Salary Simulator</div>
-            <p style={gS.promoText}>Map out your future career income and expenses.</p>
-            <button style={{ ...gS.promoBtn, background:'#10b981' }} onClick={() => onNavigate?.('Salary')}>Open Planner</button>
-          </div>
+    <div style={gS.pageWrapper}><style>{`@keyframes float { 0% { transform: translateY(0px); } 50% { transform: translateY(-8px); } 100% { transform: translateY(0px); } } .game-card:hover { transform: translateY(-10px); transition: 0.3s; } .scenario-entry { animation: slideUp 0.4s ease-out; } @keyframes slideUp { from { opacity:0; transform: translateY(20px); } to { opacity:1; transform: translateY(0); } } `}</style>
+      <div style={gS.menuContainer}><div style={gS.menuHeader}><h2 style={gS.menuTitle}>🎮 Financial Games</h2><p style={gS.menuSub}>Choose your path to financial freedom.</p></div>
+        <div style={gS.gamesGrid}>{games.map(g => (<div key={g.id} className="game-card" style={gS.gameCard}><div style={{ ...gS.gameCardTop, background: g.grad }}><div style={{ fontSize:'42px', animation:'float 3s ease-in-out infinite' }}>{g.icon}</div><h3 style={{ margin:'12px 0 0', color:'#fff', fontSize:'20px', fontWeight:'900' }}>{g.title}</h3></div><div style={gS.gameCardBottom}><p style={gS.gameCardDesc}>{g.desc}</p><button style={{ ...gS.playBtn, background: g.grad }} onClick={() => { setMoney(config.startingCash); moneyRef.current = config.startingCash; setDay(1); setActiveGame(g.id); setPlaying(true); }}>Play Mode</button></div></div>))}</div>
+        <div style={gS.extraRow}><div style={gS.cardPromo} onClick={() => setView('leagues')}><div style={gS.promoTitle}>🏆 Classroom Leagues</div><p style={gS.promoText}>Live tournaments.</p><button style={gS.promoBtn}>Enter Leagues</button></div>
+          <div style={gS.cardPromo}><div style={gS.promoTitle}>💼 Salary Simulator</div><p style={gS.promoText}>Future career map.</p><button style={{ ...gS.promoBtn, background:'#10b981' }} onClick={() => onNavigate?.('Salary')}>Open</button></div>
         </div>
       </div>
     </div>
@@ -592,7 +361,6 @@ const gS = {
   gameCardBottom: { padding:'24px' },
   gameCardDesc: { fontSize:'14px', color:'#475569', lineHeight:'1.5', height:'45px', marginBottom:'20px' },
   playBtn: { width:'100%', padding:'14px', borderRadius:'14px', border:'none', color:'#fff', fontWeight:'800', cursor:'pointer' },
-  
   gameContainer: { maxWidth:'500px', margin:'60px auto', padding:'0 20px' },
   gameHeader: { display:'flex', justifyContent:'space-between', alignItems:'center', background:'#fff', padding:'16px 20px', borderRadius:'20px', boxShadow:'0 4px 15px rgba(0,0,0,0.05)', marginBottom:'12px' },
   balanceChip: { padding:'8px 16px', borderRadius:'12px', textAlign:'right' },
@@ -605,23 +373,17 @@ const gS = {
   choiceBtn: { display:'flex', justifyContent:'space-between', padding:'18px', borderRadius:'16px', border:'none', color:'#fff', cursor:'pointer', fontWeight:'700' },
   choiceBtnSecondary: { display:'flex', justifyContent:'space-between', padding:'18px', borderRadius:'16px', border:'2px solid #e2e8f0', background:'#fff', cursor:'pointer', fontWeight:'700' },
   quitBtn: { display:'block', margin:'20px auto', background:'none', border:'none', color:'#94a3b8', fontWeight:'700', cursor:'pointer' },
-
   resultContainer: { minHeight:'100vh', display:'flex', alignItems:'center', justifyContent:'center', padding:'20px' },
   resultCard: { maxWidth:'450px', width:'100%', padding:'40px', borderRadius:'32px', textAlign:'center', color:'#fff', boxShadow:'0 30px 60px rgba(0,0,0,0.2)' },
   resultEmoji: { fontSize:'70px', marginBottom:'16px' },
   resultTitle: { fontSize:'40px', fontWeight:'900', margin:'0 0 10px' },
   resultDetails: { background:'rgba(255,255,255,0.15)', padding:'24px', borderRadius:'20px', textAlign:'left', marginBottom:'24px' },
   statRow: { display:'flex', justifyContent:'space-between', padding:'10px 0', borderBottom:'1px solid rgba(255,255,255,0.1)' },
-  resultMessage: { marginBottom:'32px', lineHeight:'1.6' },
-  resultActions: { display:'flex', flexDirection:'column', gap:'12px' },
-  actionBtn: { padding:'16px', borderRadius:'16px', border:'none', fontWeight:'800', cursor:'pointer' },
-
   extraRow: { display:'grid', gridTemplateColumns:'1fr 1fr', gap:'24px', marginTop:'40px' },
   cardPromo: { background:'#fff', padding:'24px', borderRadius:'24px', boxShadow:'0 10px 20px rgba(0,0,0,0.05)', cursor:'pointer' },
   promoTitle: { fontSize:'19px', fontWeight:'900', marginBottom:'10px' },
   promoText: { fontSize:'14px', color:'#64748b', marginBottom:'16px' },
   promoBtn: { background:'#6366f1', color:'#fff', border:'none', padding:'10px 20px', borderRadius:'10px', fontWeight:'700', cursor:'pointer' },
-
   joinBox: { background:'#fff', padding:'30px', borderRadius:'24px', display:'flex', gap:'12px', marginBottom:'32px', boxShadow:'0 4px 15px rgba(0,0,0,0.05)' },
   joinInput: { flex:1, padding:'14px', borderRadius:'12px', border:'2px solid #e2e8f0', fontSize:'16px', fontWeight:'600' },
   joinBtn: { background:'#0f172a', color:'#fff', padding:'0 24px', borderRadius:'12px', border:'none', fontWeight:'800', cursor:'pointer' },
