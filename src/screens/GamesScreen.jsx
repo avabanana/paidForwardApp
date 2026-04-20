@@ -23,12 +23,40 @@ const STOCK_WIN_REASONS = [
 ];
 
 const INITIAL_STOCKS = [
-  { id: 'GIGA', name: 'GigaSoft Tech', price: 250, history: [250, 245, 248], sector: 'Technology', pe: '24.5', sentiment: 'Bullish', yield: '1.2%' },
-  { id: 'VOY', name: 'Voyager Energy', price: 85, history: [85, 87, 86], sector: 'Energy', pe: '12.1', sentiment: 'Neutral', yield: '4.5%' },
-  { id: 'MART', name: 'MegaMart Corp', price: 120, history: [120, 118, 122], sector: 'Retail', pe: '18.2', sentiment: 'Bearish', yield: '2.1%' },
-  { id: 'SPY', name: 'S&P Lite Index', price: 400, history: [400, 401, 399], sector: 'Index Fund', pe: '21.0', sentiment: 'Bullish', yield: '1.8%' },
-  { id: 'GLD', name: 'Digital Gold', price: 1800, history: [1800, 1810, 1795], sector: 'Commodity', pe: 'N/A', sentiment: 'Neutral', yield: '0%' }
+  { 
+    id: 'GIGA', name: 'GigaSoft Tech', price: 250, history: [240, 245, 238, 252, 248, 255, 250], sector: 'Technology', pe: '45.2', sentiment: 'Bullish', yield: '0.5%', 
+    prevClose: 248.12, open: 249.50, bid: "250.10 x 1200", ask: "250.45 x 800", range52: "180.50 - 310.20", volume: "45.2M", marketCap: "2.4T", beta: "1.45", eps: "5.12", earnings: "Oct 24, 2024", targetEst: "320.00",
+    desc: "A high-growth software giant specializing in Enterprise AI and Cloud Infrastructure." 
+  },
+  { 
+    id: 'VOY', name: 'Voyager Energy', price: 85, history: [82, 84, 86, 85, 87, 86, 85], sector: 'Energy', pe: '9.4', sentiment: 'Neutral', yield: '6.2%', 
+    prevClose: 84.50, open: 85.10, bid: "84.90 x 400", ask: "85.20 x 1100", range52: "62.00 - 95.40", volume: "12.8M", marketCap: "450B", beta: "0.85", eps: "8.90", earnings: "Nov 02, 2024", targetEst: "105.00",
+    desc: "A traditional oil producer pivoting to offshore wind and hydrogen storage." 
+  },
+  { 
+    id: 'MART', name: 'MegaMart Corp', price: 120, history: [125, 122, 121, 119, 118, 122, 120], sector: 'Retail', pe: '18.2', sentiment: 'Bearish', yield: '2.1%', 
+    prevClose: 121.20, open: 120.50, bid: "119.80 x 2000", ask: "120.10 x 1500", range52: "105.00 - 158.00", volume: "22.1M", marketCap: "890B", beta: "1.10", eps: "4.25", earnings: "Sep 15, 2024", targetEst: "110.00",
+    desc: "Global retail chain facing high labor costs and fierce e-commerce competition." 
+  },
+  { 
+    id: 'SPY', name: 'S&P Lite Index', price: 400, history: [395, 398, 402, 399, 401, 399, 400], sector: 'Index Fund', pe: '21.0', sentiment: 'Bullish', yield: '1.8%', 
+    prevClose: 399.10, open: 400.00, bid: "400.05 x 5000", ask: "400.15 x 5000", range52: "350.00 - 460.00", volume: "85M", marketCap: "N/A", beta: "1.00", eps: "N/A", earnings: "N/A", targetEst: "480.00",
+    desc: "A basket of the 500 largest US companies. Lower risk, diversified exposure." 
+  },
+  { 
+    id: 'GLD', name: 'Digital Gold', price: 1800, history: [1780, 1795, 1810, 1805, 1790, 1800, 1800], sector: 'Commodity', pe: 'N/A', sentiment: 'Neutral', yield: '0%', 
+    prevClose: 1798.50, open: 1800.00, bid: "1799.50 x 100", ask: "1801.00 x 150", range52: "1600 - 2100", volume: "2.1M", marketCap: "N/A", beta: "0.15", eps: "N/A", earnings: "N/A", targetEst: "2200.00",
+    desc: "A digital asset backed by physical gold bullion stored in secure vaults." 
+  }
 ];
+
+const VOCAB_HELPER = {
+  pe: "Price-to-Earnings Ratio: Measures a company's current share price relative to its per-share earnings. High P/E often means investors expect high growth.",
+  yield: "Dividend Yield: A financial ratio that tells you the percentage of a company's share price that it pays out in dividends each year.",
+  ticker: "Ticker Symbol: A unique string of letters used to identify a particular stock on an exchange.",
+  sentiment: "Market Sentiment: The overall attitude of investors toward a particular security or the financial market.",
+  volatility: "Volatility: How much a stock's price fluctuates over time. High volatility means higher risk and higher potential reward."
+};
 
 export default function GamesScreen({ userTier, onGameEnd, onNavigate }) {
   const [activeGame, setActiveGame] = useState(null);
@@ -39,24 +67,44 @@ export default function GamesScreen({ userTier, onGameEnd, onNavigate }) {
   const [tradeMessage, setTradeMessage] = useState(null);
   const [waitingNext, setWaitingNext] = useState(false);
   
-  // League/Multiplayer States
+  // League States
   const [view, setView] = useState('menu'); 
   const [leagues, setLeagues] = useState([
-    { id: '101', name: 'AP Economics Titans', players: ['You', 'Sarah_99', 'InvestorJoe'], code: 'ECON1', activeMatch: true },
-    { id: '102', name: 'Wall Street Wolves', players: ['You', 'CryptoKing'], code: 'WOLF8', activeMatch: false }
+    { id: '101', name: 'AP Economics Titans', players: ['You', 'Sarah_99', 'InvestorJoe'], code: 'ECON1', activeMatch: true, visibility: 'public', createdBy: 'System' },
+    { id: '102', name: 'Wall Street Wolves', players: ['You', 'CryptoKing'], code: 'WOLF8', activeMatch: false, visibility: 'public', createdBy: 'System' }
   ]);
   const [joinCode, setJoinCode] = useState("");
+  const [newLeagueName, setNewLeagueName] = useState("");
+  const [leaguePrivacy, setLeaguePrivacy] = useState('public');
   const [selectedLeague, setSelectedLeague] = useState(null);
 
   // Blitz Advanced Sim States
   const [blitzStocks, setBlitzStocks] = useState(INITIAL_STOCKS);
   const [portfolio, setPortfolio] = useState({ GIGA: 0, VOY: 0, MART: 0, SPY: 0, GLD: 0 });
   const [selectedStock, setSelectedStock] = useState(INITIAL_STOCKS[0]);
+  const [activePopupStock, setActivePopupStock] = useState(null);
   const [timeLeft, setTimeLeft] = useState(600); 
   const [opponents, setOpponents] = useState([]);
   const [leagueFeed, setLeagueFeed] = useState([]);
 
+  // Hover Pop-up State
+  const [vocabPopup, setVocabPopup] = useState({ visible: false, key: null, x: 0, y: 0 });
+  const hoverTimer = useRef(null);
   const moneyRef = useRef(0);
+
+  // --- VOCAB HOVER LOGIC ---
+  const handleHoverStart = (key, e) => {
+    const x = e.clientX;
+    const y = e.clientY;
+    hoverTimer.current = setTimeout(() => {
+      setVocabPopup({ visible: true, key, x, y });
+    }, 1200);
+  };
+
+  const handleHoverEnd = () => {
+    if (hoverTimer.current) clearTimeout(hoverTimer.current);
+    setVocabPopup({ visible: false, key: null, x: 0, y: 0 });
+  };
 
   // --- BLITZ TERMINAL ENGINE ---
   useEffect(() => {
@@ -126,20 +174,34 @@ export default function GamesScreen({ userTier, onGameEnd, onNavigate }) {
         { q: "You earned 8⭐ helping clean up! Save it or spend on snacks (3⭐)?", optA: ["Spend on Snacks", 3], optB: ["Save All", 0] },
         { q: "Ice cream truck! Spend 5⭐ or skip it?", optA: ["Buy Ice Cream", 5], optB: ["Skip It", 0] },
         { q: "New card game for 8⭐. Buy it or pass?", optA: ["Buy Game", 8], optB: ["Pass", 0] },
-        { q: "Friend's birthday gift — spend 4⭐ or make something free?", optA: ["Nice Gift", 4], optB: ["Homemade", 0] }
+        { q: "Friend's birthday gift — spend 4⭐ or make something free?", optA: ["Nice Gift", 4], optB: ["Homemade", 0] },
+        { q: "New pencils for 3⭐?", optA: ["Buy", 3], optB: ["Save", 0] },
+        { q: "Candy bar for 2⭐?", optA: ["Buy", 2], optB: ["Save", 0] },
+        { q: "Final challenge: Big Star Box for 12⭐?", optA: ["Buy", 12], optB: ["Save", 0] },
       ],
       marketScenarios: [
         { q: "Lemonade Stand: Spend 10⭐ on lemons. Risk it for profit!", optA: ["Invest", 10], optB: ["Skip", 0] },
         { q: "Cookie Sale: Spend 15⭐ to bake. Will it pay off?", optA: ["Bake Cookies", 15], optB: ["Skip", 0] },
-        { q: "Snow cone stand: Risk 12⭐ or save?", optA: ["Set Up Stand", 12], optB: ["Save", 0] },
-        { q: "Craft market: Spend 8⭐ on supplies. Will anyone buy?", optA: ["Try It", 8], optB: ["Skip", 0] },
-        { q: "Tutoring: Invest 10⭐ in materials. Risky!", optA: ["Invest", 10], optB: ["Skip", 0] },
-        { q: "Pool cleaning gig: Spend 8⭐ on tools.", optA: ["Invest", 8], optB: ["Skip", 0] },
-        { q: "Final gamble: Use 12⭐ to start your biggest venture yet?", optA: ["Go Big", 12], optB: ["Play Safe", 0] }
+        { q: "Snow cone stand: Risk 12⭐ or save?", optA: ["Set Up", 12], optB: ["Save", 0] },
+        { q: "Craft market: Spend 8⭐ on supplies.", optA: ["Try It", 8], optB: ["Skip", 0] },
+        { q: "Tutoring: Invest 10⭐ in materials.", optA: ["Invest", 10], optB: ["Skip", 0] },
+        { q: "Pool cleaning: Spend 8⭐ on tools.", optA: ["Invest", 8], optB: ["Skip", 0] },
+        { q: "Yard Sale: 5⭐ for signs.", optA: ["Buy", 5], optB: ["Skip", 0] },
+        { q: "Dog walking: 4⭐ for leashes.", optA: ["Buy", 4], optB: ["Skip", 0] },
+        { q: "Plant sale: 6⭐ for seeds.", optA: ["Buy", 6], optB: ["Skip", 0] },
+        { q: "Final Venture: 20⭐ big project!", optA: ["Go Big", 20], optB: ["Play Safe", 0] }
       ],
       savingScenarios: [
-        { q: "You found 5⭐ under your pillow. Save it or spend?", optA: ["Spend it", 5], optB: ["Save it", 0] },
-        { q: "Your piggy bank is full. Add 10⭐ or buy a small toy?", optA: ["Buy Toy", 10], optB: ["Add to Savings", 0] },
+        { q: "Found 5⭐ under pillow. Save?", optA: ["Spend", 5], optB: ["Save", 0] },
+        { q: "Piggy bank full. 10⭐ toy?", optA: ["Buy", 10], optB: ["Save", 0] },
+        { q: "Found 5⭐. Save?", optA: ["Spend", 5], optB: ["Save", 0] },
+        { q: "Piggy bank full. 10⭐ toy?", optA: ["Buy", 10], optB: ["Save", 0] },
+        { q: "Found 5⭐. Save?", optA: ["Spend", 5], optB: ["Save", 0] },
+        { q: "Piggy bank full. 10⭐ toy?", optA: ["Buy", 10], optB: ["Save", 0] },
+        { q: "Found 5⭐. Save?", optA: ["Spend", 5], optB: ["Save", 0] },
+        { q: "Piggy bank full. 10⭐ toy?", optA: ["Buy", 10], optB: ["Save", 0] },
+        { q: "Found 5⭐. Save?", optA: ["Spend", 5], optB: ["Save", 0] },
+        { q: "Piggy bank full. 10⭐ toy?", optA: ["Buy", 10], optB: ["Save", 0] },
       ]
     },
     adult: {
@@ -174,18 +236,48 @@ export default function GamesScreen({ userTier, onGameEnd, onNavigate }) {
         { q: "DeFi: $400 in a Yield Farm. 40% APY but risky code.", optA: ["Farm", 400], optB: ["Skip", 0] },
         { q: "Bitcoin: $500 in the King. Stable (for crypto).", optA: ["Buy BTC", 500], optB: ["Skip", 0] },
         { q: "NFT: $250 for a digital Bored Cat. Trend is dying.", optA: ["Buy NFT", 250], optB: ["Skip", 0] },
+        { q: "Altcoin: $200 in Solana ecosys.", optA: ["Buy SOL", 200], optB: ["Skip", 0] },
+        { q: "Mining: $400 in ASIC hardware.", optA: ["Invest", 400], optB: ["Skip", 0] },
+        { q: "Web3: $300 in ENS domain names.", optA: ["Ape", 300], optB: ["Skip", 0] },
+        { q: "DEX: $350 in liquidity providing.", optA: ["Provide", 350], optB: ["Skip", 0] },
+        { q: "Gaming: $200 in Play-to-earn tokens.", optA: ["Play", 200], optB: ["Skip", 0] },
+        { q: "Layer 2: $300 in Arbitrum ecosystem.", optA: ["Invest", 300], optB: ["Skip", 0] },
       ],
       savingScenarios: [
-        { q: "Bonus: $200 Christmas bonus. Save or Spend?", optA: ["Splurge", 200], optB: ["Save It", 0] },
-        { q: "Found Cash: $50 in a jacket. Treat or Piggy Bank?", optA: ["Fancy Meal", 50], optB: ["Save It", 0] },
+        { q: "Bonus: $200 bonus. Save or Spend?", optA: ["Splurge", 200], optB: ["Save It", 0] },
+        { q: "Found Cash: $50 in jacket. Treat or Piggy Bank?", optA: ["Fancy Meal", 50], optB: ["Save It", 0] },
+        { q: "Refund: $80 check from IRS. Save or Spend?", optA: ["New Tech", 80], optB: ["Save It", 0] },
+        { q: "Cash Back: $40 earned. Save or Spend?", optA: ["Takeout", 40], optB: ["Save It", 0] },
+        { q: "Gift: $100 from Grandma. Save or Spend?", optA: ["Shopping", 100], optB: ["Save It", 0] },
+        { q: "Dividend: $30 paid out. Save or Spend?", optA: ["Movie Night", 30], optB: ["Save It", 0] },
+        { q: "Side Gig: $150 earned. Save or Spend?", optA: ["Night Out", 150], optB: ["Save It", 0] },
+        { q: "Garage Sale: $60 earned. Save or Spend?", optA: ["Gadgets", 60], optB: ["Save It", 0] },
+        { q: "Rebate: $25 back. Save or Spend?", optA: ["Lunch", 25], optB: ["Save It", 0] },
+        { q: "Interest: $10 earned. Save or Spend?", optA: ["Small Treat", 10], optB: ["Save It", 0] },
       ],
       creditScenarios: [
-        { q: "Credit Score: Pay $100 off your card to boost your score?", optA: ["Keep Cash", 0], optB: ["Pay Card", 100] },
-        { q: "Bad Debt: A friend wants a $200 loan for a 'sure thing'.", optA: ["Lend It", 200], optB: ["Decline", 0] },
+        { q: "Credit Score: Pay $100 off card to boost score?", optA: ["Keep Cash", 0], optB: ["Pay Card", 100] },
+        { q: "Bad Debt: Friend wants $200 loan for 'sure thing'.", optA: ["Lend It", 200], optB: ["Decline", 0] },
+        { q: "Balance: Pay $150 minimum or keep cash?", optA: ["Keep Cash", 0], optB: ["Pay Balance", 150] },
+        { q: "Interest: Card has 24% APR. Pay $300 now?", optA: ["Wait", 0], optB: ["Pay Debt", 300] },
+        { q: "Late Fee: $35 due. Pay now or later?", optA: ["Later", 0], optB: ["Pay Fee", 35] },
+        { q: "Financing: $500 for a couch @ 0%. Pay now?", optA: ["Finance", 0], optB: ["Pay Cash", 500] },
+        { q: "Limit: Increase limit or stay safe?", optA: ["Increase", 0], optB: ["Stay safe", 0] },
+        { q: "Rewards: Spend $100 to get $20 back?", optA: ["Spend", 100], optB: ["Save", 0] },
+        { q: "Annual Fee: $95 card fee. Pay or cancel?", optA: ["Pay Fee", 95], optB: ["Cancel", 0] },
+        { q: "Identity: Pay $10 for monitoring?", optA: ["Skip", 0], optB: ["Pay", 10] },
       ],
       hustleScenarios: [
-        { q: "Equipment: $300 for a pro camera to start photography.", optA: ["Buy Pro", 300], optB: ["Use Phone", 0] },
-        { q: "Ads: $100 for Instagram ads for your shop.", optA: ["Run Ads", 100], optB: ["Organic", 0] },
+        { q: "Equipment: $300 for pro camera.", optA: ["Buy Pro", 300], optB: ["Use Phone", 0] },
+        { q: "Ads: $100 for Instagram ads.", optA: ["Run Ads", 100], optB: ["Organic", 0] },
+        { q: "Software: $50/mo subscription.", optA: ["Subscribe", 50], optB: ["Free version", 0] },
+        { q: "Networking: $40 event ticket.", optA: ["Attend", 40], optB: ["Skip", 0] },
+        { q: "Outsourcing: $80 for logo design.", optA: ["Hire", 80], optB: ["DIY", 0] },
+        { q: "Stock: $200 in raw materials.", optA: ["Bulk Buy", 200], optB: ["Buy small", 50] },
+        { q: "Shipping: $30 for faster courier.", optA: ["Expedited", 30], optB: ["Standard", 10] },
+        { q: "Legal: $150 to register LLC.", optA: ["Register", 150], optB: ["Stay Sole", 0] },
+        { q: "Space: $100 for shared desk.", optA: ["Rent", 100], optB: ["Work Home", 0] },
+        { q: "Final push: $250 for a trade show.", optA: ["Ape In", 250], optB: ["Skip", 0] },
       ]
     }
   };
@@ -215,8 +307,8 @@ export default function GamesScreen({ userTier, onGameEnd, onNavigate }) {
   const handleMarketChoice = (opt) => {
     if (waitingNext) return;
     const amount = opt[1];
-    if (amount === 0) { setDay(d => d + 1); setTradeMessage(`⏭ Skipped trade. Balance: ${config.currencySymbol}${moneyRef.current}`); if (day >= scenarios.length) { endGame(moneyRef.current); } return; }
-    const success = Math.random() < (activeGame === 'Crypto' ? 0.35 : 0.48);
+    if (amount === 0) { setDay(d => d + 1); setTradeMessage(`⏭ Skipped trade.`); if (day >= scenarios.length) { endGame(moneyRef.current); } return; }
+    const success = Math.random() < (activeGame === 'Crypto' ? 0.38 : 0.48);
     const currentMoney = moneyRef.current;
     let newMoney, msg;
     if (success) {
@@ -232,9 +324,59 @@ export default function GamesScreen({ userTier, onGameEnd, onNavigate }) {
     else { setTimeout(() => { setDay(d => d + 1); setTradeMessage(null); setWaitingNext(false); }, 1800); }
   };
 
+  const handleCreateLeague = () => {
+    if (!newLeagueName) return;
+    const code = Math.random().toString(36).substring(7).toUpperCase();
+    const newL = { id: Date.now().toString(), name: newLeagueName, players: ['You'], code, activeMatch: false, visibility: leaguePrivacy, createdBy: 'You' };
+    setLeagues([newL, ...leagues]);
+    setNewLeagueName("");
+    alert(`League Created! Visibility: ${leaguePrivacy.toUpperCase()}. Code: ${code}`);
+  };
+
   const handleJoinLeague = () => {
     const found = leagues.find(l => l.code.toUpperCase() === joinCode.toUpperCase());
     if (found) { setSelectedLeague(found); setView('leagueDetail'); } else { alert("Invalid Code!"); }
+  };
+
+  const YahooFinancePopup = ({ stock, onClose }) => {
+    if (!stock) return null;
+    return (
+      <div style={gS.modalOverlay}>
+        <div style={gS.modalContent}>
+          <div style={gS.modalHeader}>
+            <div><h1 style={{margin:0, fontSize:'28px'}}>{stock.name} ({stock.id})</h1><span style={{fontSize:'14px', color:'#64748b'}}>{stock.sector} • NasdaqGS</span></div>
+            <button style={gS.closeBtn} onClick={onClose}>✕</button>
+          </div>
+          <div style={gS.modalPriceRow}>
+            <div style={{fontSize:'48px', fontWeight:'900'}}>${stock.price.toFixed(2)}</div>
+            <div style={{color: stock.prevClose < stock.price ? '#10b981' : '#ef4444', fontWeight:'bold', fontSize:'20px'}}>
+              {stock.prevClose < stock.price ? '+' : ''}{(stock.price - stock.prevClose).toFixed(2)} ({((stock.price - stock.prevClose)/stock.prevClose*100).toFixed(2)}%)
+            </div>
+          </div>
+          <div style={gS.modalGrid}>
+            <div style={gS.modalColumn}>
+              <div style={gS.modalStat}><span>Previous Close</span><strong>{stock.prevClose}</strong></div>
+              <div style={gS.modalStat}><span>Open</span><strong>{stock.open}</strong></div>
+              <div style={gS.modalStat}><span>Bid</span><strong>{stock.bid}</strong></div>
+              <div style={gS.modalStat}><span>Ask</span><strong>{stock.ask}</strong></div>
+              <div style={gS.modalStat}><span>52 Week Range</span><strong>{stock.range52}</strong></div>
+            </div>
+            <div style={gS.modalColumn}>
+              <div style={gS.modalStat}><span>Market Cap</span><strong>{stock.marketCap}</strong></div>
+              <div style={gS.modalStat}><span>PE Ratio (TTM)</span><strong>{stock.pe}</strong></div>
+              <div style={gS.modalStat}><span>EPS (TTM)</span><strong>{stock.eps}</strong></div>
+              <div style={gS.modalStat}><span>Earnings Date</span><strong>{stock.earnings}</strong></div>
+              <div style={gS.modalStat}><span>1y Target Est</span><strong>{stock.targetEst}</strong></div>
+            </div>
+          </div>
+          <div style={gS.modalChartArea}>
+            <svg width="100%" height="150" viewBox="0 0 400 100" preserveAspectRatio="none">
+              <polyline fill="none" stroke="#6366f1" strokeWidth="3" points={stock.history.map((d, i) => `${(i / (stock.history.length - 1)) * 400},${100 - ((d - Math.min(...stock.history)) / (Math.max(...stock.history) - Math.min(...stock.history))) * 100}`).join(" ")} />
+            </svg>
+          </div>
+        </div>
+      </div>
+    );
   };
 
   // --- RENDER LOGIC ---
@@ -257,6 +399,13 @@ export default function GamesScreen({ userTier, onGameEnd, onNavigate }) {
     if (activeGame === 'Blitz') {
       return (
         <div style={{ ...gS.pageWrapper, padding: '20px', background: '#0f172a' }}>
+          {activePopupStock && <YahooFinancePopup stock={activePopupStock} onClose={() => setActivePopupStock(null)} />}
+          {vocabPopup.visible && (
+            <div style={{ ...gS.vocabPopup, top: vocabPopup.y + 15, left: vocabPopup.x + 15 }}>
+              <strong>{VOCAB_HELPER[vocabPopup.key].split(':')[0]}</strong>
+              <p style={{margin:'5px 0 0', fontSize:'12px'}}>{VOCAB_HELPER[vocabPopup.key].split(':')[1]}</p>
+            </div>
+          )}
           <div style={{ maxWidth: '1200px', margin: '0 auto', display: 'grid', gridTemplateColumns: '250px 1fr 300px', gap: '20px' }}>
             <div style={{ background: '#1e293b', borderRadius: '16px', padding: '20px', color: '#fff' }}>
               <h3 style={{ margin: '0 0 15px', color: '#6366f1' }}>🏆 Standings</h3>
@@ -266,19 +415,30 @@ export default function GamesScreen({ userTier, onGameEnd, onNavigate }) {
               {leagueFeed.map((f, i) => <div key={i} style={{fontSize:'11px', marginBottom:'10px', color: '#94a3b8'}}>{f}</div>)}
             </div>
             <div style={{ background: '#fff', borderRadius: '16px', padding: '24px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '20px' }}><h2 style={{margin:0}}>Market Dashboard</h2><div style={{fontSize:'20px', fontWeight:'900', color: '#ef4444'}}>⏳ {Math.floor(timeLeft/60)}:{String(timeLeft%60).padStart(2,'0')}</div></div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '20px' }}><h2 style={{margin:0}}>Market Terminal</h2><div style={{fontSize:'20px', fontWeight:'900', color: '#ef4444'}}>⏳ {Math.floor(timeLeft/60)}:{String(timeLeft%60).padStart(2,'0')}</div></div>
               <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '30px' }}>
-                <thead><tr style={{ textAlign: 'left', color: '#64748b', fontSize: '13px' }}><th>Ticker</th><th>Price</th><th>Sentiment</th><th>Sector</th></tr></thead>
-                <tbody>{blitzStocks.map(s => (<tr key={s.id} onClick={()=>setSelectedStock(s)} style={{ borderBottom: '1px solid #f1f5f9', cursor: 'pointer', background: selectedStock.id === s.id ? '#f8fafc' : 'none' }}><td style={{ padding: '15px 0', fontWeight: 'bold' }}>{s.id}</td><td>${s.price.toFixed(2)}</td><td style={{ color: s.sentiment === 'Bullish' ? '#10b981' : (s.sentiment === 'Bearish' ? '#ef4444' : '#64748b') }}>{s.sentiment}</td><td>{s.sector}</td></tr>))}</tbody>
+                <thead><tr style={{ textAlign: 'left', color: '#64748b', fontSize: '13px' }}>
+                  <th onMouseEnter={(e) => handleHoverStart('ticker', e)} onMouseLeave={handleHoverEnd} style={{cursor:'help'}}>Ticker (?)</th>
+                  <th>Price</th>
+                  <th onMouseEnter={(e) => handleHoverStart('sentiment', e)} onMouseLeave={handleHoverEnd} style={{cursor:'help'}}>Sentiment (?)</th>
+                  <th>Sector</th>
+                </tr></thead>
+                <tbody>{blitzStocks.map(s => (<tr key={s.id} onClick={()=>setSelectedStock(s)} style={{ borderBottom: '1px solid #f1f5f9', cursor: 'pointer', background: selectedStock.id === s.id ? '#f8fafc' : 'none' }}>
+                  <td onClick={(e) => { e.stopPropagation(); setActivePopupStock(s); }} style={{ padding: '15px 0', fontWeight: 'bold', color: '#6366f1', textDecoration:'underline' }}>{s.id}</td>
+                  <td>${s.price.toFixed(2)}</td><td style={{ color: s.sentiment === 'Bullish' ? '#10b981' : (s.sentiment === 'Bearish' ? '#ef4444' : '#64748b') }}>{s.sentiment}</td><td>{s.sector}</td>
+                </tr>))}</tbody>
               </table>
-              <div style={{ background: '#f8fafc', padding: '20px', borderRadius: '12px' }}><h3 style={{margin:'0 0 15px'}}>{selectedStock.name} Analysis</h3><div style={{ display: 'flex', gap: '30px', marginBottom: '20px', fontSize: '14px' }}><span>P/E Ratio: <b>{selectedStock.pe}</b></span><span>Div Yield: <b>{selectedStock.yield}</b></span><span>Owned: <b>{portfolio[selectedStock.id]}</b></span></div>
+              <div style={{ background: '#f8fafc', padding: '20px', borderRadius: '12px' }}><h3 style={{margin:'0 0 15px'}}>{selectedStock.name} Analysis</h3><div style={{ display: 'flex', gap: '30px', marginBottom: '20px', fontSize: '14px' }}>
+                  <span onMouseEnter={(e) => handleHoverStart('pe', e)} onMouseLeave={handleHoverEnd} style={{cursor:'help'}}>P/E Ratio (?): <b>{selectedStock.pe}</b></span>
+                  <span onMouseEnter={(e) => handleHoverStart('yield', e)} onMouseLeave={handleHoverEnd} style={{cursor:'help'}}>Div Yield (?): <b>{selectedStock.yield}</b></span>
+                  <span>Owned: <b>{portfolio[selectedStock.id]}</b></span>
+                </div>
                 <div style={{ display: 'flex', gap: '10px' }}><button onClick={() => handleBlitzTrade(selectedStock.id, 'buy')} style={{ ...gS.playBtn, background: '#10b981', flex: 1 }}>BUY</button><button onClick={() => handleBlitzTrade(selectedStock.id, 'sell')} style={{ ...gS.playBtn, background: '#ef4444', flex: 1 }}>SELL</button></div>
               </div>
             </div>
             <div style={{ background: '#1e293b', borderRadius: '16px', padding: '20px', color: '#fff' }}>
               <h3 style={{ margin: '0 0 15px', color: '#6366f1' }}>💼 Portfolio</h3><div style={{fontSize: '24px', fontWeight: '900', marginBottom: '20px'}}>${Math.round(calculateTotalWealth())}</div>
               <div style={{ color: '#94a3b8', fontSize: '12px', marginBottom: '5px' }}>AVAILABLE CASH</div><div style={{ color: '#10b981', fontSize: '18px', fontWeight: 'bold', marginBottom: '20px' }}>${Math.round(money)}</div>
-              <div style={{ borderTop: '1px solid #334155', paddingTop: '15px' }}>{Object.entries(portfolio).map(([id, qty]) => qty > 0 && (<div key={id} style={{display:'flex', justifyContent:'space-between', marginBottom:'10px', fontSize:'13px'}}><span>{id} ({qty})</span><span>${Math.round(qty * blitzStocks.find(s=>s.id===id).price)}</span></div>))}</div>
               <button onClick={endBlitzCompetition} style={{ width:'100%', marginTop:'40px', background:'#ef4444', color:'#fff', border:'none', padding:'12px', borderRadius:'8px', cursor:'pointer', fontWeight:'bold' }}>End Competition</button>
             </div>
           </div>
@@ -304,9 +464,25 @@ export default function GamesScreen({ userTier, onGameEnd, onNavigate }) {
 
   if (view === 'leagues') {
     return (
-      <div style={gS.menuContainer}><div style={gS.menuHeader}><button onClick={() => setView('menu')} style={gS.backBtn}>← Back</button><h2 style={gS.menuTitle}>🏆 Classroom Leagues</h2></div>
-        <div style={gS.joinBox}><input style={gS.joinInput} placeholder="Code (e.g. ECON1)" value={joinCode} onChange={(e) => setJoinCode(e.target.value)} /><button style={gS.joinBtn} onClick={handleJoinLeague}>Join</button></div>
-        <div style={gS.gamesGrid}>{leagues.map(l => (<div key={l.id} style={gS.leagueCard} onClick={() => { setSelectedLeague(l); setView('leagueDetail'); }}><div style={gS.leagueIcon}>🏫</div><div style={{flex:1}}><div style={{fontWeight:'900', fontSize:'18px'}}>{l.name}</div><div style={{color:'#64748b', fontSize:'13px'}}>{l.players.length} members • Code: {l.code}</div></div>{l.activeMatch && <div style={gS.liveBadge}>LIVE</div>}</div>))}</div>
+      <div style={gS.menuContainer}>
+        <button onClick={() => setView('menu')} style={gS.backBtn}>← Back</button>
+        <div style={{...gS.joinBox, background:'#eef2ff', border:'2px solid #6366f1', flexDirection:'column', alignItems:'flex-start'}}>
+          <h3 style={{margin:0}}>Tournament Hub & Private Hubs</h3>
+          <p style={{fontSize:'12px', color:'#6366f1', marginBottom:'15px'}}>Create or join private classroom tournaments with unique codes.</p>
+          <div style={{display:'flex', gap:'10px', width:'100%', marginBottom:'20px'}}>
+            <input style={gS.joinInput} placeholder="New League Name..." value={newLeagueName} onChange={e => setNewLeagueName(e.target.value)} />
+            <select style={gS.joinInput} value={leaguePrivacy} onChange={e => setLeaguePrivacy(e.target.value)}><option value="public">Open/Public</option><option value="private">Private Only</option></select>
+            <button style={gS.joinBtn} onClick={handleCreateLeague}>Create</button>
+          </div>
+          <div style={{width:'100%', borderTop:'1px solid #d1d5db', paddingTop:'15px'}}>
+            <label style={{fontSize:'11px', fontWeight:'900', color:'#475569', display:'block', marginBottom:'8px'}}>INPUT LEAGUE JOIN CODE</label>
+            <div style={{display:'flex', gap:'10px'}}><input style={gS.joinInput} placeholder="e.g. ECON1" value={joinCode} onChange={e => setJoinCode(e.target.value)} /><button style={gS.joinBtn} onClick={handleJoinLeague}>Join</button></div>
+          </div>
+        </div>
+        <h2 style={{margin:'40px 0 20px'}}>Open Arena (Public)</h2>
+        <div style={gS.gamesGrid}>{leagues.filter(l => l.visibility === 'public').map(l => (<div key={l.id} style={gS.leagueCard} onClick={() => { setSelectedLeague(l); setView('leagueDetail'); }}><div style={gS.leagueIcon}>🏫</div><div><strong>{l.name}</strong><br/><span style={{fontSize:'12px'}}>Code: {l.code}</span></div></div>))}</div>
+        <h2 style={{margin:'40px 0 20px'}}>My Private Hubs</h2>
+        <div style={gS.gamesGrid}>{leagues.filter(l => l.createdBy === 'You').map(l => (<div key={l.id} style={{...gS.leagueCard, border:'2px solid #6366f1'}} onClick={() => { setSelectedLeague(l); setView('leagueDetail'); }}><div style={gS.leagueIcon}>🔒</div><div><strong>{l.name} (My League)</strong><br/><span style={{fontSize:'12px'}}>Code: {l.code}</span></div></div>))}</div>
       </div>
     );
   }
@@ -315,34 +491,27 @@ export default function GamesScreen({ userTier, onGameEnd, onNavigate }) {
     return (
       <div style={gS.menuContainer}><button onClick={() => setView('leagues')} style={gS.backBtn}>← All Leagues</button><div style={gS.leagueBanner}><h1 style={{margin:0}}>{selectedLeague.name}</h1><p>Competition Hub</p></div>
         <div style={gS.leagueLayout}><div style={gS.leaderboard}><h3 style={{marginTop:0}}>Leaderboard</h3>{selectedLeague.players.map((p, i) => (<div key={p} style={gS.leaderRow}><span>{i+1}. {p}</span><span style={{fontWeight:'bold'}}>{config.currencySymbol}{Math.floor(Math.random()*5000 + 1000)}</span></div>))}</div>
-          <div style={gS.leagueActions}><div style={gS.activeMatchCard}><h3>Blitz Stock Simulation</h3><p>Live trading. Beat the league bots to win.</p>
-              <button style={{...gS.playBtn, background: '#6366f1'}} onClick={() => {
-                setMoney(config.startingCash); moneyRef.current = config.startingCash;
-                setPortfolio({ GIGA: 0, VOY: 0, MART: 0, SPY: 0, GLD: 0 });
-                setOpponents(selectedLeague.players.filter(p => p !== 'You').map(name => ({ name, wealth: config.startingCash })));
-                setTimeLeft(600); setActiveGame('Blitz'); setPlaying(true); setView('menu');
-              }}>🚀 Start Competitions</button>
-            </div></div>
+          <div style={gS.leagueActions}><div style={gS.activeMatchCard}><h3>Blitz Stock Simulation</h3><button style={{...gS.playBtn, background: '#6366f1', width:'100%'}} onClick={() => { setMoney(config.startingCash); moneyRef.current = config.startingCash; setPortfolio({ GIGA: 0, VOY: 0, MART: 0, SPY: 0, GLD: 0 }); setOpponents(selectedLeague.players.filter(p => p !== 'You').map(name => ({ name, wealth: config.startingCash }))); setTimeLeft(600); setActiveGame('Blitz'); setPlaying(true); setView('menu'); }}>🚀 Start Match</button></div></div>
         </div>
       </div>
     );
   }
 
   const games = [
-    { id:'Budget', icon:'📊', title:'Survival Budget', desc:'Keep 70% of your starting cash.', grad:'linear-gradient(135deg,#6366f1,#4f46e5)' },
-    { id:'Market', icon:'📈', title:'Stock Master', desc:'Trade volatile stocks.', grad:'linear-gradient(135deg,#7c3aed,#6366f1)' },
-    { id:'Crypto', icon:'🪙', title:'Crypto King', desc:'High risk, 10x reward.', grad:'linear-gradient(135deg,#0f172a,#334155)' },
-    { id:'Save',   icon:'💰', title:'Savings Sprint', desc:'Smart frugality choices.', grad:'linear-gradient(135deg,#10b981,#059669)' },
-    { id:'Credit', icon:'💳', title:'Credit Crush', desc:'Balance debt to survive.', grad:'linear-gradient(135deg,#f43f5e,#e11d48)' },
-    { id:'Hustle', icon:'🚀', title:'Side Hustle', desc:'Launch a business.', grad:'linear-gradient(135deg,#f59e0b,#d97706)' },
+    { id:'Budget', icon:'📊', title:'Survival Budget', desc:'The cost of living is rising. Can you survive on a budget without going broke?', grad:'linear-gradient(135deg,#6366f1,#4f46e5)' },
+    { id:'Market', icon:'📈', title:'Stock Master', desc:'Day trade high-volatility stocks. Can you beat the S&P 500 benchmark?', grad:'linear-gradient(135deg,#7c3aed,#6366f1)' },
+    { id:'Crypto', icon:'🪙', title:'Crypto King', desc:'Wild swings and moon-shots. 10x your money or lose it all in one session.', grad:'linear-gradient(135deg,#0f172a,#334155)' },
+    { id:'Save',   icon:'💰', title:'Savings Sprint', desc:'Compound interest is the 8th wonder of the world. Test your frugality.', grad:'linear-gradient(135deg,#10b981,#059669)' },
+    { id:'Credit', icon:'💳', title:'Credit Crush', desc:'Navigate high-interest debt and credit scores while trying to stay afloat.', grad:'linear-gradient(135deg,#f43f5e,#e11d48)' },
+    { id:'Hustle', icon:'🚀', title:'Side Hustle', desc:'Invest in equipment and marketing to launch a successful small business.', grad:'linear-gradient(135deg,#f59e0b,#d97706)' },
   ];
 
   return (
     <div style={gS.pageWrapper}><style>{`@keyframes float { 0% { transform: translateY(0px); } 50% { transform: translateY(-8px); } 100% { transform: translateY(0px); } } .game-card:hover { transform: translateY(-10px); transition: 0.3s; } .scenario-entry { animation: slideUp 0.4s ease-out; } @keyframes slideUp { from { opacity:0; transform: translateY(20px); } to { opacity:1; transform: translateY(0); } } `}</style>
       <div style={gS.menuContainer}><div style={gS.menuHeader}><h2 style={gS.menuTitle}>🎮 Financial Games</h2><p style={gS.menuSub}>Choose your path to financial freedom.</p></div>
-        <div style={gS.gamesGrid}>{games.map(g => (<div key={g.id} className="game-card" style={gS.gameCard}><div style={{ ...gS.gameCardTop, background: g.grad }}><div style={{ fontSize:'42px', animation:'float 3s ease-in-out infinite' }}>{g.icon}</div><h3 style={{ margin:'12px 0 0', color:'#fff', fontSize:'20px', fontWeight:'900' }}>{g.title}</h3></div><div style={gS.gameCardBottom}><p style={gS.gameCardDesc}>{g.desc}</p><button style={{ ...gS.playBtn, background: g.grad }} onClick={() => { setMoney(config.startingCash); moneyRef.current = config.startingCash; setDay(1); setActiveGame(g.id); setPlaying(true); }}>Play Mode</button></div></div>))}</div>
+        <div style={gS.gamesGrid}>{games.map(g => (<div key={g.id} className="game-card" style={gS.gameCard} onClick={() => { setMoney(config.startingCash); moneyRef.current = config.startingCash; setDay(1); setActiveGame(g.id); setPlaying(true); }}><div style={{ ...gS.gameCardTop, background: g.grad }}><div style={{ fontSize:'42px', animation:'float 3s ease-in-out infinite' }}>{g.icon}</div><h3 style={{ margin:'12px 0 0', color:'#fff', fontSize:'20px', fontWeight:'900' }}>{g.title}</h3></div><div style={gS.gameCardBottom}><p style={gS.gameCardDesc}>{g.desc}</p><button style={{ ...gS.playBtn, background: g.grad }}>Play Mode</button></div></div>))}</div>
         <div style={gS.extraRow}><div style={gS.cardPromo} onClick={() => setView('leagues')}><div style={gS.promoTitle}>🏆 Classroom Leagues</div><p style={gS.promoText}>Live tournaments.</p><button style={gS.promoBtn}>Enter Leagues</button></div>
-          <div style={gS.cardPromo}><div style={gS.promoTitle}>💼 Salary Simulator</div><p style={gS.promoText}>Future career map.</p><button style={{ ...gS.promoBtn, background:'#10b981' }} onClick={() => onNavigate?.('Salary')}>Open</button></div>
+          <div style={gS.cardPromo}><div style={gS.promoTitle}>💼 Salary Simulator</div><p style={gS.promoText}>Career map.</p><button style={{ ...gS.promoBtn, background:'#10b981' }} onClick={() => onNavigate?.('Salary')}>Open</button></div>
         </div>
       </div>
     </div>
@@ -350,6 +519,15 @@ export default function GamesScreen({ userTier, onGameEnd, onNavigate }) {
 }
 
 const gS = {
+  vocabPopup: { position:'fixed', zIndex:9999, background:'#fff', padding:'16px', borderRadius:'12px', width:'220px', boxShadow:'0 10px 30px rgba(0,0,0,0.2)', border:'1px solid #6366f1', pointerEvents:'none' },
+  modalOverlay: { position:'fixed', top:0, left:0, right:0, bottom:0, background:'rgba(0,0,0,0.8)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:10000, padding:'20px' },
+  modalContent: { background:'#fff', width:'100%', maxWidth:'800px', borderRadius:'24px', padding:'32px', maxHeight:'90vh', overflowY:'auto' },
+  modalHeader: { display:'flex', justifyContent:'space-between', marginBottom:'24px' },
+  closeBtn: { background:'none', border:'none', fontSize:'24px', cursor:'pointer' },
+  modalPriceRow: { display:'flex', alignItems:'baseline', gap:'20px', marginBottom:'30px' },
+  modalGrid: { display:'grid', gridTemplateColumns:'1fr 1fr', gap:'40px' },
+  modalStat: { display:'flex', justifyContent:'space-between', padding:'12px 0', borderBottom:'1px solid #f1f5f9' },
+  modalChartArea: { background:'#f8fafc', padding:'24px', borderRadius:'16px', marginTop:'30px' },
   pageWrapper: { minHeight:'100vh', background:'#f8fafc', paddingBottom:'60px' },
   menuContainer: { maxWidth:'1000px', margin:'0 auto', padding:'40px 20px', fontFamily:"'Inter', system-ui, sans-serif" },
   menuHeader: { marginBottom:'32px', textAlign:'center' },
@@ -379,6 +557,7 @@ const gS = {
   resultTitle: { fontSize:'40px', fontWeight:'900', margin:'0 0 10px' },
   resultDetails: { background:'rgba(255,255,255,0.15)', padding:'24px', borderRadius:'20px', textAlign:'left', marginBottom:'24px' },
   statRow: { display:'flex', justifyContent:'space-between', padding:'10px 0', borderBottom:'1px solid rgba(255,255,255,0.1)' },
+  actionBtn: { width:'100%', padding:'18px', borderRadius:'18px', border:'none', background:'#fff', color: '#1e293b', fontSize: '16px', fontWeight:'900', cursor:'pointer', boxShadow: '0 4px 10px rgba(0,0,0,0.1)' },
   extraRow: { display:'grid', gridTemplateColumns:'1fr 1fr', gap:'24px', marginTop:'40px' },
   cardPromo: { background:'#fff', padding:'24px', borderRadius:'24px', boxShadow:'0 10px 20px rgba(0,0,0,0.05)', cursor:'pointer' },
   promoTitle: { fontSize:'19px', fontWeight:'900', marginBottom:'10px' },
@@ -389,7 +568,6 @@ const gS = {
   joinBtn: { background:'#0f172a', color:'#fff', padding:'0 24px', borderRadius:'12px', border:'none', fontWeight:'800', cursor:'pointer' },
   leagueCard: { background:'#fff', padding:'20px', borderRadius:'18px', display:'flex', alignItems:'center', gap:'15px', cursor:'pointer', border:'2px solid transparent' },
   leagueIcon: { fontSize:'30px', background:'#f1f5f9', width:'60px', height:'60px', display:'flex', alignItems:'center', justifyContent:'center', borderRadius:'14px' },
-  liveBadge: { background:'#ef4444', color:'#fff', fontSize:'10px', fontWeight:'900', padding:'4px 8px', borderRadius:'6px' },
   backBtn: { background:'none', border:'none', color:'#6366f1', fontWeight:'800', cursor:'pointer', marginBottom:'12px' },
   leagueBanner: { background:'#6366f1', color:'#fff', padding:'40px', borderRadius:'24px', marginBottom:'30px' },
   leagueLayout: { display:'grid', gridTemplateColumns:'1fr 1.5fr', gap:'24px' },
