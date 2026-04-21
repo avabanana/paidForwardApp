@@ -1,529 +1,289 @@
-import React, { useEffect, useMemo, useState } from "react";
-import {
-  collection,
-  doc,
-  setDoc,
-  getDoc,
-  onSnapshot,
-  updateDoc,
-  query,
-  where,
-  getDocs,
-  serverTimestamp
-} from "firebase/firestore";
+import React, { useState, useRef, useEffect } from "react";
 
-const CHALLENGE_POOL = [
-  {
-    question: "📦 You want to buy new sneakers for $120 but your rent is due next week. What do you do?",
-    options: [
-      { label: "Buy the sneakers now", points: -10, feedback: "Risky move — rent is a necessity!" },
-      { label: "Wait until after rent is paid", points: 20, feedback: "Smart! Needs before wants." },
-      { label: "Put it on a credit card", points: -5, feedback: "Interest adds up fast." },
-      { label: "Look for cheaper alternatives", points: 15, feedback: "Great budgeting instinct!" }
-    ]
-  },
-  {
-    question: "💳 You get a $500 bonus at work. How do you handle it?",
-    options: [
-      { label: "Spend it all on a celebration", points: -5, feedback: "Fun, but not financially wise." },
-      { label: "Save 50%, spend 50%", points: 20, feedback: "Balanced approach — well done!" },
-      { label: "Put it all in savings", points: 25, feedback: "Maximum points for max saving!" },
-      { label: "Use it to pay off debt", points: 22, feedback: "Reducing debt is always smart." }
-    ]
-  },
-  {
-    question: "🛒 Your friend says a luxury item is 'on sale' and you should grab it. What do you do?",
-    options: [
-      { label: "Buy it immediately", points: -10, feedback: "A sale doesn't mean you need it." },
-      { label: "Check if it's in your budget first", points: 25, feedback: "Always check your budget!" },
-      { label: "Ask if you actually need it", points: 20, feedback: "Great critical thinking." },
-      { label: "Ignore the sale and move on", points: 10, feedback: "Discipline is powerful." }
-    ]
-  },
-  {
-    question: "📈 You have $200 to invest. Which option fits a beginner?",
-    options: [
-      { label: "All in on a meme stock", points: -15, feedback: "Very high risk for beginners." },
-      { label: "Low-cost index fund", points: 25, feedback: "Smart, diversified choice!" },
-      { label: "Buy crypto with all of it", points: -10, feedback: "Crypto is very volatile." },
-      { label: "Keep it in a savings account for now", points: 15, feedback: "Safe, but you could do more." }
-    ]
-  },
-  {
-    question: "🏦 Your emergency fund covers 1 month of expenses. What's the ideal goal?",
-    options: [
-      { label: "1 month is enough", points: 5, feedback: "Better than nothing, but not ideal." },
-      { label: "3–6 months of expenses", points: 25, feedback: "That's the financial expert recommendation!" },
-      { label: "Save 12 months", points: 15, feedback: "Great but might be over-saving." },
-      { label: "Don't bother with an emergency fund", points: -20, feedback: "This could be financially devastating." }
-    ]
-  },
-  {
-    question: "💸 A friend asks you to lend $300 with no repayment plan. What do you say?",
-    options: [
-      { label: "Sure, anytime!", points: -10, feedback: "Lending without a plan often leads to loss." },
-      { label: "Only if they sign a simple agreement", points: 20, feedback: "Smart — protect yourself!" },
-      { label: "Offer a smaller amount you can afford to lose", points: 15, feedback: "Reasonable compromise." },
-      { label: "Politely decline", points: 10, feedback: "It's okay to protect your finances." }
-    ]
-  },
-  {
-    question: "🎓 You're deciding whether to take out a student loan. What's key?",
-    options: [
-      { label: "Borrow as much as offered", points: -15, feedback: "Never borrow more than you need." },
-      { label: "Research interest rates and repayment", points: 25, feedback: "Knowledge is power!" },
-      { label: "Only borrow what's absolutely necessary", points: 20, feedback: "Excellent discipline." },
-      { label: "Avoid loans completely", points: 5, feedback: "Sometimes loans are a good investment." }
-    ]
-  }
+const STOCK_FAIL_REASONS = [
+  "The company missed its quarterly earnings by 40%. Investors panicked and sold off.",
+  "A major competitor launched a cheaper product, gutting the stock's market share overnight.",
+  "The CEO was caught in an accounting scandal. Trading was halted before you could exit.",
+  "Supply chain disruptions in Southeast Asia crippled production for the quarter.",
+  "The Fed raised interest rates unexpectedly, hammering growth stocks across the board.",
+  "A short-seller published a damning report calling the company a 'house of cards.'",
+  "Regulatory fines worth $2B were announced. The stock dropped 38% in a single session.",
+  "A data breach exposed 50 million user records. Customer trust collapsed overnight.",
+  "The company's key patent was invalidated in court, wiping out its competitive moat.",
+  "Macroeconomic fears triggered a broad market sell-off. Your position took collateral damage.",
 ];
 
-const makeCode = () => Math.random().toString(36).slice(2, 8).toUpperCase();
+const STOCK_WIN_REASONS = [
+  "Strong earnings beat expectations by 25%. Institutional buyers piled in.",
+  "The company announced a surprise share buyback program. Stock jumped 18%.",
+  "A partnership with a major tech giant was announced. Momentum traders flooded in.",
+  "Inflation data came in lower than expected — growth stocks surged across the board.",
+  "The company's new product launch broke pre-order records. Revenue guidance revised upward.",
+  "A prominent hedge fund disclosed a large stake. Retail investors followed the signal."
+];
 
-export default function LeagueScreen({ currentUser, userId, db }) {
-  const [myLeagueCodes, setMyLeagueCodes] = useState([]);
-  const [leagues, setLeagues] = useState({});
-  const [activeCode, setActiveCode] = useState(null);
-  const [newLeagueName, setNewLeagueName] = useState("");
+const INITIAL_STOCKS = [
+  { id: 'GIGA', name: 'GigaSoft Tech', price: 250, history: [240, 245, 238, 252, 248, 255, 250], sector: 'Technology', pe: '45.2', sentiment: 'Bullish', yield: '0.5%', prevClose: 248.12, open: 249.50, bid: "250.10 x 1200", ask: "250.45 x 800", range52: "180.50 - 310.20", volume: "45.2M", marketCap: "2.4T", beta: "1.45", eps: "5.12", earnings: "Oct 24, 2024", targetEst: "320.00" },
+  { id: 'VOY', name: 'Voyager Energy', price: 85, history: [82, 84, 86, 85, 87, 86, 85], sector: 'Energy', pe: '9.4', sentiment: 'Neutral', yield: '6.2%', prevClose: 84.50, open: 85.10, bid: "84.90 x 400", ask: "85.20 x 1100", range52: "62.00 - 95.40", volume: "12.8M", marketCap: "450B", beta: "0.85", eps: "8.90", earnings: "Nov 02, 2024", targetEst: "105.00" },
+  { id: 'MART', name: 'MegaMart Corp', price: 120, history: [125, 122, 121, 119, 118, 122, 120], sector: 'Retail', pe: '18.2', sentiment: 'Bearish', yield: '2.1%', prevClose: 121.20, open: 120.50, bid: "119.80 x 2000", ask: "120.10 x 1500", range52: "105.00 - 158.00", volume: "22.1M", marketCap: "890B", beta: "1.10", eps: "4.25", earnings: "Sep 15, 2024", targetEst: "110.00" },
+  { id: 'SPY', name: 'S&P Lite Index', price: 400, history: [395, 398, 402, 399, 401, 399, 400], sector: 'Index Fund', pe: '21.0', sentiment: 'Bullish', yield: '1.8%', prevClose: 399.10, open: 400.00, bid: "400.05 x 5000", ask: "400.15 x 5000", range52: "350.00 - 460.00", volume: "85M", marketCap: "N/A", beta: "1.00", eps: "N/A", earnings: "N/A", targetEst: "480.00" },
+  { id: 'GLD', name: 'Digital Gold', price: 1800, history: [1780, 1795, 1810, 1805, 1790, 1800, 1800], sector: 'Commodity', pe: 'N/A', sentiment: 'Neutral', yield: '0%', prevClose: 1798.50, open: 1800.00, bid: "1799.50 x 100", ask: "1801.00 x 150", range52: "1600 - 2100", volume: "2.1M", marketCap: "N/A", beta: "0.15", eps: "N/A", earnings: "N/A", targetEst: "2200.00" }
+];
+
+const VOCAB_HELPER = {
+  pe: "Price-to-Earnings Ratio: Measures a company's current share price relative to its per-share earnings. High P/E often means investors expect high growth.",
+  yield: "Dividend Yield: A financial ratio that tells you the percentage of a company's share price that it pays out in dividends each year.",
+  ticker: "Ticker Symbol: A unique string of letters used to identify a particular stock on an exchange.",
+  sentiment: "Market Sentiment: The overall attitude of investors toward a particular security.",
+  volatility: "Volatility: How much a stock's price fluctuates over time."
+};
+
+export default function LeagueScreen({ userTier, userName, onGameEnd }) {
+  const [currentUser] = useState(userName || localStorage.getItem("FIN_USERNAME") || "Guest_" + Math.floor(Math.random() * 9000));
+  const [leagues, setLeagues] = useState(() => JSON.parse(localStorage.getItem("FIN_LEAGUES_GLOBAL")) || []);
+  const [view, setView] = useState('menu');
+  const [selectedLeague, setSelectedLeague] = useState(null);
   const [joinCode, setJoinCode] = useState("");
-  const [message, setMessage] = useState("");
-  const [savingLeague, setSavingLeague] = useState(false);
-  const [joiningLeague, setJoiningLeague] = useState(false);
-  const [challenge, setChallenge] = useState(null);
-  const [answered, setAnswered] = useState(false);
-  const [lastAnswer, setLastAnswer] = useState(null);
-  const [competitionQ, setCompetitionQ] = useState(null);
+  const [newLeagueName, setNewLeagueName] = useState("");
+  const [leaguePrivacy, setLeaguePrivacy] = useState('public');
+  
+  // Game States
+  const [playing, setPlaying] = useState(false);
+  const [money, setMoney] = useState(1000);
+  const [timeLeft, setTimeLeft] = useState(600);
+  const [blitzStocks, setBlitzStocks] = useState(INITIAL_STOCKS);
+  const [portfolio, setPortfolio] = useState({ GIGA: 0, VOY: 0, MART: 0, SPY: 0, GLD: 0 });
+  const [selectedStock, setSelectedStock] = useState(INITIAL_STOCKS[0]);
+  const [activePopupStock, setActivePopupStock] = useState(null);
+  const [opponents, setOpponents] = useState([]);
+  const [leagueFeed, setLeagueFeed] = useState([]);
+  const [gameResult, setGameResult] = useState(null);
+  const [gameStats, setGameStats] = useState({ buys: 0, sells: 0, startMoney: 1000 });
+  const [vocabPopup, setVocabPopup] = useState({ visible: false, key: null, x: 0, y: 0 });
+  const vocabRef = useRef(null);
 
-  // Load user's league memberships from Firestore
+  // Sync Leagues across accounts/tabs
   useEffect(() => {
-    if (!db || !userId) return;
-    const userRef = doc(db, "users", userId);
-    const unsub = onSnapshot(userRef, (snap) => {
-      const data = snap.data() || {};
-      setMyLeagueCodes(data.leagueCodes || []);
-    });
-    return () => unsub();
-  }, [db, userId]);
-
-  // Subscribe to each league the user belongs to
-  useEffect(() => {
-    if (!db || myLeagueCodes.length === 0) return;
-    const unsubs = myLeagueCodes.map((code) => {
-      const ref = doc(db, "leagues", code);
-      return onSnapshot(ref, (snap) => {
-        if (snap.exists()) {
-          setLeagues((prev) => ({ ...prev, [code]: { id: snap.id, ...snap.data() } }));
-        }
-      });
-    });
-    return () => unsubs.forEach((u) => u());
-  }, [db, myLeagueCodes]);
-
-  // Pick a daily challenge
-  useEffect(() => {
-    const todayKey = new Date().toISOString().slice(0, 10);
-    const idx = todayKey.split("-").reduce((a, b) => a + parseInt(b), 0) % CHALLENGE_POOL.length;
-    setChallenge(CHALLENGE_POOL[idx]);
-    const compIdx = (idx + 1) % CHALLENGE_POOL.length;
-    setCompetitionQ(CHALLENGE_POOL[compIdx]);
+    const sync = () => {
+      const global = JSON.parse(localStorage.getItem("FIN_LEAGUES_GLOBAL") || "[]");
+      setLeagues(global);
+    };
+    window.addEventListener('storage', sync);
+    const poller = setInterval(sync, 1500);
+    return () => { window.removeEventListener('storage', sync); clearInterval(poller); };
   }, []);
 
-  const activeLeague = activeCode ? leagues[activeCode] : null;
+  useEffect(() => {
+    localStorage.setItem("FIN_LEAGUES_GLOBAL", JSON.stringify(leagues));
+  }, [leagues]);
 
-  const createLeague = async () => {
-    if (!newLeagueName.trim()) {
-      setMessage("Please type a league name before creating one.");
-      return;
-    }
-    if (!db || !userId) {
-      setMessage("Unable to create league. Please sign in again.");
-      return;
-    }
+  // Blitz Engine
+  useEffect(() => {
+    let interval;
+    if (playing && timeLeft > 0) {
+      interval = setInterval(() => {
+        const myWealth = money + blitzStocks.reduce((acc, s) => acc + (portfolio[s.id] * s.price), 0);
+        localStorage.setItem(`FIN_SYNC_${selectedLeague.id}_${currentUser}`, myWealth.toString());
 
-    setSavingLeague(true);
-    setMessage("Creating your league…");
+        setBlitzStocks(cur => cur.map(s => {
+          const change = (Math.random() - 0.49) * (s.id === 'GIGA' ? 12 : 8);
+          const next = Math.max(5, s.price + change);
+          return { ...s, price: next, history: [...s.history.slice(-14), next] };
+        }));
 
-    try {
-      const code = makeCode();
-      const leagueData = {
-        code,
-        name: newLeagueName.trim(),
-        createdBy: currentUser,
-        createdAt: serverTimestamp(),
-        members: {
-          [userId]: { name: currentUser, score: 0, answered: 0 }
+        const liveLeague = JSON.parse(localStorage.getItem("FIN_LEAGUES_GLOBAL") || "[]").find(l => l.id === selectedLeague.id);
+        if (liveLeague) {
+          setOpponents(liveLeague.players.filter(p => p !== currentUser).map(p => ({
+            name: p, wealth: parseFloat(localStorage.getItem(`FIN_SYNC_${selectedLeague.id}_${p}`) || "1000")
+          })));
         }
-      };
-      await setDoc(doc(db, "leagues", code), leagueData);
-      const userRef = doc(db, "users", userId);
-      const snap = await getDoc(userRef);
-      const existing = snap.data()?.leagueCodes || [];
-      await updateDoc(userRef, { leagueCodes: [...existing, code] });
-      setNewLeagueName("");
-      setActiveCode(code);
-      setMessage(`✅ League created! Share code: ${code}`);
-    } catch (err) {
-      setMessage(err.message || "Could not create league. Try again.");
-    } finally {
-      setSavingLeague(false);
+        setLeagueFeed(JSON.parse(localStorage.getItem(`FIN_FEED_${selectedLeague.id}`) || "[]"));
+        setTimeLeft(t => t - 1);
+      }, 1000);
+    } else if (timeLeft === 0 && playing) endMatch();
+    return () => clearInterval(interval);
+  }, [playing, timeLeft, money, portfolio, blitzStocks]);
+
+  const handleCreate = () => {
+    if (!newLeagueName) return;
+    const code = Math.random().toString(36).substring(7).toUpperCase();
+    const newL = { id: Date.now().toString(), name: newLeagueName, players: [currentUser], code, visibility: leaguePrivacy, createdBy: currentUser };
+    setLeagues(prev => [...prev, newL]);
+    setNewLeagueName("");
+    alert("League Created! Code: " + code);
+  };
+
+  const handleJoin = () => {
+    const code = joinCode.toUpperCase();
+    const global = JSON.parse(localStorage.getItem("FIN_LEAGUES_GLOBAL") || "[]");
+    const idx = global.findIndex(l => l.code.toUpperCase() === code);
+    if (idx !== -1) {
+      global[idx].players = Array.from(new Set([...global[idx].players, currentUser]));
+      setLeagues(global);
+      localStorage.setItem("FIN_LEAGUES_GLOBAL", JSON.stringify(global));
+      setSelectedLeague(global[idx]);
+      setView('detail');
+    } else alert("Invalid Code!");
+  };
+
+  const handleDelete = (id) => {
+    if (!window.confirm("Delete this league?")) return;
+    const updated = leagues.filter(l => l.id !== id);
+    setLeagues(updated);
+    if (selectedLeague?.id === id) setView('menu');
+  };
+
+  const trade = (id, type) => {
+    const stock = blitzStocks.find(s => s.id === id);
+    if (type === 'buy' && money >= stock.price) {
+      setMoney(m => m - stock.price);
+      setPortfolio(p => ({ ...p, [id]: p[id] + 1 }));
+      setGameStats(s => ({ ...s, buys: s.buys + 1 }));
+      updateFeed(`${currentUser} bought ${id}`);
+    } else if (type === 'sell' && portfolio[id] > 0) {
+      setMoney(m => m + stock.price);
+      setPortfolio(p => ({ ...p, [id]: p[id] - 1 }));
+      setGameStats(s => ({ ...s, sells: s.sells + 1 }));
+      updateFeed(`${currentUser} sold ${id}`);
     }
   };
 
-  const joinLeague = async () => {
-    const code = joinCode.trim().toUpperCase();
-    if (!code) {
-      setMessage("Please enter a league code.");
-      return;
-    }
-    if (!db || !userId) {
-      setMessage("Unable to join league. Please sign in again.");
-      return;
-    }
-
-    setJoiningLeague(true);
-    setMessage("Checking league code…");
-
-    try {
-      const ref = doc(db, "leagues", code);
-      const snap = await getDoc(ref);
-      if (!snap.exists()) {
-        setMessage("❌ League not found. Check the code.");
-        return;
-      }
-      const data = snap.data();
-      if (!data.members?.[userId]) {
-        await updateDoc(ref, {
-          [`members.${userId}`]: { name: currentUser, score: 0, answered: 0 }
-        });
-      }
-      const userRef = doc(db, "users", userId);
-      const userSnap = await getDoc(userRef);
-      const existing = userSnap.data()?.leagueCodes || [];
-      if (!existing.includes(code)) {
-        await updateDoc(userRef, { leagueCodes: [...existing, code] });
-      }
-      setJoinCode("");
-      setActiveCode(code);
-      setMessage(`🎉 Joined league: ${data.name}!`);
-    } catch (err) {
-      setMessage(err.message || "Could not join league. Please try again.");
-    } finally {
-      setJoiningLeague(false);
-    }
+  const updateFeed = (msg) => {
+    const key = `FIN_FEED_${selectedLeague.id}`;
+    const cur = JSON.parse(localStorage.getItem(key) || "[]");
+    localStorage.setItem(key, JSON.stringify([msg, ...cur].slice(0, 10)));
   };
 
-  const answerChallenge = async (option) => {
-    if (answered || !activeLeague || !db) return;
-    setAnswered(true);
-    setLastAnswer(option);
-    const ref = doc(db, "leagues", activeCode);
-    const current = activeLeague.members?.[userId] || { score: 0, answered: 0 };
-    await updateDoc(ref, {
-      [`members.${userId}.name`]: currentUser,
-      [`members.${userId}.score`]: (current.score || 0) + option.points,
-      [`members.${userId}.answered`]: (current.answered || 0) + 1
-    });
+  const endMatch = () => {
+    const final = money + blitzStocks.reduce((acc, s) => acc + (portfolio[s.id] * s.price), 0);
+    const net = final - gameStats.startMoney;
+    setGameResult({ final, net, buys: gameStats.buys, sells: gameStats.sells, msg: net > 0 ? STOCK_WIN_REASONS[0] : STOCK_FAIL_REASONS[0] });
+    setPlaying(false);
   };
 
-  const leaderboard = useMemo(() => {
-    if (!activeLeague?.members) return [];
-    return Object.entries(activeLeague.members)
-      .map(([key, data]) => ({
-        key,
-        name: data?.name || key,
-        score: data?.score || 0,
-        answered: data?.answered || 0
-      }))
-      .sort((a, b) => b.score - a.score);
-  }, [activeLeague]);
+  const YahooFinancePopup = ({ stock, onClose }) => (
+    <div style={lS.modalOverlay}><div style={lS.modalContent}>
+      <div style={lS.modalHeader}><h2>{stock.name} ({stock.id})</h2><button onClick={onClose} style={lS.closeBtn}>✕</button></div>
+      <div style={lS.modalPriceRow}><div style={{fontSize:'48px', fontWeight:'900'}}>${stock.price.toFixed(2)}</div></div>
+      <div style={lS.modalGrid}>
+        <div>Previous Close: <strong>{stock.prevClose}</strong><br/>Open: <strong>{stock.open}</strong></div>
+        <div>Market Cap: <strong>{stock.marketCap}</strong><br/>P/E Ratio: <strong>{stock.pe}</strong></div>
+      </div>
+    </div></div>
+  );
 
-  const memberCount = activeLeague ? Object.keys(activeLeague.members).length : 0;
-  const hasCompetition = memberCount > 1;
+  if (gameResult) return (
+    <div style={lS.resultContainer}><div style={lS.resultCard}>
+      <h1>SESSION REPORT</h1>
+      <div style={lS.statBox}>
+        <p>Total Buys: {gameResult.buys}</p><p>Total Sells: {gameResult.sells}</p>
+        <p>Net Profit/Loss: <strong>${Math.round(gameResult.net)}</strong></p>
+        <p style={{fontSize:'14px', marginTop:'15px', color:'#cbd5e1'}}>{gameResult.msg}</p>
+      </div>
+      <button style={lS.actionBtn} onClick={() => { setGameResult(null); setView('menu'); }}>Continue</button>
+    </div></div>
+  );
 
-  return (
-    <div style={styles.container}>
-      <h2 style={styles.title}>🏆 Classroom Leagues</h2>
-      <p style={styles.sub}>
-        Compete with friends on personal finance knowledge. Answer daily challenges, climb the leaderboard!
-      </p>
-
-      <div style={styles.row}>
-        <div style={styles.card}>
-          <h3 style={styles.cardTitle}>➕ Create a League</h3>
-          <p style={styles.cardNote}>Start a new league and invite friends with your code.</p>
-          <input
-            style={styles.input}
-            placeholder="League name (e.g. Finance Club)"
-            value={newLeagueName}
-            onChange={(e) => setNewLeagueName(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && createLeague()}
-          />
-          <button type="button" style={styles.button} onClick={createLeague} disabled={savingLeague}>{savingLeague ? 'Creating…' : 'Create League'}</button>
+  if (playing) return (
+    <div style={{...lS.pageWrapper, background:'#0f172a', padding:'20px'}}>
+      {activePopupStock && <YahooFinancePopup stock={activePopupStock} onClose={() => setActivePopupStock(null)} />}
+      {vocabPopup.visible && <div ref={vocabRef} style={{...lS.vocabPopup, top:vocabPopup.y, left:vocabPopup.x}}>
+        <div style={{display:'flex', justifyContent:'space-between'}}><strong>{VOCAB_HELPER[vocabPopup.key].split(':')[0]}</strong><button onClick={()=>setVocabPopup({visible:false})} style={lS.minBtn}>_</button></div>
+        <p style={{fontSize:'12px', margin:'5px 0 0'}}>{VOCAB_HELPER[vocabPopup.key].split(':')[1]}</p>
+      </div>}
+      <div style={lS.blitzGrid}>
+        <div style={lS.sidePanel}>
+          <h3>🏆 Standings</h3>
+          <div style={lS.standRow}><span>1. {currentUser} (You)</span><span>${Math.round(money + blitzStocks.reduce((acc, s) => acc + (portfolio[s.id] * s.price), 0))}</span></div>
+          {opponents.sort((a,b)=>b.wealth-a.wealth).map((o,i)=><div key={o.name} style={lS.standRow}><span>{i+2}. {o.name}</span><span>${Math.round(o.wealth)}</span></div>)}
+          <h3 style={{marginTop:'30px'}}>📡 Feed</h3>
+          {leagueFeed.map((f,i)=><div key={i} style={{fontSize:'11px', color:'#94a3b8'}}>{f}</div>)}
         </div>
-
-        <div style={styles.card}>
-          <h3 style={styles.cardTitle}>🔗 Join a League</h3>
-          <p style={styles.cardNote}>Enter the 6-character code from your league organizer.</p>
-          <input
-            style={styles.input}
-            placeholder="Enter league code (e.g. AB12CD)"
-            value={joinCode}
-            onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
-            onKeyDown={(e) => e.key === "Enter" && joinLeague()}
-            maxLength={6}
-          />
-          <button type="button" style={styles.button} onClick={joinLeague} disabled={joiningLeague}>{joiningLeague ? 'Joining…' : 'Join League'}</button>
+        <div style={lS.mainPanel}>
+          <div style={{display:'flex', justifyContent:'space-between'}}><h2>Terminal</h2><h2 style={{color:'#ef4444'}}>⏳ {Math.floor(timeLeft/60)}:{String(timeLeft%60).padStart(2,'0')}</h2></div>
+          <table style={lS.table}>
+            <thead><tr><th onClick={(e)=>handleVocabClick('ticker', e)}>Ticker (?)</th><th>Price</th><th onClick={(e)=>handleVocabClick('sentiment', e)}>Sentiment (?)</th></tr></thead>
+            <tbody>{blitzStocks.map(s=>(<tr key={s.id} onClick={()=>setSelectedStock(s)} style={{background: selectedStock.id===s.id?'#f8fafc':'none'}}>
+              <td onClick={(e)=>{e.stopPropagation(); setActivePopupStock(s);}} style={{color:'#6366f1', textDecoration:'underline'}}>{s.id}</td>
+              <td>${s.price.toFixed(2)}</td><td>{s.sentiment}</td>
+            </tr>))}</tbody>
+          </table>
+          <div style={lS.tradeBar}>
+            <h3>{selectedStock.name}</h3>
+            <div style={{display:'flex', gap:'10px'}}><button style={{...lS.playBtn, background:'#10b981'}} onClick={()=>trade(selectedStock.id, 'buy')}>BUY</button>
+            <button style={{...lS.playBtn, background:'#ef4444'}} onClick={()=>trade(selectedStock.id, 'sell')}>SELL</button></div>
+          </div>
         </div>
       </div>
-
-      {message && <div style={styles.message}>{message}</div>}
-
-      {myLeagueCodes.length > 0 && (
-        <div style={styles.myLeagues}>
-          <strong style={{ fontSize: "13px", color: "#475569" }}>Your Leagues:</strong>
-          <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", marginTop: "8px" }}>
-            {myLeagueCodes.map((code) => (
-              <button
-                key={code}
-                style={{
-                  ...styles.leagueTab,
-                  background: activeCode === code ? "#2563eb" : "#f1f5f9",
-                  color: activeCode === code ? "#fff" : "#334155"
-                }}
-                onClick={() => setActiveCode(code)}
-              >
-                {leagues[code]?.name || code}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {activeLeague ? (
-        <>
-          <div style={styles.activeInfo}>
-            <div>
-              <strong style={{ fontSize: "16px" }}>{activeLeague.name}</strong>
-              <span style={styles.codeChip}>Code: {activeCode}</span>
-            </div>
-            <div style={{ color: "#64748b", fontSize: "13px" }}>
-              👥 {memberCount} member{memberCount !== 1 ? "s" : ""}
-              {memberCount === 1 && " · Invite friends to compete!"}
-            </div>
-          </div>
-
-          {/* Daily Challenge */}
-          {challenge && (
-            <div style={styles.challengeCard}>
-              <div style={styles.challengeHeader}>
-                <span style={styles.challengeTag}>⚡ Daily Challenge</span>
-                <span style={styles.challengeDate}>{new Date().toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric" })}</span>
-              </div>
-              <p style={styles.challengeQ}>{challenge.question}</p>
-
-              {!answered ? (
-                <div style={styles.optionGrid}>
-                  {challenge.options.map((opt, i) => (
-                    <button
-                      key={i}
-                      style={styles.optionBtn}
-                      onClick={() => answerChallenge(opt)}
-                    >
-                      {opt.label}
-                    </button>
-                  ))}
-                </div>
-              ) : (
-                <div style={{
-                  ...styles.feedbackBox,
-                  background: lastAnswer.points > 0 ? "#d1fae5" : "#fee2e2",
-                  borderColor: lastAnswer.points > 0 ? "#6ee7b7" : "#fca5a5"
-                }}>
-                  <div style={{ fontWeight: "700", fontSize: "15px", marginBottom: "4px" }}>
-                    {lastAnswer.points > 0 ? "✅ " : "❌ "}{lastAnswer.label}
-                  </div>
-                  <div style={{ color: "#334155", fontSize: "14px" }}>{lastAnswer.feedback}</div>
-                  <div style={{ marginTop: "6px", fontWeight: "700", color: lastAnswer.points > 0 ? "#065f46" : "#991b1b" }}>
-                    {lastAnswer.points > 0 ? `+${lastAnswer.points}` : lastAnswer.points} points
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Competition round (only when 2+ members) */}
-          {hasCompetition && competitionQ && (
-            <div style={styles.competitionCard}>
-              <div style={styles.competitionHeader}>
-                <span style={styles.competitionTag}>🔥 Competition Round</span>
-                <span style={{ fontSize: "12px", color: "#64748b" }}>vs. {memberCount - 1} opponent{memberCount > 2 ? "s" : ""}</span>
-              </div>
-              <p style={styles.challengeQ}>{competitionQ.question}</p>
-              <div style={styles.optionGrid}>
-                {competitionQ.options.map((opt, i) => (
-                  <button
-                    key={i}
-                    style={{ ...styles.optionBtn, borderColor: "#6366f1", color: "#4f46e5" }}
-                    onClick={() => {
-                      if (!db || !activeLeague) return;
-                      const ref = doc(db, "leagues", activeCode);
-                      const current = activeLeague.members?.[currentUser] || { score: 0 };
-                      updateDoc(ref, {
-                        [`members.${currentUser}.score`]: (current.score || 0) + opt.points
-                      });
-                      setMessage(`Competition: ${opt.feedback} (${opt.points > 0 ? "+" : ""}${opt.points} pts)`);
-                    }}
-                  >
-                    {opt.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Leaderboard */}
-          <div style={styles.leaderboard}>
-            <h3 style={styles.cardTitle}>🏅 Leaderboard</h3>
-            {leaderboard.length === 0 ? (
-              <p style={{ color: "#64748b", fontSize: "14px" }}>No activity yet. Be the first to answer!</p>
-            ) : (
-              leaderboard.map((entry, i) => (
-                <div
-                  key={entry.name}
-                  style={{
-                    ...styles.tableRow,
-                    background: entry.name === currentUser ? "#eff6ff" : "transparent",
-                    borderRadius: "10px",
-                    padding: "10px 14px"
-                  }}
-                >
-                  <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                    <span style={styles.rankBadge}>
-                      {i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : `#${i + 1}`}
-                    </span>
-                    <span style={{ fontWeight: entry.name === currentUser ? "700" : "500", color: "#1e293b" }}>
-                      {entry.name}
-                      {entry.name === currentUser && (
-                        <span style={{ fontSize: "11px", color: "#2563eb", marginLeft: "6px" }}>you</span>
-                      )}
-                    </span>
-                  </div>
-                  <div style={{ textAlign: "right" }}>
-                    <div style={{ fontWeight: "700", color: "#2563eb" }}>{entry.score} pts</div>
-                    <div style={{ fontSize: "11px", color: "#94a3b8" }}>{entry.answered} answered</div>
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
-        </>
-      ) : (
-        <div style={styles.emptyState}>
-          <div style={{ fontSize: "48px", marginBottom: "12px" }}>🏆</div>
-          <p style={{ fontWeight: "700", color: "#1e293b", margin: "0 0 6px" }}>No league selected</p>
-          <p style={{ color: "#64748b", margin: 0, fontSize: "14px" }}>
-            Create or join a league to unlock the leaderboard and daily challenges.
-          </p>
-        </div>
-      )}
     </div>
+  );
+
+  if (view === 'detail') return (
+    <div style={lS.menuContainer}><button onClick={()=>setView('menu')} style={lS.backBtn}>← Back</button>
+      <div style={lS.leagueBanner}><h1>{selectedLeague.name}</h1><p>Competition Hub • User: {currentUser}</p></div>
+      <div style={lS.detailLayout}>
+        <div style={lS.card}><h3>Leaderboard</h3>{selectedLeague.players.map((p,i)=><div key={p} style={lS.standRow}>{i+1}. {p} {p===currentUser?'(You)':''}</div>)}</div>
+        <div style={lS.card}><h3>Blitz Sim</h3><button style={{...lS.playBtn, background:'#6366f1'}} onClick={()=>{setMoney(1000); setTimeLeft(600); setPlaying(true);}}>🚀 Start Match</button></div>
+      </div>
+    </div>
+  );
+
+  return (
+    <div style={lS.pageWrapper}><div style={lS.menuContainer}>
+      <div style={{...lS.joinBox, background:'#eef2ff', border:'2px solid #6366f1', flexDirection:'column'}}>
+        <h3 style={{margin:0}}>Tournament Hub</h3>
+        <p style={{fontSize:'12px', color:'#6366f1'}}>Create or join hubs with unique codes.</p>
+        <div style={{display:'flex', gap:'10px', width:'100%', margin:'15px 0'}}>
+          <input style={lS.joinInput} placeholder="New League Name..." value={newLeagueName} onChange={e=>setNewLeagueName(e.target.value)} />
+          <select style={lS.joinInput} value={leaguePrivacy} onChange={e=>setLeaguePrivacy(e.target.value)}><option value="public">Public</option><option value="private">Private</option></select>
+          <button style={lS.joinBtn} onClick={handleCreate}>Create</button>
+        </div>
+        <div style={{width:'100%', borderTop:'1px solid #d1d5db', paddingTop:'15px'}}>
+          <label style={{fontSize:'11px', fontWeight:'900'}}>INPUT JOIN CODE</label>
+          <div style={{display:'flex', gap:'10px', marginTop:'5px'}}><input style={lS.joinInput} placeholder="Code..." value={joinCode} onChange={e=>setJoinCode(e.target.value)}/><button style={lS.joinBtn} onClick={handleJoin}>Join</button></div>
+        </div>
+      </div>
+      <h2>Available Hubs</h2>
+      <div style={lS.grid}>{leagues.filter(l => l.visibility === 'public' || l.createdBy === currentUser || l.players.includes(currentUser)).map(l => (
+        <div key={l.id} style={lS.leagueCard} onClick={()=>{setSelectedLeague(l); setView('detail');}}>
+          <span>{l.visibility==='public'?'🏫':'🔒'}</span>
+          <div><strong>{l.name}</strong><br/><small>{l.players.length} Players • Code: {l.code}</small></div>
+          <div style={{marginLeft:'auto', display:'flex', gap:'5px'}}>
+            <button onClick={(e)=>{e.stopPropagation(); navigator.clipboard.writeText(l.code); alert("Copied!");}} style={lS.copyBtn}>Copy</button>
+            {l.createdBy === currentUser && <button onClick={(e)=>{e.stopPropagation(); handleDelete(l.id);}} style={{...lS.copyBtn, color:'#ef4444'}}>Delete</button>}
+          </div>
+        </div>
+      ))}</div>
+    </div></div>
   );
 }
 
-const styles = {
-  container: { maxWidth: "800px", margin: "0 auto", padding: "20px", fontFamily: "'Inter', system-ui, sans-serif" },
-  title: { fontSize: "28px", marginBottom: "8px", color: "#111827" },
-  sub: { color: "#64748b", marginBottom: "24px", fontSize: "15px" },
-  row: { display: "flex", gap: "16px", flexWrap: "wrap", marginBottom: "18px" },
-  card: {
-    flex: "1 1 260px", background: "#fff", padding: "20px",
-    borderRadius: "18px", boxShadow: "0 8px 24px rgba(0,0,0,0.06)",
-    border: "1px solid #e2e8f0"
-  },
-  cardTitle: { margin: "0 0 6px 0", fontSize: "16px", fontWeight: "700", color: "#111827" },
-  cardNote: { color: "#64748b", fontSize: "13px", margin: "0 0 14px" },
-  input: {
-    width: "100%", padding: "11px 14px", borderRadius: "12px",
-    border: "1px solid #cbd5e1", marginBottom: "12px",
-    fontSize: "14px", boxSizing: "border-box", fontFamily: "inherit"
-  },
-  button: {
-    padding: "11px 20px", background: "#2563eb", color: "#fff",
-    border: "none", borderRadius: "12px", cursor: "pointer",
-    fontWeight: "700", fontSize: "14px", width: "100%"
-  },
-  message: {
-    marginBottom: "16px", padding: "12px 16px",
-    background: "#eff6ff", border: "1px solid #bfdbfe",
-    borderRadius: "12px", color: "#1d4ed8", fontWeight: "600", fontSize: "14px"
-  },
-  myLeagues: {
-    background: "#f8fafc", borderRadius: "14px",
-    padding: "14px 16px", marginBottom: "18px", border: "1px solid #e2e8f0"
-  },
-  leagueTab: {
-    padding: "7px 14px", borderRadius: "999px",
-    border: "none", cursor: "pointer", fontWeight: "600", fontSize: "13px"
-  },
-  activeInfo: {
-    display: "flex", justifyContent: "space-between", alignItems: "center",
-    background: "#f8fafc", padding: "14px 18px",
-    borderRadius: "14px", marginBottom: "18px", border: "1px solid #e2e8f0"
-  },
-  codeChip: {
-    marginLeft: "10px", background: "#e0e7ff", color: "#4338ca",
-    borderRadius: "999px", padding: "2px 10px", fontSize: "12px", fontWeight: "700"
-  },
-  challengeCard: {
-    background: "linear-gradient(135deg,#fefce8,#fef9c3)",
-    borderRadius: "18px", padding: "20px",
-    marginBottom: "18px", border: "1px solid #fde68a"
-  },
-  challengeHeader: {
-    display: "flex", justifyContent: "space-between",
-    alignItems: "center", marginBottom: "14px"
-  },
-  challengeTag: {
-    background: "#f59e0b", color: "#fff",
-    borderRadius: "999px", padding: "4px 12px", fontSize: "12px", fontWeight: "700"
-  },
-  challengeDate: { fontSize: "12px", color: "#92400e" },
-  challengeQ: { fontSize: "16px", fontWeight: "600", color: "#1e293b", marginBottom: "16px", lineHeight: "1.5" },
-  optionGrid: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" },
-  optionBtn: {
-    padding: "12px 14px", background: "#fff", border: "2px solid #e2e8f0",
-    borderRadius: "12px", cursor: "pointer", fontSize: "13px",
-    fontWeight: "600", color: "#1e293b", textAlign: "left",
-    transition: "border-color 0.2s"
-  },
-  feedbackBox: {
-    padding: "14px 16px", borderRadius: "12px",
-    border: "2px solid", marginTop: "4px"
-  },
-  competitionCard: {
-    background: "linear-gradient(135deg,#eef2ff,#ede9fe)",
-    borderRadius: "18px", padding: "20px",
-    marginBottom: "18px", border: "1px solid #c7d2fe"
-  },
-  competitionHeader: {
-    display: "flex", justifyContent: "space-between",
-    alignItems: "center", marginBottom: "14px"
-  },
-  competitionTag: {
-    background: "#6366f1", color: "#fff",
-    borderRadius: "999px", padding: "4px 12px", fontSize: "12px", fontWeight: "700"
-  },
-  leaderboard: {
-    background: "#fff", padding: "20px", borderRadius: "18px",
-    boxShadow: "0 8px 24px rgba(0,0,0,0.05)", border: "1px solid #e2e8f0"
-  },
-  tableRow: {
-    display: "flex", justifyContent: "space-between",
-    alignItems: "center", marginBottom: "4px"
-  },
-  rankBadge: { fontSize: "18px", width: "28px", textAlign: "center" },
-  emptyState: {
-    textAlign: "center", padding: "40px 20px",
-    background: "#f8fafc", borderRadius: "18px", border: "1px dashed #cbd5e1"
-  }
+const lS = {
+  pageWrapper: { minHeight:'100vh', background:'#f8fafc', paddingBottom:'40px', fontFamily:'sans-serif' },
+  menuContainer: { maxWidth:'900px', margin:'0 auto', padding:'40px 20px' },
+  joinBox: { background:'#fff', padding:'25px', borderRadius:'20px', display:'flex', gap:'10px', marginBottom:'30px', boxShadow:'0 4px 12px rgba(0,0,0,0.05)' },
+  joinInput: { padding:'12px', borderRadius:'10px', border:'1px solid #e2e8f0', flex:1 },
+  joinBtn: { padding:'0 20px', borderRadius:'10px', border:'none', background:'#0f172a', color:'#fff', fontWeight:'bold', cursor:'pointer' },
+  grid: { display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(300px, 1fr))', gap:'15px' },
+  leagueCard: { background:'#fff', padding:'20px', borderRadius:'15px', display:'flex', alignItems:'center', gap:'15px', cursor:'pointer', boxShadow:'0 2px 8px rgba(0,0,0,0.05)' },
+  copyBtn: { padding:'5px 10px', borderRadius:'8px', border:'1px solid #e2e8f0', background:'#f8fafc', fontSize:'10px', cursor:'pointer' },
+  leagueBanner: { background:'#6366f1', color:'#fff', padding:'30px', borderRadius:'20px', marginBottom:'20px' },
+  detailLayout: { display:'grid', gridTemplateColumns:'1fr 1fr', gap:'20px' },
+  card: { background:'#fff', padding:'20px', borderRadius:'20px', boxShadow:'0 4px 12px rgba(0,0,0,0.05)' },
+  standRow: { display:'flex', justifyContent:'space-between', padding:'10px 0', borderBottom:'1px solid #f1f5f9' },
+  blitzGrid: { display:'grid', gridTemplateColumns:'250px 1fr', gap:'20px', maxWidth:'1200px', margin:'0 auto' },
+  sidePanel: { background:'#1e293b', padding:'20px', borderRadius:'15px', color:'#fff' },
+  mainPanel: { background:'#fff', padding:'20px', borderRadius:'15px' },
+  table: { width:'100%', borderCollapse:'collapse', marginTop:'20px' },
+  tradeBar: { marginTop:'20px', padding:'20px', background:'#f8fafc', borderRadius:'15px' },
+  playBtn: { flex:1, padding:'15px', border:'none', borderRadius:'10px', color:'#fff', fontWeight:'bold', cursor:'pointer' },
+  vocabPopup: { position:'fixed', zIndex:9999, background:'#fff', padding:'15px', borderRadius:'12px', width:'200px', boxShadow:'0 10px 25px rgba(0,0,0,0.2)', border:'1px solid #6366f1' },
+  minBtn: { border:'none', background:'none', cursor:'pointer', fontWeight:'bold' },
+  modalOverlay: { position:'fixed', inset:0, background:'rgba(0,0,0,0.8)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:10000 },
+  modalContent: { background:'#fff', padding:'30px', borderRadius:'25px', maxWidth:'500px', width:'90%' },
+  resultContainer: { minHeight:'100vh', display:'flex', alignItems:'center', justifyContent:'center', background:'#0f172a' },
+  resultCard: { background:'linear-gradient(135deg, #1e293b, #0f172a)', padding:'40px', borderRadius:'30px', color:'#fff', textAlign:'center', maxWidth:'400px' },
+  statBox: { background:'rgba(255,255,255,0.1)', padding:'20px', borderRadius:'15px', margin:'20px 0', textAlign:'left' },
+  actionBtn: { width:'100%', padding:'15px', borderRadius:'10px', border:'none', fontWeight:'bold', cursor:'pointer', background:'#fff', color:'#0f172a' },
+  backBtn: { background:'none', border:'none', color:'#6366f1', fontWeight:'bold', cursor:'pointer', marginBottom:'10px' }
 };
