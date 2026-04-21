@@ -58,7 +58,7 @@ const VOCAB_HELPER = {
   volatility: "Volatility: How much a stock's price fluctuates over time. High volatility means higher risk and higher potential reward."
 };
 
-export default function GamesScreen({ userTier, onGameEnd, onNavigate }) {
+export default function GamesScreen({ userTier, onGameEnd, onNavigate, userName }) {
   const [activeGame, setActiveGame] = useState(null);
   const [playing, setPlaying] = useState(false);
   const [money, setMoney] = useState(0);
@@ -66,19 +66,50 @@ export default function GamesScreen({ userTier, onGameEnd, onNavigate }) {
   const [gameResult, setGameResult] = useState(null);
   const [tradeMessage, setTradeMessage] = useState(null);
   const [waitingNext, setWaitingNext] = useState(false);
+  const [gameStats, setGameStats] = useState({ buys: 0, sells: 0, startMoney: 0 });
   
-  // League States
+  // Persistent Username Identification
+  const [currentUser] = useState(() => {
+    if (userName) return userName;
+    const saved = localStorage.getItem("FIN_USERNAME");
+    if (saved) return saved;
+    const fresh = "Investor_" + Math.floor(Math.random() * 9000);
+    localStorage.setItem("FIN_USERNAME", fresh);
+    return fresh;
+  });
+
+  // Global Multi-Account Syncing State
+  const [leagues, setLeagues] = useState(() => {
+    const saved = localStorage.getItem("FIN_LEAGUES_GLOBAL");
+    const base = [
+      { id: '101', name: 'AP Economics Titans', players: ['Sarah_99', 'InvestorJoe'], code: 'ECON1', activeMatch: true, visibility: 'public', createdBy: 'System' },
+      { id: '102', name: 'Wall Street Wolves', players: ['CryptoKing'], code: 'WOLF8', activeMatch: false, visibility: 'public', createdBy: 'System' }
+    ];
+    return saved ? JSON.parse(saved) : base;
+  });
+
+  // Sync to Storage
+  useEffect(() => {
+    localStorage.setItem("FIN_LEAGUES_GLOBAL", JSON.stringify(leagues));
+  }, [leagues]);
+
+  // Global storage listener (updates across accounts/tabs)
+  useEffect(() => {
+    const handleSync = () => {
+      const updated = localStorage.getItem("FIN_LEAGUES_GLOBAL");
+      if (updated) setLeagues(JSON.parse(updated));
+    };
+    window.addEventListener('storage', handleSync);
+    const poller = setInterval(handleSync, 1000);
+    return () => { window.removeEventListener('storage', handleSync); clearInterval(poller); };
+  }, []);
+
   const [view, setView] = useState('menu'); 
-  const [leagues, setLeagues] = useState([
-    { id: '101', name: 'AP Economics Titans', players: ['You', 'Sarah_99', 'InvestorJoe'], code: 'ECON1', activeMatch: true, visibility: 'public', createdBy: 'System' },
-    { id: '102', name: 'Wall Street Wolves', players: ['You', 'CryptoKing'], code: 'WOLF8', activeMatch: false, visibility: 'public', createdBy: 'System' }
-  ]);
   const [joinCode, setJoinCode] = useState("");
   const [newLeagueName, setNewLeagueName] = useState("");
   const [leaguePrivacy, setLeaguePrivacy] = useState('public');
   const [selectedLeague, setSelectedLeague] = useState(null);
 
-  // Blitz Advanced Sim States
   const [blitzStocks, setBlitzStocks] = useState(INITIAL_STOCKS);
   const [portfolio, setPortfolio] = useState({ GIGA: 0, VOY: 0, MART: 0, SPY: 0, GLD: 0 });
   const [selectedStock, setSelectedStock] = useState(INITIAL_STOCKS[0]);
@@ -87,46 +118,59 @@ export default function GamesScreen({ userTier, onGameEnd, onNavigate }) {
   const [opponents, setOpponents] = useState([]);
   const [leagueFeed, setLeagueFeed] = useState([]);
 
-  // Hover Pop-up State
+  // Vocab State
   const [vocabPopup, setVocabPopup] = useState({ visible: false, key: null, x: 0, y: 0 });
-  const hoverTimer = useRef(null);
+  const vocabRef = useRef(null);
   const moneyRef = useRef(0);
 
-  // --- VOCAB HOVER LOGIC ---
-  const handleHoverStart = (key, e) => {
-    const x = e.clientX;
-    const y = e.clientY;
-    hoverTimer.current = setTimeout(() => {
-      setVocabPopup({ visible: true, key, x, y });
-    }, 1200);
+  // Close vocab on click outside
+  useEffect(() => {
+    const clickOutside = (e) => {
+      if (vocabRef.current && !vocabRef.current.contains(e.target)) {
+        setVocabPopup({ visible: false, key: null, x: 0, y: 0 });
+      }
+    };
+    document.addEventListener("mousedown", clickOutside);
+    return () => document.removeEventListener("mousedown", clickOutside);
+  }, []);
+
+  const handleVocabClick = (key, e) => {
+    e.stopPropagation();
+    setVocabPopup({ visible: true, key, x: e.clientX, y: e.clientY });
   };
 
-  const handleHoverEnd = () => {
-    if (hoverTimer.current) clearTimeout(hoverTimer.current);
-    setVocabPopup({ visible: false, key: null, x: 0, y: 0 });
-  };
-
-  // --- BLITZ TERMINAL ENGINE ---
+  // --- BLITZ MULTIPLAYER ENGINE ---
   useEffect(() => {
     let interval;
     if (playing && activeGame === 'Blitz' && timeLeft > 0) {
       interval = setInterval(() => {
+        // Broadcast local user wealth to global space
+        const myWealth = calculateTotalWealth();
+        localStorage.setItem(`FIN_SYNC_LEAGUE_${selectedLeague.id}_USER_${currentUser}`, myWealth.toString());
+
+        // Update local market prices
         setBlitzStocks(current => current.map(s => {
-          const volatility = s.id === 'GIGA' ? 12 : (s.id === 'SPY' ? 3 : 8);
-          const change = (Math.random() - 0.49) * volatility;
+          const vol = s.id === 'GIGA' ? 12 : (s.id === 'SPY' ? 3 : 8);
+          const change = (Math.random() - 0.49) * vol;
           const next = Math.max(5, s.price + change);
           return { ...s, price: next, history: [...s.history.slice(-14), next] };
         }));
 
-        if (Math.random() > 0.85) {
-          const randomOpp = opponents[Math.floor(Math.random() * opponents.length)];
-          const randomStock = blitzStocks[Math.floor(Math.random() * blitzStocks.length)];
-          const action = Math.random() > 0.5 ? 'bought' : 'sold';
-          const qty = Math.floor(Math.random() * 5) + 1;
-          
-          setLeagueFeed(prev => [`${randomOpp?.name || 'Bot'} ${action} ${qty} shares of ${randomStock.id}`, ...prev.slice(0, 5)]);
-          setOpponents(prev => prev.map(o => o.name === randomOpp?.name ? { ...o, wealth: o.wealth * (1 + (Math.random() - 0.48) * 0.012) } : o));
+        // Read opponent wealth from shared storage
+        const currentLeagueData = JSON.parse(localStorage.getItem("FIN_LEAGUES_GLOBAL") || "[]").find(l => l.id === selectedLeague.id);
+        if (currentLeagueData) {
+          const liveOpponents = currentLeagueData.players
+            .filter(p => p !== currentUser)
+            .map(p => ({
+              name: p,
+              wealth: parseFloat(localStorage.getItem(`FIN_SYNC_LEAGUE_${selectedLeague.id}_USER_${p}`) || "1000")
+            }));
+          setOpponents(liveOpponents);
         }
+
+        // Shared Feed Sync
+        const feedKey = `FIN_SYNC_FEED_${selectedLeague.id}`;
+        setLeagueFeed(JSON.parse(localStorage.getItem(feedKey) || "[]"));
 
         setTimeLeft(t => t - 1);
       }, 1000);
@@ -134,17 +178,29 @@ export default function GamesScreen({ userTier, onGameEnd, onNavigate }) {
       endBlitzCompetition();
     }
     return () => clearInterval(interval);
-  }, [playing, activeGame, timeLeft, opponents, blitzStocks]);
+  }, [playing, activeGame, timeLeft, currentUser, selectedLeague]);
 
   const handleBlitzTrade = (stockId, type) => {
     const stock = blitzStocks.find(s => s.id === stockId);
     if (type === 'buy' && money >= stock.price) {
       setMoney(m => m - stock.price);
       setPortfolio(p => ({ ...p, [stockId]: p[stockId] + 1 }));
+      setGameStats(s => ({ ...s, buys: s.buys + 1 }));
+      pushToSharedFeed(`${currentUser} bought 1 share of ${stockId} @ $${stock.price.toFixed(2)}`);
     } else if (type === 'sell' && portfolio[stockId] > 0) {
       setMoney(m => m + stock.price);
       setPortfolio(p => ({ ...p, [stockId]: p[stockId] - 1 }));
+      setGameStats(s => ({ ...s, sells: s.sells + 1 }));
+      pushToSharedFeed(`${currentUser} sold 1 share of ${stockId} @ $${stock.price.toFixed(2)}`);
     }
+  };
+
+  const pushToSharedFeed = (msg) => {
+    const key = `FIN_SYNC_FEED_${selectedLeague.id}`;
+    const cur = JSON.parse(localStorage.getItem(key) || "[]");
+    const updated = [msg, ...cur].slice(0, 10);
+    localStorage.setItem(key, JSON.stringify(updated));
+    setLeagueFeed(updated);
   };
 
   const calculateTotalWealth = () => {
@@ -156,11 +212,12 @@ export default function GamesScreen({ userTier, onGameEnd, onNavigate }) {
   const endBlitzCompetition = () => {
     const finalWealth = calculateTotalWealth();
     setMoney(finalWealth);
-    const leadOpponent = opponents.reduce((prev, current) => (prev.wealth > current.wealth) ? prev : current, {wealth: 0, name: 'Opponent'});
-    const won = finalWealth > leadOpponent.wealth;
-    setGameResult(won ? 'won' : 'lost');
-    setTradeMessage(`League Result: ${won ? 'You Won' : leadOpponent.name + ' Won'} ($${Math.round(won ? finalWealth : leadOpponent.wealth)})`);
-    if (onGameEnd) onGameEnd(won ? 'won' : 'lost');
+    const net = finalWealth - gameStats.startMoney;
+    const qualitative = net > 0 ? STOCK_WIN_REASONS[Math.floor(Math.random() * STOCK_WIN_REASONS.length)] : STOCK_FAIL_REASONS[Math.floor(Math.random() * STOCK_FAIL_REASONS.length)];
+    
+    setGameResult('report');
+    setTradeMessage(`Blitz Competition Report: You made ${gameStats.buys} buys and ${gameStats.sells} sells. Your net profit/loss was $${Math.round(net)}. ${qualitative}`);
+    if (onGameEnd) onGameEnd(net > 0 ? 'won' : 'lost');
   };
 
   const tierSettings = {
@@ -287,7 +344,7 @@ export default function GamesScreen({ userTier, onGameEnd, onNavigate }) {
 
   const resetGame = (countAsPlayed = false) => {
     if (countAsPlayed && onGameEnd) onGameEnd('lost');
-    setPlaying(false); setGameResult(null); setActiveGame(null); setMoney(0); moneyRef.current = 0; setDay(1); setTradeMessage(null); setWaitingNext(false); setView('menu');
+    setPlaying(false); setGameResult(null); setActiveGame(null); setMoney(0); moneyRef.current = 0; setDay(1); setTradeMessage(null); setWaitingNext(false); setView('menu'); setGameStats({ buys: 0, sells: 0, startMoney: 0 });
   };
 
   const endGame = (finalMoney) => {
@@ -314,9 +371,11 @@ export default function GamesScreen({ userTier, onGameEnd, onNavigate }) {
     if (success) {
       const profit = Math.max(10, Math.round(amount * (0.5 + Math.random() * (activeGame === 'Crypto' ? 2.5 : 1.8))));
       newMoney = currentMoney + profit; msg = `✅ +${config.currencySymbol}${profit} PROFIT! ${STOCK_WIN_REASONS[Math.floor(Math.random() * STOCK_WIN_REASONS.length)]}`;
+      setGameStats(s => ({ ...s, buys: s.buys + 1 }));
     } else {
       const loss = Math.round(amount * (0.6 + Math.random() * (activeGame === 'Crypto' ? 1.0 : 0.8)));
       newMoney = Math.max(0, currentMoney - loss); msg = `❌ -${config.currencySymbol}${loss} LOSS. ${STOCK_FAIL_REASONS[Math.floor(Math.random() * STOCK_FAIL_REASONS.length)]}`;
+      setGameStats(s => ({ ...s, sells: s.sells + 1 }));
     }
     moneyRef.current = newMoney; setMoney(newMoney); setTradeMessage(msg); setWaitingNext(true);
     if (newMoney <= 0) { setTimeout(() => { setGameResult('lost'); setWaitingNext(false); }, 1800); } 
@@ -327,15 +386,36 @@ export default function GamesScreen({ userTier, onGameEnd, onNavigate }) {
   const handleCreateLeague = () => {
     if (!newLeagueName) return;
     const code = Math.random().toString(36).substring(7).toUpperCase();
-    const newL = { id: Date.now().toString(), name: newLeagueName, players: ['You'], code, activeMatch: false, visibility: leaguePrivacy, createdBy: 'You' };
-    setLeagues([newL, ...leagues]);
+    const newL = { id: Date.now().toString(), name: newLeagueName, players: [currentUser], code, activeMatch: false, visibility: leaguePrivacy, createdBy: currentUser };
+    const updated = [newL, ...leagues];
+    localStorage.setItem("FIN_LEAGUES_GLOBAL", JSON.stringify(updated));
+    setLeagues(updated);
     setNewLeagueName("");
-    alert(`League Created! Visibility: ${leaguePrivacy.toUpperCase()}. Code: ${code}`);
+    alert(`League Created! Code: ${code}`);
   };
 
   const handleJoinLeague = () => {
-    const found = leagues.find(l => l.code.toUpperCase() === joinCode.toUpperCase());
-    if (found) { setSelectedLeague(found); setView('leagueDetail'); } else { alert("Invalid Code!"); }
+    const target = joinCode.toUpperCase();
+    const globalLeagues = JSON.parse(localStorage.getItem("FIN_LEAGUES_GLOBAL") || "[]");
+    const foundIdx = globalLeagues.findIndex(l => l.code.toUpperCase() === target);
+    if (foundIdx !== -1) {
+      const updatedPlayers = Array.from(new Set([...globalLeagues[foundIdx].players, currentUser]));
+      globalLeagues[foundIdx].players = updatedPlayers;
+      localStorage.setItem("FIN_LEAGUES_GLOBAL", JSON.stringify(globalLeagues));
+      setLeagues(globalLeagues);
+      setSelectedLeague(globalLeagues[foundIdx]);
+      setView('leagueDetail');
+    } else {
+      alert("Invalid League Code!");
+    }
+  };
+
+  const handleDeleteLeague = (id) => {
+    if (!window.confirm("Delete this league forever?")) return;
+    const updated = leagues.filter(l => l.id !== id);
+    localStorage.setItem("FIN_LEAGUES_GLOBAL", JSON.stringify(updated));
+    setLeagues(updated);
+    if (selectedLeague && selectedLeague.id === id) setView('leagues');
   };
 
   const YahooFinancePopup = ({ stock, onClose }) => {
@@ -382,14 +462,14 @@ export default function GamesScreen({ userTier, onGameEnd, onNavigate }) {
   // --- RENDER LOGIC ---
 
   if (gameResult) {
-    const isWin = gameResult === 'won';
+    const isWin = gameResult === 'won' || gameResult === 'report';
     return (
       <div style={gS.resultContainer}>
         <div style={{ ...gS.resultCard, background: isWin ? 'linear-gradient(135deg,#064e3b,#059669)' : 'linear-gradient(135deg,#4c0519,#be123c)' }}>
-          <div style={gS.resultEmoji}>{isWin ? '🏆🎉' : '💔😤'}</div>
-          <h1 style={gS.resultTitle}>{isWin ? 'YOU WON!' : 'GAME OVER'}</h1>
-          <div style={gS.resultDetails}><div style={gS.statRow}><span>Final Wealth</span><strong style={{ fontSize:'22px' }}>${Math.round(money)}</strong></div><div style={gS.statRow}><span>Result</span><strong>{tradeMessage || "Session Complete"}</strong></div></div>
-          <button style={{ ...gS.actionBtn, background:'#fff', color: isWin ? '#059669' : '#be123c' }} onClick={() => resetGame()}>Continue</button>
+          <div style={gS.resultEmoji}>{isWin ? '🏆' : '💔'}</div>
+          <h1 style={gS.resultTitle}>{gameResult === 'report' ? 'FINAL RECAP' : (isWin ? 'YOU WON!' : 'GAME OVER')}</h1>
+          <div style={gS.resultDetails}><div style={gS.statRow}><span>Final Wealth</span><strong style={{ fontSize:'22px' }}>${Math.round(money)}</strong></div><div style={gS.statRow}><span>Insight</span><strong>{tradeMessage || "Finished"}</strong></div></div>
+          <button style={{ ...gS.actionBtn, color: isWin ? '#059669' : '#be123c' }} onClick={() => resetGame()}>Continue</button>
         </div>
       </div>
     );
@@ -401,15 +481,15 @@ export default function GamesScreen({ userTier, onGameEnd, onNavigate }) {
         <div style={{ ...gS.pageWrapper, padding: '20px', background: '#0f172a' }}>
           {activePopupStock && <YahooFinancePopup stock={activePopupStock} onClose={() => setActivePopupStock(null)} />}
           {vocabPopup.visible && (
-            <div style={{ ...gS.vocabPopup, top: vocabPopup.y + 15, left: vocabPopup.x + 15 }}>
-              <strong>{VOCAB_HELPER[vocabPopup.key].split(':')[0]}</strong>
+            <div ref={vocabRef} style={{ ...gS.vocabPopup, top: vocabPopup.y + 15, left: vocabPopup.x + 15 }}>
+              <div style={{display:'flex', justifyContent:'space-between'}}><strong>{VOCAB_HELPER[vocabPopup.key].split(':')[0]}</strong><button style={gS.minBtn} onClick={()=>setVocabPopup({visible:false})}>_</button></div>
               <p style={{margin:'5px 0 0', fontSize:'12px'}}>{VOCAB_HELPER[vocabPopup.key].split(':')[1]}</p>
             </div>
           )}
           <div style={{ maxWidth: '1200px', margin: '0 auto', display: 'grid', gridTemplateColumns: '250px 1fr 300px', gap: '20px' }}>
             <div style={{ background: '#1e293b', borderRadius: '16px', padding: '20px', color: '#fff' }}>
               <h3 style={{ margin: '0 0 15px', color: '#6366f1' }}>🏆 Standings</h3>
-              <div style={gS.leaderRow}><span style={{color:'#facc15'}}>1. You</span> <span>${Math.round(calculateTotalWealth())}</span></div>
+              <div style={gS.leaderRow}><span style={{color:'#facc15'}}>1. {currentUser} (You)</span> <span>${Math.round(calculateTotalWealth())}</span></div>
               {opponents.sort((a,b)=>b.wealth-a.wealth).map((o, i)=>(<div key={o.name} style={{...gS.leaderRow, borderBottom:'1px solid #334155'}}><span>{i+2}. {o.name}</span> <span>${Math.round(o.wealth)}</span></div>))}
               <h3 style={{ margin: '30px 0 15px', color: '#10b981' }}>📡 Activity Feed</h3>
               {leagueFeed.map((f, i) => <div key={i} style={{fontSize:'11px', marginBottom:'10px', color: '#94a3b8'}}>{f}</div>)}
@@ -418,9 +498,9 @@ export default function GamesScreen({ userTier, onGameEnd, onNavigate }) {
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '20px' }}><h2 style={{margin:0}}>Market Terminal</h2><div style={{fontSize:'20px', fontWeight:'900', color: '#ef4444'}}>⏳ {Math.floor(timeLeft/60)}:{String(timeLeft%60).padStart(2,'0')}</div></div>
               <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '30px' }}>
                 <thead><tr style={{ textAlign: 'left', color: '#64748b', fontSize: '13px' }}>
-                  <th onMouseEnter={(e) => handleHoverStart('ticker', e)} onMouseLeave={handleHoverEnd} style={{cursor:'help'}}>Ticker (?)</th>
+                  <th onClick={(e) => handleVocabClick('ticker', e)} style={{cursor:'help', textDecoration:'underline'}}>Ticker (?)</th>
                   <th>Price</th>
-                  <th onMouseEnter={(e) => handleHoverStart('sentiment', e)} onMouseLeave={handleHoverEnd} style={{cursor:'help'}}>Sentiment (?)</th>
+                  <th onClick={(e) => handleVocabClick('sentiment', e)} style={{cursor:'help', textDecoration:'underline'}}>Sentiment (?)</th>
                   <th>Sector</th>
                 </tr></thead>
                 <tbody>{blitzStocks.map(s => (<tr key={s.id} onClick={()=>setSelectedStock(s)} style={{ borderBottom: '1px solid #f1f5f9', cursor: 'pointer', background: selectedStock.id === s.id ? '#f8fafc' : 'none' }}>
@@ -429,8 +509,8 @@ export default function GamesScreen({ userTier, onGameEnd, onNavigate }) {
                 </tr>))}</tbody>
               </table>
               <div style={{ background: '#f8fafc', padding: '20px', borderRadius: '12px' }}><h3 style={{margin:'0 0 15px'}}>{selectedStock.name} Analysis</h3><div style={{ display: 'flex', gap: '30px', marginBottom: '20px', fontSize: '14px' }}>
-                  <span onMouseEnter={(e) => handleHoverStart('pe', e)} onMouseLeave={handleHoverEnd} style={{cursor:'help'}}>P/E Ratio (?): <b>{selectedStock.pe}</b></span>
-                  <span onMouseEnter={(e) => handleHoverStart('yield', e)} onMouseLeave={handleHoverEnd} style={{cursor:'help'}}>Div Yield (?): <b>{selectedStock.yield}</b></span>
+                  <span onClick={(e) => handleVocabClick('pe', e)} style={{cursor:'help', textDecoration:'underline'}}>P/E Ratio (?): <b>{selectedStock.pe}</b></span>
+                  <span onClick={(e) => handleVocabClick('yield', e)} style={{cursor:'help', textDecoration:'underline'}}>Div Yield (?): <b>{selectedStock.yield}</b></span>
                   <span>Owned: <b>{portfolio[selectedStock.id]}</b></span>
                 </div>
                 <div style={{ display: 'flex', gap: '10px' }}><button onClick={() => handleBlitzTrade(selectedStock.id, 'buy')} style={{ ...gS.playBtn, background: '#10b981', flex: 1 }}>BUY</button><button onClick={() => handleBlitzTrade(selectedStock.id, 'sell')} style={{ ...gS.playBtn, background: '#ef4444', flex: 1 }}>SELL</button></div>
@@ -476,22 +556,23 @@ export default function GamesScreen({ userTier, onGameEnd, onNavigate }) {
           </div>
           <div style={{width:'100%', borderTop:'1px solid #d1d5db', paddingTop:'15px'}}>
             <label style={{fontSize:'11px', fontWeight:'900', color:'#475569', display:'block', marginBottom:'8px'}}>INPUT LEAGUE JOIN CODE</label>
+            <p style={{fontSize:'12px', color:'#64748b', marginBottom:'10px'}}>Join a private hub via code.</p>
             <div style={{display:'flex', gap:'10px'}}><input style={gS.joinInput} placeholder="e.g. ECON1" value={joinCode} onChange={e => setJoinCode(e.target.value)} /><button style={gS.joinBtn} onClick={handleJoinLeague}>Join</button></div>
           </div>
         </div>
         <h2 style={{margin:'40px 0 20px'}}>Open Arena (Public)</h2>
-        <div style={gS.gamesGrid}>{leagues.filter(l => l.visibility === 'public').map(l => (<div key={l.id} style={gS.leagueCard} onClick={() => { setSelectedLeague(l); setView('leagueDetail'); }}><div style={gS.leagueIcon}>🏫</div><div><strong>{l.name}</strong><br/><span style={{fontSize:'12px'}}>Code: {l.code}</span></div></div>))}</div>
-        <h2 style={{margin:'40px 0 20px'}}>My Private Hubs</h2>
-        <div style={gS.gamesGrid}>{leagues.filter(l => l.createdBy === 'You').map(l => (<div key={l.id} style={{...gS.leagueCard, border:'2px solid #6366f1'}} onClick={() => { setSelectedLeague(l); setView('leagueDetail'); }}><div style={gS.leagueIcon}>🔒</div><div><strong>{l.name} (My League)</strong><br/><span style={{fontSize:'12px'}}>Code: {l.code}</span></div></div>))}</div>
+        <div style={gS.gamesGrid}>{leagues.filter(l => l.visibility === 'public').map(l => (<div key={l.id} style={gS.leagueCard} onClick={() => { setSelectedLeague(l); setView('leagueDetail'); }}><div style={gS.leagueIcon}>🏫</div><div><strong>{l.name}</strong><br/><span style={{fontSize:'12px'}}>Code: {l.code} • {l.players.length} Players</span></div><div style={{marginLeft:'auto', display:'flex', gap:'8px'}}><button onClick={(e)=>{e.stopPropagation(); navigator.clipboard.writeText(l.code); alert('Copied!');}} style={gS.copyBtn}>Copy Code</button>{l.createdBy === currentUser && <button onClick={(e)=>{e.stopPropagation(); handleDeleteLeague(l.id);}} style={{...gS.copyBtn, background:'#fee2e2', color:'#ef4444'}}>Delete</button>}</div></div>))}</div>
+        <h2 style={{margin:'40px 0 20px'}}>My Hubs</h2>
+        <div style={gS.gamesGrid}>{leagues.filter(l => (l.createdBy === currentUser || l.players.includes(currentUser)) && l.visibility !== 'public').map(l => (<div key={l.id} style={{...gS.leagueCard, border:'2px solid #6366f1'}} onClick={() => { setSelectedLeague(l); setView('leagueDetail'); }}><div style={gS.leagueIcon}>{l.createdBy === currentUser ? '🔒' : '🤝'}</div><div><strong>{l.name} {l.createdBy === currentUser ? '(Owner)' : '(Member)'}</strong><br/><span style={{fontSize:'12px'}}>Code: {l.code}</span></div><div style={{marginLeft:'auto', display:'flex', gap:'8px'}}><button onClick={(e)=>{e.stopPropagation(); navigator.clipboard.writeText(l.code); alert('Copied!');}} style={gS.copyBtn}>Copy Code</button>{l.createdBy === currentUser && <button onClick={(e)=>{e.stopPropagation(); handleDeleteLeague(l.id);}} style={{...gS.copyBtn, background:'#fee2e2', color:'#ef4444'}}>Delete</button>}</div></div>))}</div>
       </div>
     );
   }
 
   if (view === 'leagueDetail') {
     return (
-      <div style={gS.menuContainer}><button onClick={() => setView('leagues')} style={gS.backBtn}>← All Leagues</button><div style={gS.leagueBanner}><h1 style={{margin:0}}>{selectedLeague.name}</h1><p>Competition Hub</p></div>
-        <div style={gS.leagueLayout}><div style={gS.leaderboard}><h3 style={{marginTop:0}}>Leaderboard</h3>{selectedLeague.players.map((p, i) => (<div key={p} style={gS.leaderRow}><span>{i+1}. {p}</span><span style={{fontWeight:'bold'}}>{config.currencySymbol}{Math.floor(Math.random()*5000 + 1000)}</span></div>))}</div>
-          <div style={gS.leagueActions}><div style={gS.activeMatchCard}><h3>Blitz Stock Simulation</h3><button style={{...gS.playBtn, background: '#6366f1', width:'100%'}} onClick={() => { setMoney(config.startingCash); moneyRef.current = config.startingCash; setPortfolio({ GIGA: 0, VOY: 0, MART: 0, SPY: 0, GLD: 0 }); setOpponents(selectedLeague.players.filter(p => p !== 'You').map(name => ({ name, wealth: config.startingCash }))); setTimeLeft(600); setActiveGame('Blitz'); setPlaying(true); setView('menu'); }}>🚀 Start Match</button></div></div>
+      <div style={gS.menuContainer}><button onClick={() => setView('leagues')} style={gS.backBtn}>← All Leagues</button><div style={gS.leagueBanner}><h1 style={{margin:0}}>{selectedLeague.name}</h1><p>Competition Logged as: {currentUser}</p></div>
+        <div style={gS.leagueLayout}><div style={gS.leaderboard}><h3 style={{marginTop:0}}>Live Leaderboard</h3>{selectedLeague.players.map((p, i) => (<div key={p} style={gS.leaderRow}><span>{i+1}. {p} {p === currentUser ? '(You)' : ''}</span><span style={{fontWeight:'bold'}}>${Math.round(parseFloat(localStorage.getItem(`FIN_SYNC_LEAGUE_${selectedLeague.id}_USER_${p}`) || 1000))}</span></div>))}</div>
+          <div style={gS.leagueActions}><div style={gS.activeMatchCard}><h3>Blitz Stock Simulation</h3><button style={{...gS.playBtn, background: '#6366f1', width:'100%', cursor:'pointer'}} onClick={() => { setMoney(config.startingCash); moneyRef.current = config.startingCash; setGameStats({buys:0, sells:0, startMoney: config.startingCash}); setPortfolio({ GIGA: 0, VOY: 0, MART: 0, SPY: 0, GLD: 0 }); setOpponents(selectedLeague.players.filter(p => p !== currentUser).map(name => ({ name, wealth: config.startingCash }))); setTimeLeft(600); setActiveGame('Blitz'); setPlaying(true); setView('menu'); }}>🚀 Start Match</button></div></div>
         </div>
       </div>
     );
@@ -508,8 +589,8 @@ export default function GamesScreen({ userTier, onGameEnd, onNavigate }) {
 
   return (
     <div style={gS.pageWrapper}><style>{`@keyframes float { 0% { transform: translateY(0px); } 50% { transform: translateY(-8px); } 100% { transform: translateY(0px); } } .game-card:hover { transform: translateY(-10px); transition: 0.3s; } .scenario-entry { animation: slideUp 0.4s ease-out; } @keyframes slideUp { from { opacity:0; transform: translateY(20px); } to { opacity:1; transform: translateY(0); } } `}</style>
-      <div style={gS.menuContainer}><div style={gS.menuHeader}><h2 style={gS.menuTitle}>🎮 Financial Games</h2><p style={gS.menuSub}>Choose your path to financial freedom.</p></div>
-        <div style={gS.gamesGrid}>{games.map(g => (<div key={g.id} className="game-card" style={gS.gameCard} onClick={() => { setMoney(config.startingCash); moneyRef.current = config.startingCash; setDay(1); setActiveGame(g.id); setPlaying(true); }}><div style={{ ...gS.gameCardTop, background: g.grad }}><div style={{ fontSize:'42px', animation:'float 3s ease-in-out infinite' }}>{g.icon}</div><h3 style={{ margin:'12px 0 0', color:'#fff', fontSize:'20px', fontWeight:'900' }}>{g.title}</h3></div><div style={gS.gameCardBottom}><p style={gS.gameCardDesc}>{g.desc}</p><button style={{ ...gS.playBtn, background: g.grad }}>Play Mode</button></div></div>))}</div>
+      <div style={gS.menuContainer}><div style={gS.menuHeader}><h2 style={gS.menuTitle}>🎮 Financial Games</h2><p style={gS.menuSub}>Paths to freedom. (User: {currentUser})</p></div>
+        <div style={gS.gamesGrid}>{games.map(g => (<div key={g.id} className="game-card" style={gS.gameCard} onClick={() => { setMoney(config.startingCash); moneyRef.current = config.startingCash; setDay(1); setActiveGame(g.id); setPlaying(true); setGameStats(s=>({...s, startMoney: config.startingCash})); }}><div style={{ ...gS.gameCardTop, background: g.grad }}><div style={{ fontSize:'42px', animation:'float 3s ease-in-out infinite' }}>{g.icon}</div><h3 style={{ margin:'12px 0 0', color:'#fff', fontSize:'20px', fontWeight:'900' }}>{g.title}</h3></div><div style={gS.gameCardBottom}><p style={gS.gameCardDesc}>{g.desc}</p><button style={{ ...gS.playBtn, background: g.grad }}>Play Mode</button></div></div>))}</div>
         <div style={gS.extraRow}><div style={gS.cardPromo} onClick={() => setView('leagues')}><div style={gS.promoTitle}>🏆 Classroom Leagues</div><p style={gS.promoText}>Live tournaments.</p><button style={gS.promoBtn}>Enter Leagues</button></div>
           <div style={gS.cardPromo}><div style={gS.promoTitle}>💼 Salary Simulator</div><p style={gS.promoText}>Career map.</p><button style={{ ...gS.promoBtn, background:'#10b981' }} onClick={() => onNavigate?.('Salary')}>Open</button></div>
         </div>
@@ -519,7 +600,8 @@ export default function GamesScreen({ userTier, onGameEnd, onNavigate }) {
 }
 
 const gS = {
-  vocabPopup: { position:'fixed', zIndex:9999, background:'#fff', padding:'16px', borderRadius:'12px', width:'220px', boxShadow:'0 10px 30px rgba(0,0,0,0.2)', border:'1px solid #6366f1', pointerEvents:'none' },
+  vocabPopup: { position:'fixed', zIndex:9999, background:'#fff', padding:'16px', borderRadius:'12px', width:'220px', boxShadow:'0 10px 30px rgba(0,0,0,0.2)', border:'1px solid #6366f1' },
+  minBtn: { border:'none', background:'none', cursor:'pointer', fontSize:'16px', fontWeight:'bold' },
   modalOverlay: { position:'fixed', top:0, left:0, right:0, bottom:0, background:'rgba(0,0,0,0.8)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:10000, padding:'20px' },
   modalContent: { background:'#fff', width:'100%', maxWidth:'800px', borderRadius:'24px', padding:'32px', maxHeight:'90vh', overflowY:'auto' },
   modalHeader: { display:'flex', justifyContent:'space-between', marginBottom:'24px' },
@@ -557,7 +639,7 @@ const gS = {
   resultTitle: { fontSize:'40px', fontWeight:'900', margin:'0 0 10px' },
   resultDetails: { background:'rgba(255,255,255,0.15)', padding:'24px', borderRadius:'20px', textAlign:'left', marginBottom:'24px' },
   statRow: { display:'flex', justifyContent:'space-between', padding:'10px 0', borderBottom:'1px solid rgba(255,255,255,0.1)' },
-  actionBtn: { width:'100%', padding:'18px', borderRadius:'18px', border:'none', background:'#fff', color: '#1e293b', fontSize: '16px', fontWeight:'900', cursor:'pointer', boxShadow: '0 4px 10px rgba(0,0,0,0.1)' },
+  actionBtn: { width:'100%', padding:'18px', borderRadius:'18px', border:'none', fontSize: '16px', fontWeight:'900', cursor:'pointer', boxShadow: '0 4px 10px rgba(0,0,0,0.1)', transition: 'transform 0.2s', background: '#fff' },
   extraRow: { display:'grid', gridTemplateColumns:'1fr 1fr', gap:'24px', marginTop:'40px' },
   cardPromo: { background:'#fff', padding:'24px', borderRadius:'24px', boxShadow:'0 10px 20px rgba(0,0,0,0.05)', cursor:'pointer' },
   promoTitle: { fontSize:'19px', fontWeight:'900', marginBottom:'10px' },
@@ -566,6 +648,7 @@ const gS = {
   joinBox: { background:'#fff', padding:'30px', borderRadius:'24px', display:'flex', gap:'12px', marginBottom:'32px', boxShadow:'0 4px 15px rgba(0,0,0,0.05)' },
   joinInput: { flex:1, padding:'14px', borderRadius:'12px', border:'2px solid #e2e8f0', fontSize:'16px', fontWeight:'600' },
   joinBtn: { background:'#0f172a', color:'#fff', padding:'0 24px', borderRadius:'12px', border:'none', fontWeight:'800', cursor:'pointer' },
+  copyBtn: { padding:'6px 12px', borderRadius:'8px', border:'1px solid #e2e8f0', background:'#f8fafc', fontSize:'11px', fontWeight:'bold', cursor:'pointer' },
   leagueCard: { background:'#fff', padding:'20px', borderRadius:'18px', display:'flex', alignItems:'center', gap:'15px', cursor:'pointer', border:'2px solid transparent' },
   leagueIcon: { fontSize:'30px', background:'#f1f5f9', width:'60px', height:'60px', display:'flex', alignItems:'center', justifyContent:'center', borderRadius:'14px' },
   backBtn: { background:'none', border:'none', color:'#6366f1', fontWeight:'800', cursor:'pointer', marginBottom:'12px' },
