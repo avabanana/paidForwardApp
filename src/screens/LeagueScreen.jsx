@@ -35,7 +35,18 @@ const VOCAB_HELPER = {
   yield: "Dividend Yield: A financial ratio that tells you the percentage of a company's share price that it pays out in dividends each year.",
   ticker: "Ticker Symbol: A unique string of letters used to identify a particular stock on an exchange.",
   sentiment: "Market Sentiment: The overall attitude of investors toward a particular security.",
-  volatility: "Volatility: How much a stock's price fluctuates over time."
+  volatility: "Volatility: How much a stock's price fluctuates over time.",
+  prevClose: "Previous Close: The last trading price from the previous trading day.",
+  open: "Open: The price at which the stock first traded when the market opened today.",
+  bid: "Bid: The highest price a buyer is willing to pay right now (often shown with size).",
+  ask: "Ask: The lowest price a seller is willing to accept right now (often shown with size).",
+  marketCap: "Market Capitalization: The total market value of a company's outstanding shares.",
+  range52: "52-Week Range: The lowest and highest prices the stock has traded at in the last 52 weeks.",
+  targetEst: "1Y Target Estimate: Analyst consensus price target for one year out.",
+  earnings: "Earnings Date: The scheduled date when the company reports earnings.",
+  eps: "EPS (TTM): Earnings Per Share over the trailing twelve months.",
+  volume: "Volume: The number of shares traded during the period.",
+  beta: "Beta: A measure of a stock's volatility relative to the market."
 };
 
 export default function LeagueScreen({ currentUser: propCurrentUser, userId, db, userTier, onGameEnd }) {
@@ -61,6 +72,32 @@ export default function LeagueScreen({ currentUser: propCurrentUser, userId, db,
   const [gameStats, setGameStats] = useState({ buys: 0, sells: 0, startMoney: 1000 });
   const [vocabPopup, setVocabPopup] = useState({ visible: false, key: null, x: 0, y: 0 });
   const vocabRef = useRef(null);
+  const bcRef = useRef(null);
+
+  // helper to broadcast immediate sync to other tabs
+  const broadcastSync = (payload = { type: 'sync' }) => {
+    try {
+      if (bcRef.current) bcRef.current.postMessage(payload);
+      // also write a quick timestamp to localStorage to nudge storage listeners
+      localStorage.setItem('FIN_LEAGUES_LAST_SYNC', Date.now().toString());
+    } catch (err) { console.warn('broadcast failed', err); }
+  };
+
+  // Close vocab on click outside or Escape
+  useEffect(() => {
+    const onDocClick = (e) => {
+      if (!vocabRef.current) return;
+      if (!vocabRef.current.contains(e.target)) {
+        setVocabPopup((v) => v.visible ? { visible: false, key: null, x: 0, y: 0 } : v);
+      }
+    };
+    const onKey = (e) => {
+      if (e.key === 'Escape') setVocabPopup({ visible: false, key: null, x: 0, y: 0 });
+    };
+    document.addEventListener('mousedown', onDocClick);
+    document.addEventListener('keydown', onKey);
+    return () => { document.removeEventListener('mousedown', onDocClick); document.removeEventListener('keydown', onKey); };
+  }, []);
 
   // Sync Leagues across accounts/tabs
   useEffect(() => {
@@ -76,6 +113,33 @@ export default function LeagueScreen({ currentUser: propCurrentUser, userId, db,
   useEffect(() => {
     localStorage.setItem("FIN_LEAGUES_GLOBAL", JSON.stringify(leagues));
   }, [leagues]);
+
+  // BroadcastChannel: ensure cross-tab/account sync (more reliable than relying only on storage events)
+  useEffect(() => {
+    try {
+      if (typeof BroadcastChannel !== 'undefined') {
+        bcRef.current = new BroadcastChannel('FIN_LEAGUES_CHANNEL');
+        bcRef.current.onmessage = (ev) => {
+          if (!ev.data) return;
+          if (ev.data.type === 'sync') {
+            const global = JSON.parse(localStorage.getItem("FIN_LEAGUES_GLOBAL") || "[]");
+            setLeagues(global);
+          }
+        };
+      }
+    } catch (err) {
+      console.warn('BroadcastChannel not available', err);
+    }
+    return () => { bcRef.current?.close && bcRef.current.close(); };
+  }, []);
+
+  // Vocab click helper (places small helper popup near cursor)
+  const handleVocabClick = (key, e) => {
+    if (e && e.preventDefault) e.preventDefault();
+    const x = (e?.clientX || window.innerWidth / 2) + 8;
+    const y = (e?.clientY || window.innerHeight / 2) + 8;
+    setVocabPopup({ visible: true, key, x, y });
+  };
 
   // Blitz Engine
   useEffect(() => {
@@ -106,21 +170,27 @@ export default function LeagueScreen({ currentUser: propCurrentUser, userId, db,
 
   const handleCreate = () => {
     if (!newLeagueName) return;
-    const code = Math.random().toString(36).substring(7).toUpperCase();
+    // more reliable random code (6 chars)
+    const code = Math.random().toString(36).substring(2, 8).toUpperCase();
     const newL = { id: Date.now().toString(), name: newLeagueName, players: [currentUser], code, visibility: leaguePrivacy, createdBy: currentUser };
-    setLeagues(prev => [...prev, newL]);
+    const newArr = [...leagues, newL];
+    setLeagues(newArr);
+    // persist immediately so other tabs/profiles can pick it up
+    localStorage.setItem("FIN_LEAGUES_GLOBAL", JSON.stringify(newArr));
+    broadcastSync({ type: 'sync', action: 'create', league: newL });
     setNewLeagueName("");
     alert("League Created! Code: " + code);
   };
 
   const handleJoin = () => {
-    const code = joinCode.toUpperCase();
+    const code = joinCode.trim().toUpperCase();
     const global = JSON.parse(localStorage.getItem("FIN_LEAGUES_GLOBAL") || "[]");
     const idx = global.findIndex(l => l.code.toUpperCase() === code);
     if (idx !== -1) {
-      global[idx].players = Array.from(new Set([...global[idx].players, currentUser]));
+      global[idx].players = Array.from(new Set([...(global[idx].players || []), currentUser]));
       setLeagues(global);
       localStorage.setItem("FIN_LEAGUES_GLOBAL", JSON.stringify(global));
+      broadcastSync({ type: 'sync', action: 'join', leagueId: global[idx].id, user: currentUser });
       setSelectedLeague(global[idx]);
       setView('detail');
     } else alert("Invalid Code!");
@@ -130,6 +200,7 @@ export default function LeagueScreen({ currentUser: propCurrentUser, userId, db,
     if (!window.confirm("Delete this league?")) return;
     const updated = leagues.filter(l => l.id !== id);
     setLeagues(updated);
+    broadcastSync({ type: 'sync', action: 'delete', leagueId: id });
     if (selectedLeague?.id === id) setView('menu');
   };
 
@@ -161,16 +232,83 @@ export default function LeagueScreen({ currentUser: propCurrentUser, userId, db,
     setPlaying(false);
   };
 
-  const YahooFinancePopup = ({ stock, onClose }) => (
-    <div style={lS.modalOverlay}><div style={lS.modalContent}>
-      <div style={lS.modalHeader}><h2>{stock.name} ({stock.id})</h2><button onClick={onClose} style={lS.closeBtn}>✕</button></div>
-      <div style={lS.modalPriceRow}><div style={{fontSize:'48px', fontWeight:'900'}}>${stock.price.toFixed(2)}</div></div>
-      <div style={lS.modalGrid}>
-        <div>Previous Close: <strong>{stock.prevClose}</strong><br/>Open: <strong>{stock.open}</strong></div>
-        <div>Market Cap: <strong>{stock.marketCap}</strong><br/>P/E Ratio: <strong>{stock.pe}</strong></div>
+  const YahooFinancePopup = ({ stock, onClose }) => {
+    const [zoom, setZoom] = useState(1);
+    const [hoverIdx, setHoverIdx] = useState(null);
+    const data = stock.history || [];
+    const visibleCount = Math.max(3, Math.round(data.length / zoom));
+    const slice = data.slice(-visibleCount);
+    const w = 600, h = 200, padding = 30;
+    const max = Math.max(...slice), min = Math.min(...slice);
+    const scaleX = (i) => padding + (i / Math.max(1, slice.length - 1)) * (w - padding * 2);
+    const scaleY = (v) => padding + (1 - (v - min) / Math.max(1e-6, (max - min))) * (h - padding * 2);
+    const points = slice.map((v, i) => `${scaleX(i)},${scaleY(v)}`).join(' ');
+
+    const handleSvgMove = (e) => {
+      const rect = e.target.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const rel = Math.round(((x - padding) / (w - padding * 2)) * (slice.length - 1));
+      const idx = Math.min(slice.length - 1, Math.max(0, rel || 0));
+      setHoverIdx(idx);
+    };
+
+    const handleWheel = (e) => {
+      e.preventDefault();
+      const delta = Math.sign(e.deltaY);
+      setZoom(z => Math.min(4, Math.max(1, z - delta)));
+    };
+
+    return (
+      <div style={lS.modalOverlay} onClick={onClose}>
+        <div style={lS.modalContent} onClick={(e) => e.stopPropagation()}>
+          <div style={lS.modalHeader}><h2>{stock.name} ({stock.id})</h2><button onClick={onClose} style={lS.closeBtn}>✕</button></div>
+          <div style={lS.modalPriceRow}><div style={{fontSize:'48px', fontWeight:'900'}}>${stock.price.toFixed(2)}</div>
+            <div style={{display:'flex', gap:8, alignItems:'center'}}>
+              <button onClick={() => setZoom(z => Math.max(1, z - 1))} style={lS.minBtn}>−</button>
+              <span style={{fontSize:12, color:'#64748b'}}>Zoom x{zoom}</span>
+              <button onClick={() => setZoom(z => Math.min(4, z + 1))} style={lS.minBtn}>+</button>
+            </div>
+          </div>
+
+          <div style={lS.modalGrid}>
+            <div>
+              Previous Close: <strong>{stock.prevClose}</strong><br/>
+              Open: <strong>{stock.open}</strong><br/>
+              Bid: <strong>{stock.bid}</strong><br/>
+              Ask: <strong>{stock.ask}</strong>
+            </div>
+            <div>
+              Market Cap: <strong>{stock.marketCap}</strong><br/>
+              52W Range: <strong>{stock.range52}</strong><br/>
+              1Y Target Est: <strong>{stock.targetEst}</strong><br/>
+              Earnings Date: <strong>{stock.earnings}</strong><br/>
+              EPS (TTM): <strong>{stock.eps}</strong>
+            </div>
+          </div>
+
+          <div style={lS.modalChartArea}>
+            <svg width={w} height={h} onMouseMove={handleSvgMove} onMouseLeave={() => setHoverIdx(null)} onWheel={handleWheel} style={{width:'100%', height: '220px'}}>
+              {/* grid lines and labels */}
+              {Array.from({length:4}).map((_,i)=>{
+                const y = padding + i * ((h - padding*2)/3);
+                const val = (max - ((i/3) * (max - min))).toFixed(2);
+                return <g key={i}><line x1={padding} x2={w-padding} y1={y} y2={y} stroke="#eef2ff" strokeWidth={1}/><text x={6} y={y+4} fontSize={11} fill="#94a3b8">{val}</text></g>;
+              })}
+
+              <polyline fill="none" stroke="#6366f1" strokeWidth={2} points={points} strokeLinecap="round" strokeLinejoin="round" />
+              {slice.map((v,i)=>{
+                const cx = scaleX(i); const cy = scaleY(v);
+                return <circle key={i} cx={cx} cy={cy} r={hoverIdx===i?5:3} fill={hoverIdx===i?"#ef4444":"#6366f1"} />;
+              })}
+            </svg>
+            {hoverIdx !== null && (
+              <div style={{marginTop:8, fontSize:13, color:'#334155'}}>Point: ${slice[hoverIdx].toFixed(2)} ({hoverIdx+1 - slice.length} days)</div>
+            )}
+          </div>
+        </div>
       </div>
-    </div></div>
-  );
+    );
+  };
 
   if (gameResult) return (
     <div style={lS.resultContainer}><div style={lS.resultCard}>
@@ -187,8 +325,8 @@ export default function LeagueScreen({ currentUser: propCurrentUser, userId, db,
   if (playing) return (
     <div style={{...lS.pageWrapper, background:'#0f172a', padding:'20px'}}>
       {activePopupStock && <YahooFinancePopup stock={activePopupStock} onClose={() => setActivePopupStock(null)} />}
-      {vocabPopup.visible && <div ref={vocabRef} style={{...lS.vocabPopup, top:vocabPopup.y, left:vocabPopup.x}}>
-        <div style={{display:'flex', justifyContent:'space-between'}}><strong>{VOCAB_HELPER[vocabPopup.key].split(':')[0]}</strong><button onClick={()=>setVocabPopup({visible:false})} style={lS.minBtn}>_</button></div>
+      {playing && vocabPopup.visible && <div ref={vocabRef} style={{...lS.vocabPopup, top:vocabPopup.y, left:vocabPopup.x}}>
+        <div><strong>{VOCAB_HELPER[vocabPopup.key].split(':')[0]}</strong></div>
         <p style={{fontSize:'12px', margin:'5px 0 0'}}>{VOCAB_HELPER[vocabPopup.key].split(':')[1]}</p>
       </div>}
       <div style={lS.blitzGrid}>
@@ -229,6 +367,12 @@ export default function LeagueScreen({ currentUser: propCurrentUser, userId, db,
   );
 
   return (
+    return (
+
+    {/* This tiny text ensures the UI stays connected to the storage */}
+    <span style={{fontSize:'1px', color:'transparent'}}>Sync: {leagues.length}</span>
+    
+    <div style={lS.menuContainer}></div>
     <div style={lS.pageWrapper}><div style={lS.menuContainer}>
       <div style={{...lS.joinBox, background:'#eef2ff', border:'2px solid #6366f1', flexDirection:'column'}}>
         <h3 style={{margin:0}}>Tournament Hub</h3>
@@ -243,6 +387,7 @@ export default function LeagueScreen({ currentUser: propCurrentUser, userId, db,
           <div style={{display:'flex', gap:'10px', marginTop:'5px'}}><input style={lS.joinInput} placeholder="Code..." value={joinCode} onChange={e=>setJoinCode(e.target.value)}/><button style={lS.joinBtn} onClick={handleJoin}>Join</button></div>
         </div>
       </div>
+      
       <h2>Available Hubs</h2>
       <div style={lS.grid}>{leagues.filter(l => {
         if (l.visibility === 'public') return true;
