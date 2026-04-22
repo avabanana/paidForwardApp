@@ -38,8 +38,8 @@ const VOCAB_HELPER = {
   volatility: "Volatility: How much a stock's price fluctuates over time."
 };
 
-export default function LeagueScreen({ userTier, userName, onGameEnd }) {
-  const [currentUser] = useState(userName || localStorage.getItem("FIN_USERNAME") || "Guest_" + Math.floor(Math.random() * 9000));
+export default function LeagueScreen({ currentUser: propCurrentUser, userId, db, userTier, onGameEnd }) {
+  const [currentUser] = useState(propCurrentUser || localStorage.getItem("FIN_USERNAME") || "Guest_" + Math.floor(Math.random() * 9000));
   const [leagues, setLeagues] = useState(() => JSON.parse(localStorage.getItem("FIN_LEAGUES_GLOBAL")) || []);
   const [view, setView] = useState('menu');
   const [selectedLeague, setSelectedLeague] = useState(null);
@@ -220,9 +220,9 @@ export default function LeagueScreen({ userTier, userName, onGameEnd }) {
 
   if (view === 'detail') return (
     <div style={lS.menuContainer}><button onClick={()=>setView('menu')} style={lS.backBtn}>← Back</button>
-      <div style={lS.leagueBanner}><h1>{selectedLeague.name}</h1><p>Competition Hub • User: {currentUser}</p></div>
+      <div style={lS.leagueBanner}><h1>{selectedLeague.name}</h1><p>Competition Hub • User: {currentUser}</p>{selectedLeague.createdBy && <p style={{fontSize:'12px', color:'rgba(255,255,255,0.7)'}}>Created by: {selectedLeague.createdBy}</p>}</div>
       <div style={lS.detailLayout}>
-        <div style={lS.card}><h3>Leaderboard</h3>{selectedLeague.players.map((p,i)=><div key={p} style={lS.standRow}>{i+1}. {p} {p===currentUser?'(You)':''}</div>)}</div>
+        <div style={lS.card}><h3>Players ({selectedLeague.players.length})</h3>{selectedLeague.players.map((p,i)=><div key={p} style={lS.standRow}>{i+1}. {p}{p===selectedLeague.createdBy?' (Creator)':''} {p===currentUser?'(You)':''}</div>)}</div>
         <div style={lS.card}><h3>Blitz Sim</h3><button style={{...lS.playBtn, background:'#6366f1'}} onClick={()=>{setMoney(1000); setTimeLeft(600); setPlaying(true);}}>🚀 Start Match</button></div>
       </div>
     </div>
@@ -244,10 +244,15 @@ export default function LeagueScreen({ userTier, userName, onGameEnd }) {
         </div>
       </div>
       <h2>Available Hubs</h2>
-      <div style={lS.grid}>{leagues.filter(l => l.visibility === 'public' || l.createdBy === currentUser || l.players.includes(currentUser)).map(l => (
+      <div style={lS.grid}>{leagues.filter(l => {
+        if (l.visibility === 'public') return true;
+        if (l.createdBy === currentUser) return true;
+        if (l.players.includes(currentUser)) return true;
+        return false;
+      }).map(l => (
         <div key={l.id} style={lS.leagueCard} onClick={()=>{setSelectedLeague(l); setView('detail');}}>
           <span>{l.visibility==='public'?'🏫':'🔒'}</span>
-          <div><strong>{l.name}</strong><br/><small>{l.players.length} Players • Code: {l.code}</small></div>
+          <div><strong>{l.name}</strong><br/><small>{l.players.length} Players{l.createdBy ? ` • Creator: ${l.createdBy}` : ''} • Code: {l.code}</small></div>
           <div style={{marginLeft:'auto', display:'flex', gap:'5px'}}>
             <button onClick={(e)=>{e.stopPropagation(); navigator.clipboard.writeText(l.code); alert("Copied!");}} style={lS.copyBtn}>Copy</button>
             {l.createdBy === currentUser && <button onClick={(e)=>{e.stopPropagation(); handleDelete(l.id);}} style={{...lS.copyBtn, color:'#ef4444'}}>Delete</button>}
