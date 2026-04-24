@@ -70,11 +70,12 @@ export default function GamesScreen({ userTier, onGameEnd, onNavigate, userName 
   
   // Persistent Username Identification
   const [currentUser] = useState(() => {
+    // Prefer explicit prop (auth). If not provided, try shared localStorage.
     if (userName) return userName;
     const saved = localStorage.getItem("FIN_USERNAME");
     if (saved) return saved;
+    // Generate a per-session fallback name but DO NOT overwrite shared localStorage
     const fresh = "Investor_" + Math.floor(Math.random() * 9000);
-    localStorage.setItem("FIN_USERNAME", fresh);
     return fresh;
   });
 
@@ -389,6 +390,8 @@ export default function GamesScreen({ userTier, onGameEnd, onNavigate, userName 
     const newL = { id: Date.now().toString(), name: newLeagueName, players: [currentUser], code, activeMatch: false, visibility: leaguePrivacy, createdBy: currentUser };
     const updated = [newL, ...leagues];
     localStorage.setItem("FIN_LEAGUES_GLOBAL", JSON.stringify(updated));
+    // nudge other tabs by touching a timestamp
+    try { localStorage.setItem('FIN_LEAGUES_LAST_SYNC', Date.now().toString()); } catch (e) {}
     setLeagues(updated);
     setNewLeagueName("");
     alert(`League Created! Code: ${code}`);
@@ -402,8 +405,12 @@ export default function GamesScreen({ userTier, onGameEnd, onNavigate, userName 
       const updatedPlayers = Array.from(new Set([...globalLeagues[foundIdx].players, currentUser]));
       globalLeagues[foundIdx].players = updatedPlayers;
       localStorage.setItem("FIN_LEAGUES_GLOBAL", JSON.stringify(globalLeagues));
-      setLeagues(globalLeagues);
-      setSelectedLeague(globalLeagues[foundIdx]);
+      try { localStorage.setItem('FIN_LEAGUES_LAST_SYNC', Date.now().toString()); } catch (e) {}
+      // re-read and refresh local state to avoid race/overwrite
+      const fresh = JSON.parse(localStorage.getItem("FIN_LEAGUES_GLOBAL") || "[]");
+      setLeagues(fresh);
+      const leagueObj = fresh.find(l => l.code.toUpperCase() === target);
+      setSelectedLeague(leagueObj || globalLeagues[foundIdx]);
       setView('leagueDetail');
     } else {
       alert("Invalid League Code!");
@@ -482,10 +489,10 @@ export default function GamesScreen({ userTier, onGameEnd, onNavigate, userName 
           {activePopupStock && <YahooFinancePopup stock={activePopupStock} onClose={() => setActivePopupStock(null)} />}
           {vocabPopup.visible && (
             <div ref={vocabRef} style={{ ...gS.vocabPopup, top: vocabPopup.y + 15, left: vocabPopup.x + 15 }}>
-              <div style={{display:'flex', justifyContent:'space-between'}}><strong>{VOCAB_HELPER[vocabPopup.key].split(':')[0]}</strong><button style={gS.minBtn} onClick={()=>setVocabPopup({visible:false})}>_</button></div>
-              <p style={{margin:'5px 0 0', fontSize:'12px'}}>{VOCAB_HELPER[vocabPopup.key].split(':')[1]}</p>
-            </div>
-          )}
+              <div><strong>{VOCAB_HELPER[vocabPopup.key].split(':')[0]}</strong></div>
+               <p style={{margin:'5px 0 0', fontSize:'12px'}}>{VOCAB_HELPER[vocabPopup.key].split(':')[1]}</p>
+             </div>
+           )}
           <div style={{ maxWidth: '1200px', margin: '0 auto', display: 'grid', gridTemplateColumns: '250px 1fr 300px', gap: '20px' }}>
             <div style={{ background: '#1e293b', borderRadius: '16px', padding: '20px', color: '#fff' }}>
               <h3 style={{ margin: '0 0 15px', color: '#6366f1' }}>🏆 Standings</h3>
