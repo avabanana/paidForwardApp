@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useEffect } from "react";
+import React, { useMemo, useState } from "react";
 
 const dailyTips = [
   "Track one small purchase today and think about how it fits into your budget.",

@@ -273,12 +273,14 @@ export default function CoursesScreen({ courseProgressMap = {}, setCourseProgres
   const [completedCourseTitle, setCompletedCourseTitle] = useState('');
   const [completionDate, setCompletionDate] = useState('');
   // FIX: Initialize with courseProgressMap and merge — never replace — on prop changes
-  const [localProgressMap, setLocalProgressMap] = useState({ ...(courseProgressMap || {}) });
+  const [localProgressMap, setLocalProgressMap] = useState(() => courseProgressMap || {});
   const [courseCompleteMarked, setCourseCompleteMarked] = useState(false);
 
-  // FIX: Merge incoming prop changes instead of replacing, so local completions are never wiped
+  // FIX: Update local state when props change
   useEffect(() => {
-    setLocalProgressMap(prev => ({ ...(courseProgressMap || {}), ...prev }));
+    if (courseProgressMap) {
+      setLocalProgressMap(prev => ({ ...courseProgressMap, ...prev }));
+    }
   }, [courseProgressMap]);
 
   // Single source of truth: localProgressMap (initialized from prop, merged on prop changes)

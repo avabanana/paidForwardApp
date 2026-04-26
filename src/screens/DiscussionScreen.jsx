@@ -16,7 +16,7 @@ import {
 export default function DiscussionScreen({ currentUser, streak = 0, db, userId }) {
   const [posts, setPosts] = useState([]);
   const [newPost, setNewPost] = useState("");
-  const [showMine, setShowMine] = useState(false);
+  const [showMine, setShowMine] = useState(() => false);
   const [replyText, setReplyText] = useState({});
   const [loading, setLoading] = useState(true);
 
@@ -30,10 +30,6 @@ export default function DiscussionScreen({ currentUser, streak = 0, db, userId }
     });
     return () => unsub();
   }, [db]);
-
-  useEffect(() => {
-    setShowMine(false);
-  }, [currentUser]);
 
   const actorId = userId || currentUser || "Guest";
   const currentUserDisplayName = currentUser || "Guest";

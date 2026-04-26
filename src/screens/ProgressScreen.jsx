@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useMemo } from "react";
 import ProgressBar from "../components/ProgressBar";
 
 const ACHIEVEMENT_DEFS = [
@@ -125,7 +125,6 @@ export default function ProgressScreen({
   streak = 0,
   userTier = "adult",
   userId,
-  db,
   achievements = [],
   updateData,
   onAchievementUnlocked,
@@ -146,7 +145,7 @@ export default function ProgressScreen({
       if (saved) {
         JSON.parse(saved).forEach((id) => poppedRef.current.add(id));
       }
-    } catch (err) {
+    } catch {
       // ignore storage failures
     }
   }, [storageKey]);
@@ -155,7 +154,7 @@ export default function ProgressScreen({
     achievements.forEach((id) => poppedRef.current.add(id));
   }, [achievements]);
 
-  const stats = { coursesCompleted, gameWins, gamesPlayed, xp, streak };
+  const stats = useMemo(() => ({ coursesCompleted, gameWins, gamesPlayed, xp, streak }), [coursesCompleted, gameWins, gamesPlayed, xp, streak]);
 
   useEffect(() => {
     if (!updateData || !onAchievementUnlocked) return;
@@ -182,11 +181,11 @@ export default function ProgressScreen({
     if (typeof window !== 'undefined') {
       try {
         window.localStorage.setItem(storageKey, JSON.stringify(Array.from(poppedRef.current)));
-      } catch (err) {
+      } catch {
         // ignore storage failures
       }
     }
-  }, [xp, gamesPlayed, gameWins, coursesCompleted, streak, achievements, updateData, onAchievementUnlocked, storageKey]);
+  }, [xp, gamesPlayed, gameWins, coursesCompleted, streak, achievements, updateData, onAchievementUnlocked, storageKey, stats]);
 
   const achievementList = ACHIEVEMENT_DEFS.map((def) => ({
     ...def,

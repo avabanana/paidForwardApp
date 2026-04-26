@@ -1,9 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import {
   doc,
-  getDoc,
   setDoc,
-  updateDoc,
   onSnapshot
 } from 'firebase/firestore';
 
@@ -38,7 +36,7 @@ export default function GoalScreen({ currentUser = 'guest', userTier = 'adult', 
       setLoading(false);
     });
     return () => unsub();
-  }, [userId]);
+  }, [userId, goalsRef]);
 
   const saveGoals = async (updated) => {
     if (!goalsRef) return;

@@ -67,10 +67,10 @@ function readLeagues() {
 function writeLeagues(leagues, bc) {
   const json = JSON.stringify(leagues);
   localStorage.setItem(STORAGE_KEY, json);
-  try { bc?.postMessage({ type: 'sync' }); } catch {}
+  try { bc?.postMessage({ type: 'sync' }); } catch {} // eslint-disable-line no-empty
 }
 
-export default function LeagueScreen({ currentUser: propCurrentUser, userId, db, userTier, onGameEnd }) {
+export default function LeagueScreen({ currentUser: propCurrentUser }) {
   // ── currentUser must be unique per account. If the parent passes it in, use it.
   // Otherwise fall back to a session-scoped random name (NOT localStorage, so two
   // tabs don't accidentally share the same guest name).
@@ -115,8 +115,8 @@ export default function LeagueScreen({ currentUser: propCurrentUser, userId, db,
         bcRef.current = new BroadcastChannel(CHANNEL_NAME);
         bcRef.current.onmessage = () => setLeagues(readLeagues());
       }
-    } catch {}
-    return () => { try { bcRef.current?.close(); } catch {} };
+    } catch {} // eslint-disable-line no-empty
+    return () => { try { bcRef.current?.close(); } catch {} }; // eslint-disable-line no-empty
   }, []);
 
   // ── Poll localStorage for cross-tab changes ────────────────────────────────
@@ -242,7 +242,7 @@ export default function LeagueScreen({ currentUser: propCurrentUser, userId, db,
       endMatch();
     }
     return () => clearInterval(interval);
-  }, [playing, timeLeft, money, portfolio, blitzStocks]);
+  }, [playing, timeLeft, money, portfolio, blitzStocks, selectedLeague.id, currentUser, endMatch]);
 
   const trade = (id, type) => {
     const stock = blitzStocks.find(s => s.id === id);
@@ -265,12 +265,12 @@ export default function LeagueScreen({ currentUser: propCurrentUser, userId, db,
     localStorage.setItem(key, JSON.stringify([msg, ...cur].slice(0, 10)));
   };
 
-  const endMatch = () => {
+  const endMatch = useCallback(() => {
     const final = money + blitzStocks.reduce((acc, s) => acc + (portfolio[s.id] * s.price), 0);
     const net = final - gameStats.startMoney;
     setGameResult({ final, net, buys: gameStats.buys, sells: gameStats.sells, msg: net > 0 ? STOCK_WIN_REASONS[0] : STOCK_FAIL_REASONS[0] });
     setPlaying(false);
-  };
+  }, [money, blitzStocks, portfolio, gameStats.startMoney, gameStats.buys, gameStats.sells]);
 
   // ── Chart popup ────────────────────────────────────────────────────────────
   const YahooFinancePopup = ({ stock, onClose }) => {

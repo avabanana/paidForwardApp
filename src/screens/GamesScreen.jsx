@@ -141,6 +141,24 @@ export default function GamesScreen({ userTier, onGameEnd, onNavigate, userName 
   };
 
   // --- BLITZ MULTIPLAYER ENGINE ---
+
+  const calculateTotalWealth = () => {
+    let stockValue = 0;
+    blitzStocks.forEach(s => stockValue += portfolio[s.id] * s.price);
+    return money + stockValue;
+  };
+
+  const endBlitzCompetition = () => {
+    const finalWealth = calculateTotalWealth();
+    setMoney(finalWealth);
+    const net = finalWealth - gameStats.startMoney;
+    const qualitative = net > 0 ? STOCK_WIN_REASONS[Math.floor(Math.random() * STOCK_WIN_REASONS.length)] : STOCK_FAIL_REASONS[Math.floor(Math.random() * STOCK_FAIL_REASONS.length)];
+    
+    setGameResult('report');
+    setTradeMessage(`Blitz Competition Report: You made ${gameStats.buys} buys and ${gameStats.sells} sells. Your net profit/loss was $${Math.round(net)}. ${qualitative}`);
+    if (onGameEnd) onGameEnd(net > 0 ? 'won' : 'lost');
+  };
+
   useEffect(() => {
     let interval;
     if (playing && activeGame === 'Blitz' && timeLeft > 0) {
@@ -179,47 +197,7 @@ export default function GamesScreen({ userTier, onGameEnd, onNavigate, userName 
       endBlitzCompetition();
     }
     return () => clearInterval(interval);
-  }, [playing, activeGame, timeLeft, currentUser, selectedLeague]);
-
-  const handleBlitzTrade = (stockId, type) => {
-    const stock = blitzStocks.find(s => s.id === stockId);
-    if (type === 'buy' && money >= stock.price) {
-      setMoney(m => m - stock.price);
-      setPortfolio(p => ({ ...p, [stockId]: p[stockId] + 1 }));
-      setGameStats(s => ({ ...s, buys: s.buys + 1 }));
-      pushToSharedFeed(`${currentUser} bought 1 share of ${stockId} @ $${stock.price.toFixed(2)}`);
-    } else if (type === 'sell' && portfolio[stockId] > 0) {
-      setMoney(m => m + stock.price);
-      setPortfolio(p => ({ ...p, [stockId]: p[stockId] - 1 }));
-      setGameStats(s => ({ ...s, sells: s.sells + 1 }));
-      pushToSharedFeed(`${currentUser} sold 1 share of ${stockId} @ $${stock.price.toFixed(2)}`);
-    }
-  };
-
-  const pushToSharedFeed = (msg) => {
-    const key = `FIN_SYNC_FEED_${selectedLeague.id}`;
-    const cur = JSON.parse(localStorage.getItem(key) || "[]");
-    const updated = [msg, ...cur].slice(0, 10);
-    localStorage.setItem(key, JSON.stringify(updated));
-    setLeagueFeed(updated);
-  };
-
-  const calculateTotalWealth = () => {
-    let stockValue = 0;
-    blitzStocks.forEach(s => stockValue += portfolio[s.id] * s.price);
-    return money + stockValue;
-  };
-
-  const endBlitzCompetition = () => {
-    const finalWealth = calculateTotalWealth();
-    setMoney(finalWealth);
-    const net = finalWealth - gameStats.startMoney;
-    const qualitative = net > 0 ? STOCK_WIN_REASONS[Math.floor(Math.random() * STOCK_WIN_REASONS.length)] : STOCK_FAIL_REASONS[Math.floor(Math.random() * STOCK_FAIL_REASONS.length)];
-    
-    setGameResult('report');
-    setTradeMessage(`Blitz Competition Report: You made ${gameStats.buys} buys and ${gameStats.sells} sells. Your net profit/loss was $${Math.round(net)}. ${qualitative}`);
-    if (onGameEnd) onGameEnd(net > 0 ? 'won' : 'lost');
-  };
+  }, [playing, activeGame, timeLeft, currentUser, selectedLeague, calculateTotalWealth, endBlitzCompetition]);
 
   const tierSettings = {
     elementary: {
@@ -391,7 +369,7 @@ export default function GamesScreen({ userTier, onGameEnd, onNavigate, userName 
     const updated = [newL, ...leagues];
     localStorage.setItem("FIN_LEAGUES_GLOBAL", JSON.stringify(updated));
     // nudge other tabs by touching a timestamp
-    try { localStorage.setItem('FIN_LEAGUES_LAST_SYNC', Date.now().toString()); } catch (e) {}
+    try { localStorage.setItem('FIN_LEAGUES_LAST_SYNC', Date.now().toString()); } catch {}
     setLeagues(updated);
     setNewLeagueName("");
     alert(`League Created! Code: ${code}`);
@@ -405,7 +383,7 @@ export default function GamesScreen({ userTier, onGameEnd, onNavigate, userName 
       const updatedPlayers = Array.from(new Set([...globalLeagues[foundIdx].players, currentUser]));
       globalLeagues[foundIdx].players = updatedPlayers;
       localStorage.setItem("FIN_LEAGUES_GLOBAL", JSON.stringify(globalLeagues));
-      try { localStorage.setItem('FIN_LEAGUES_LAST_SYNC', Date.now().toString()); } catch (e) {}
+      try { localStorage.setItem('FIN_LEAGUES_LAST_SYNC', Date.now().toString()); } catch {}
       // re-read and refresh local state to avoid race/overwrite
       const fresh = JSON.parse(localStorage.getItem("FIN_LEAGUES_GLOBAL") || "[]");
       setLeagues(fresh);

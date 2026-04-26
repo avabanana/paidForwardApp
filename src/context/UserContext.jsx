@@ -1,19 +1,34 @@
 import React, { createContext, useState, useEffect } from 'react';
+import { supabase } from '../supabaseClient';
 
-// Create the Context
-export const UserContext = createContext();
+const UserContext = createContext();
 
-// Create the Provider Component
 export const UserProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [age, setAge] = useState(null);
   const [points, setPoints] = useState(0);
+  const [loading, setLoading] = useState(true);
 
-  // You can add logic here to save user data to localStorage 
-  // so they stay logged in even if they refresh the page!
+  useEffect(() => {
+    // Check active session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUser(session?.user ?? null);
+      setLoading(false);
+    });
+
+    // Listen for changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
   useEffect(() => {
     const savedAge = localStorage.getItem('userAge');
-    if (savedAge) setAge(JSON.parse(savedAge));
+    if (savedAge) {
+      setAge(JSON.parse(savedAge));
+    }
   }, []);
 
   const updateAge = (newAge) => {
@@ -28,9 +43,12 @@ export const UserProvider = ({ children }) => {
       age, 
       setAge: updateAge, 
       points, 
-      setPoints 
+      setPoints,
+      loading
     }}>
-      {children}
+      {!loading && children}
     </UserContext.Provider>
   );
 };
+
+export { UserContext };
