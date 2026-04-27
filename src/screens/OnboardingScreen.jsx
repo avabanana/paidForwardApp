@@ -53,7 +53,6 @@ function OnboardingScreen() {
           }]);
         
         if (profileError) throw profileError;
-        alert('Check your email for the confirmation link!');
       } else {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;

@@ -1,17 +1,5 @@
 import React, { useState, useEffect } from "react";
-import {
-  collection,
-  addDoc,
-  onSnapshot,
-  query,
-  orderBy,
-  doc,
-  updateDoc,
-  deleteDoc,
-  serverTimestamp,
-  arrayUnion,
-  arrayRemove
-} from "firebase/firestore";
+import { supabase } from "../supabaseClient";
 
 export default function DiscussionScreen({ currentUser, streak = 0, db, userId }) {
   const [posts, setPosts] = useState([]);
@@ -20,78 +8,121 @@ export default function DiscussionScreen({ currentUser, streak = 0, db, userId }
   const [replyText, setReplyText] = useState({});
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    if (!db) return;
-    const q = query(collection(db, "discussion_posts"), orderBy("createdAt", "desc"));
-    const unsub = onSnapshot(q, (snap) => {
-      const data = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-      setPosts(data);
+  const fetchPosts = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("discussion_posts")
+        .select("*")
+        .order("createdAt", { ascending: false });
+      if (error) throw error;
+      setPosts(data || []);
+    } catch (err) {
+      console.warn("Could not fetch discussion posts:", err.message || err);
+    } finally {
       setLoading(false);
-    });
-    return () => unsub();
-  }, [db]);
+    }
+  };
+
+  useEffect(() => {
+    // Initial load
+    fetchPosts();
+    // Polling fallback for realtime-like behavior (mock client does not support realtime)
+    const id = setInterval(() => fetchPosts(), 3000);
+    return () => clearInterval(id);
+  }, []);
 
   const actorId = userId || currentUser || "Guest";
   const currentUserDisplayName = currentUser || "Guest";
 
   const handlePost = async (e) => {
     e.preventDefault();
-    if (!newPost.trim() || !db) return;
-    await addDoc(collection(db, "discussion_posts"), {
-      user: currentUserDisplayName,
-      userId: userId || "",
-      text: newPost.trim(),
-      createdAt: serverTimestamp(),
-      likes: [],
-      reactions: { thumbs: [], laugh: [] },
-      replies: []
-    });
-    setNewPost("");
+    if (!newPost.trim()) return;
+    try {
+      const payload = {
+        user: currentUserDisplayName,
+        userId: userId || "",
+        text: newPost.trim(),
+        createdAt: new Date().toISOString(),
+        likes: [],
+        reactions: { thumbs: [], laugh: [] },
+        replies: []
+      };
+      const { error } = await supabase.from("discussion_posts").insert([payload]);
+      if (error) throw error;
+      setNewPost("");
+      await fetchPosts();
+    } catch (err) {
+      console.warn("Failed to post:", err.message || err);
+    }
   };
 
   const deletePost = async (postId) => {
-    if (!db) return;
-    await deleteDoc(doc(db, "discussion_posts", postId));
+    try {
+      const { error } = await supabase.from("discussion_posts").delete().eq("id", postId);
+      if (error) throw error;
+      await fetchPosts();
+    } catch (err) {
+      console.warn("Failed to delete post:", err.message || err);
+    }
   };
 
   const toggleReaction = async (postId, type, currentReactions) => {
-    if (!db) return;
-    const postRef = doc(db, "discussion_posts", postId);
-    const field = type === "like" ? "likes" : `reactions.${type}`;
-    const arr = type === "like"
-      ? (currentReactions.likes || [])
-      : (currentReactions.reactions?.[type] || []);
-    const hasReacted = arr.includes(actorId);
-    await updateDoc(postRef, {
-      [field]: hasReacted ? arrayRemove(actorId) : arrayUnion(actorId)
-    });
+    try {
+      const field = type === "like" ? "likes" : `reactions`;
+      let updated;
+      if (type === "like") {
+        const arr = currentReactions.likes || [];
+        const hasReacted = arr.includes(actorId);
+        updated = { likes: hasReacted ? arr.filter((a) => a !== actorId) : [...arr, actorId] };
+      } else {
+        const reactions = currentReactions.reactions || { thumbs: [], laugh: [] };
+        const arr = reactions[type] || [];
+        const hasReacted = arr.includes(actorId);
+        const newReactions = { ...reactions, [type]: hasReacted ? arr.filter((a) => a !== actorId) : [...arr, actorId] };
+        updated = { reactions: newReactions };
+      }
+      const { error } = await supabase.from("discussion_posts").update(updated).eq("id", postId);
+      if (error) throw error;
+      await fetchPosts();
+    } catch (err) {
+      console.warn("Failed to toggle reaction:", err.message || err);
+    }
   };
 
   const handleReply = async (postId, currentReplies) => {
     const text = replyText[postId]?.trim();
-    if (!text || !db) return;
-    const newReply = {
-      id: Date.now(),
-      user: currentUser || "Guest",
-      userId: userId || "",
-      text,
-      timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
-    };
-    const postRef = doc(db, "discussion_posts", postId);
-    await updateDoc(postRef, { replies: [...(currentReplies || []), newReply] });
-    setReplyText((prev) => ({ ...prev, [postId]: "" }));
+    if (!text) return;
+    try {
+      const newReply = {
+        id: Date.now(),
+        user: currentUser || "Guest",
+        userId: userId || "",
+        text,
+        timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+      };
+      const updatedReplies = [...(currentReplies || []), newReply];
+      const { error } = await supabase.from("discussion_posts").update({ replies: updatedReplies }).eq("id", postId);
+      if (error) throw error;
+      setReplyText((prev) => ({ ...prev, [postId]: "" }));
+      await fetchPosts();
+    } catch (err) {
+      console.warn("Failed to add reply:", err.message || err);
+    }
   };
 
   const deleteReply = async (postId, replyId, currentReplies) => {
-    if (!db) return;
-    const postRef = doc(db, "discussion_posts", postId);
-    await updateDoc(postRef, {
-      replies: (currentReplies || []).filter((r) => r.id !== replyId)
-    });
+    try {
+      const updated = (currentReplies || []).filter((r) => r.id !== replyId);
+      const { error } = await supabase.from("discussion_posts").update({ replies: updated }).eq("id", postId);
+      if (error) throw error;
+      await fetchPosts();
+    } catch (err) {
+      console.warn("Failed to delete reply:", err.message || err);
+    }
   };
 
   const visiblePosts = showMine
-    ? posts.filter((p) => userId ? p.userId === userId : p.user === currentUserDisplayName)
+    ? posts.filter((p) => (userId ? p.userId === userId : p.user === currentUserDisplayName))
     : posts;
 
   return (
@@ -144,8 +175,8 @@ export default function DiscussionScreen({ currentUser, streak = 0, db, userId }
                   </div>
                 </div>
                 <span style={dStyles.time}>
-                  {post.createdAt?.toDate
-                    ? post.createdAt.toDate().toLocaleString()
+                  {post.createdAt
+                    ? new Date(post.createdAt).toLocaleString()
                     : "just now"}
                 </span>
               </div>

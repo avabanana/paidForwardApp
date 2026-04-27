@@ -7,6 +7,9 @@ const supabaseKey = 'sb_publishable_RtXJTGiZ_1dAIZkbKYZ4KQ_XCFf0yxw'
 // Create mock client for development when Supabase is not available
 class MockSupabaseClient {
   constructor() {
+    this.authListeners = [];
+    this.monitorAuthChanges();
+    
     this.auth = {
       signUp: async ({ email, password, options }) => {
         // Mock successful signup
@@ -16,6 +19,7 @@ class MockSupabaseClient {
           user_metadata: options?.data || {}
         };
         localStorage.setItem('mock_user', JSON.stringify(user));
+        this.notifyAuthChange('SIGNED_UP', user);
         return { data: { user }, error: null };
       },
       signInWithPassword: async ({ email, password }) => {
@@ -26,10 +30,12 @@ class MockSupabaseClient {
           user_metadata: { username: email.split('@')[0] }
         };
         localStorage.setItem('mock_user', JSON.stringify(user));
+        this.notifyAuthChange('SIGNED_IN', user);
         return { data: { user }, error: null };
       },
       signOut: async () => {
         localStorage.removeItem('mock_user');
+        this.notifyAuthChange('SIGNED_OUT', null);
         return { error: null };
       },
       getSession: async () => {
@@ -38,14 +44,51 @@ class MockSupabaseClient {
         return { data: { session }, error: null };
       },
       onAuthStateChange: (callback) => {
-        // Mock auth state change listener
+        // Register listener
+        this.authListeners.push(callback);
+        
+        // Immediately call with current state
         const user = localStorage.getItem('mock_user');
         if (user) {
-          setTimeout(() => callback('SIGNED_IN', { user: JSON.parse(user) }), 100);
+          setTimeout(() => callback('SIGNED_IN', { user: JSON.parse(user) }), 10);
+        } else {
+          setTimeout(() => callback('SIGNED_OUT', null), 10);
         }
-        return { data: { subscription: { unsubscribe: () => {} } } };
+        
+        // Return unsubscribe function
+        return { 
+          data: { 
+            subscription: { 
+              unsubscribe: () => {
+                this.authListeners = this.authListeners.filter(l => l !== callback);
+              } 
+            } 
+          } 
+        };
       }
     };
+  }
+
+  notifyAuthChange(event, user) {
+    this.authListeners.forEach(callback => {
+      setTimeout(() => callback(event, user ? { user } : null), 10);
+    });
+  }
+
+  monitorAuthChanges() {
+    // Monitor localStorage for changes
+    let lastState = localStorage.getItem('mock_user');
+    setInterval(() => {
+      const currentState = localStorage.getItem('mock_user');
+      if (currentState !== lastState) {
+        lastState = currentState;
+        if (currentState) {
+          this.notifyAuthChange('SIGNED_IN', JSON.parse(currentState));
+        } else {
+          this.notifyAuthChange('SIGNED_OUT', null);
+        }
+      }
+    }, 100);
 
     this.from = (table) => ({
       select: () => ({
@@ -78,29 +121,30 @@ class MockSupabaseClient {
           }
         })
       }),
-      insert: () => ({
-        async: async () => ({ error: null })
-      }),
-      update: () => ({
-        eq: () => ({
-          async: async () => ({ error: null })
-        })
+      insert: (data) => Promise.resolve({ data, error: null }),
+      update: (data) => ({
+        eq: () => Promise.resolve({ data, error: null })
       })
     });
   }
 }
 
-// Try to create real Supabase client, fall back to mock if it fails
+// Use mock client for development
+// To use real Supabase, set VITE_USE_REAL_SUPABASE=true
 let supabase;
-try {
-  supabase = createClient(supabaseUrl, supabaseKey);
-  // Test the connection
-  supabase.auth.getSession().catch(() => {
-    console.warn('Supabase connection failed, using mock client for development');
+
+const useRealSupabase = import.meta.env.VITE_USE_REAL_SUPABASE === 'true';
+
+if (useRealSupabase) {
+  try {
+    supabase = createClient(supabaseUrl, supabaseKey);
+    console.log('Using real Supabase client');
+  } catch (error) {
+    console.warn('Real Supabase failed, falling back to mock client');
     supabase = new MockSupabaseClient();
-  });
-} catch (error) {
-  console.warn('Supabase not available, using mock client for development');
+  }
+} else {
+  console.log('Using mock client for development. Set VITE_USE_REAL_SUPABASE=true to use real Supabase');
   supabase = new MockSupabaseClient();
 }
 

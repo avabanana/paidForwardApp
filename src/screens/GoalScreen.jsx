@@ -1,9 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import {
-  doc,
-  setDoc,
-  onSnapshot
-} from 'firebase/firestore';
+import { supabase } from '../supabaseClient';
 
 const SUGGESTED_GOALS = [
   { name: 'Emergency Fund', target: 500, emoji: '🛟', color: '#dbeafe' },
@@ -22,26 +18,44 @@ export default function GoalScreen({ currentUser = 'guest', userTier = 'adult', 
   const [celebrationName, setCelebrationName] = useState('');
   const [loading, setLoading] = useState(true);
 
-  const goalsRef = userId && db ? doc(db, 'user_goals', userId) : null;
-
-  // Load goals from Firestore — scoped strictly to this userId
-  useEffect(() => {
-    if (!goalsRef) { setLoading(false); return; }
-    const unsub = onSnapshot(goalsRef, (snap) => {
-      if (snap.exists()) {
-        setGoals(snap.data().goals || []);
-      } else {
+  const fetchGoals = async () => {
+    if (!userId) { setLoading(false); return; }
+    try {
+      const { data, error } = await supabase
+        .from('user_goals')
+        .select('*')
+        .eq('id', userId)
+        .single();
+      if (error && error.code !== 'PGRST116') {
+        console.warn('Could not fetch goals:', error.message || error);
         setGoals([]);
+      } else {
+        setGoals((data && data.goals) || []);
       }
+    } catch (err) {
+      console.warn('Fetch goals error:', err.message || err);
+      setGoals([]);
+    } finally {
       setLoading(false);
-    });
-    return () => unsub();
-  }, [userId, goalsRef]);
+    }
+  };
+
+  useEffect(() => {
+    fetchGoals();
+    const id = setInterval(() => fetchGoals(), 3000);
+    return () => clearInterval(id);
+  }, [userId]);
 
   const saveGoals = async (updated) => {
-    if (!goalsRef) return;
+    if (!userId) return;
     setGoals(updated);
-    await setDoc(goalsRef, { goals: updated, userId, username: currentUser }, { merge: true });
+    try {
+      const payload = { id: userId, goals: updated, username: currentUser };
+      const { error } = await supabase.from('user_goals').upsert(payload);
+      if (error) console.warn('Could not save goals:', error.message || error);
+    } catch (err) {
+      console.warn('Save goals error:', err.message || err);
+    }
   };
 
   const totalSaved = goals.reduce((sum, g) => sum + (g.current || 0), 0);
