@@ -403,6 +403,33 @@ export default function GamesScreen({ userTier, onGameEnd, onNavigate, userName 
     if (selectedLeague && selectedLeague.id === id) setView('leagues');
   };
 
+  const handleBlitzTrade = (stockId, action) => {
+    const stock = blitzStocks.find(s => s.id === stockId);
+    if (!stock) return;
+
+    if (action === 'buy') {
+      const cost = Math.round(stock.price);
+      if (money >= cost) {
+        setMoney(money - cost);
+        setPortfolio(prev => ({ ...prev, [stockId]: (prev[stockId] || 0) + 1 }));
+        setGameStats(s => ({ ...s, buys: s.buys + 1 }));
+        setTradeMessage(`✅ Bought 1 share of ${stock.id} at $${cost}`);
+      } else {
+        setTradeMessage(`❌ Insufficient funds. Need $${cost}, have $${Math.round(money)}`);
+      }
+    } else if (action === 'sell') {
+      if (portfolio[stockId] > 0) {
+        const proceeds = Math.round(stock.price);
+        setMoney(money + proceeds);
+        setPortfolio(prev => ({ ...prev, [stockId]: prev[stockId] - 1 }));
+        setGameStats(s => ({ ...s, sells: s.sells + 1 }));
+        setTradeMessage(`✅ Sold 1 share of ${stock.id} for $${proceeds}`);
+      } else {
+        setTradeMessage(`❌ You don't own any shares of ${stock.id}`);
+      }
+    }
+  };
+
   const YahooFinancePopup = ({ stock, onClose }) => {
     if (!stock) return null;
     return (
