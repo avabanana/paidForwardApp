@@ -28,33 +28,50 @@ export default function GoalScreen({ currentUser = 'guest', userTier = 'adult', 
         .single();
       if (error && error.code !== 'PGRST116') {
         console.warn('Could not fetch goals:', error.message || error);
-        setGoals([]);
-      } else {
-        setGoals((data && data.goals) || []);
+        // Don't reset goals to empty on error - keep local state
+      } else if (data && data.goals && data.goals.length > 0) {
+        // Only update if there are goals in the database
+        setGoals(data.goals);
       }
     } catch (err) {
       console.warn('Fetch goals error:', err.message || err);
-      setGoals([]);
+      // Don't reset goals to empty on error - keep local state
     } finally {
       setLoading(false);
     }
   };
 
+  // Fetch goals on mount and when userId changes
   useEffect(() => {
     fetchGoals();
-    const id = setInterval(() => fetchGoals(), 3000);
+    
+    // Set up a longer interval (every 10 seconds) but only if there are already goals
+    const id = setInterval(() => {
+      if (goals.length > 0) {
+        fetchGoals();
+      }
+    }, 10000);
+    
     return () => clearInterval(id);
-  }, [userId]);
+  }, [userId, goals.length]);
 
+  // Improved save with better error handling
   const saveGoals = async (updated) => {
     if (!userId) return;
+    
+    // Update local state immediately (optimistic update)
     setGoals(updated);
+    
     try {
       const payload = { id: userId, goals: updated, username: currentUser };
       const { error } = await supabase.from('user_goals').upsert(payload);
-      if (error) console.warn('Could not save goals:', error.message || error);
+      if (error) {
+        console.warn('Could not save goals:', error.message || error);
+        // Goals already updated optimistically, so don't revert
+      }
     } catch (err) {
       console.warn('Save goals error:', err.message || err);
+      // Goals already updated optimistically, so don't revert
     }
   };
 

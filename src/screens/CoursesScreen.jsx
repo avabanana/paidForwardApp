@@ -285,6 +285,30 @@ export default function CoursesScreen({ courseProgressMap = {}, setCourseProgres
     }
   }, [courseProgressMap]);
 
+  // Re-sync progress from props whenever they update
+  useEffect(() => {
+    if (courseProgressMap && Object.keys(courseProgressMap).length > 0) {
+      setLocalProgressMap(courseProgressMap);
+    }
+  }, [Object.keys(courseProgressMap || {}).join(',')]);
+
+  // Save progress whenever localProgressMap changes significantly
+  useEffect(() => {
+    if (storagePref === 'supabase') {
+      const timer = setTimeout(async () => {
+        try {
+          const { data: { user } } = await supabase.auth.getUser();
+          if (user) {
+            await supabase.from('users').update({ courseProgressMap: localProgressMap }).eq('id', user.id);
+          }
+        } catch (err) {
+          console.error("Background sync error:", err);
+        }
+      }, 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [localProgressMap, storagePref]);
+
   const effectiveProgressMap = localProgressMap;
   const isElementary = userTier === 'elementary';
   const courseHeading = isElementary ? 'Money Adventures' : 'Courses';

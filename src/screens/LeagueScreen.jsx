@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from "react";
+import { supabase } from '../supabaseClient';
 
 const STORAGE_KEY = "FIN_LEAGUES_GLOBAL_V2";
 const CHANNEL_NAME = "FIN_LEAGUES_CHANNEL_V2";
@@ -52,9 +53,79 @@ const VOCAB_HELPER = {
   beta: "Beta: A measure of a stock's volatility relative to the market."
 };
 
-// ─── Centralized storage helpers ───────────────────────────────────────────
-// All reads go through readLeagues() and all writes go through writeLeagues()
-// so there is ONE authoritative path and no stale-state bugs.
+// ─── Supabase-based storage helpers ───────────────────────────────────────
+
+async function fetchAllPublicLeagues() {
+  try {
+    const { data, error } = await supabase
+      .from('leagues')
+      .select('*')
+      .eq('visibility', 'public')
+      .order('created_at', { ascending: false });
+    if (error) throw error;
+    return data || [];
+  } catch (err) {
+    console.warn('Failed to fetch public leagues:', err);
+    return [];
+  }
+}
+
+async function fetchUserLeagues(userId) {
+  if (!userId) return [];
+  try {
+    const { data, error } = await supabase
+      .from('leagues')
+      .select('*')
+      .or(`creator_id.eq.${userId},players->>username.eq.${userId}`)
+      .order('created_at', { ascending: false });
+    if (error) throw error;
+    return data || [];
+  } catch (err) {
+    console.warn('Failed to fetch user leagues:', err);
+    return [];
+  }
+}
+
+async function createLeagueInDb(league, userId) {
+  try {
+    const { error } = await supabase
+      .from('leagues')
+      .insert([{ ...league, creator_id: userId }]);
+    if (error) throw error;
+    return true;
+  } catch (err) {
+    console.warn('Failed to create league:', err);
+    return false;
+  }
+}
+
+async function updateLeagueInDb(leagueId, updates) {
+  try {
+    const { error } = await supabase
+      .from('leagues')
+      .update(updates)
+      .eq('id', leagueId);
+    if (error) throw error;
+    return true;
+  } catch (err) {
+    console.warn('Failed to update league:', err);
+    return false;
+  }
+}
+
+async function deleteLeagueFromDb(leagueId) {
+  try {
+    const { error } = await supabase
+      .from('leagues')
+      .delete()
+      .eq('id', leagueId);
+    if (error) throw error;
+    return true;
+  } catch (err) {
+    console.warn('Failed to delete league:', err);
+    return false;
+  }
+}
 
 function readLeagues() {
   try {
@@ -70,29 +141,24 @@ function writeLeagues(leagues, bc) {
   try { bc?.postMessage({ type: 'sync' }); } catch {} // eslint-disable-line no-empty
 }
 
-export default function LeagueScreen({ currentUser: propCurrentUser }) {
-  // ── currentUser must be unique per account. If the parent passes it in, use it.
-  // Otherwise fall back to a session-scoped random name (NOT localStorage, so two
-  // tabs don't accidentally share the same guest name).
+export default function LeagueScreen({ currentUser: propCurrentUser, userId }) {
   const [currentUser] = useState(() => {
     if (propCurrentUser) return propCurrentUser;
-    // Try a username stored explicitly (e.g. set during login)
     const stored = localStorage.getItem("FIN_USERNAME");
     if (stored) return stored;
-    // Last resort: generate one and store it so it persists across refreshes for this profile
     const generated = "Guest_" + Math.random().toString(36).substring(2, 7).toUpperCase();
     localStorage.setItem("FIN_USERNAME", generated);
     return generated;
   });
 
-  const [leagues, setLeagues] = useState(readLeagues);
+  const [leagues, setLeagues] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [view, setView] = useState('menu');
   const [selectedLeague, setSelectedLeague] = useState(null);
   const [joinCode, setJoinCode] = useState("");
   const [newLeagueName, setNewLeagueName] = useState("");
   const [leaguePrivacy, setLeaguePrivacy] = useState('public');
 
-  // Game States
   const [playing, setPlaying] = useState(false);
   const [money, setMoney] = useState(1000);
   const [timeLeft, setTimeLeft] = useState(600);
@@ -108,26 +174,30 @@ export default function LeagueScreen({ currentUser: propCurrentUser }) {
   const vocabRef = useRef(null);
   const bcRef = useRef(null);
 
-  // ── Set up BroadcastChannel once ──────────────────────────────────────────
   useEffect(() => {
-    try {
-      if (typeof BroadcastChannel !== 'undefined') {
-        bcRef.current = new BroadcastChannel(CHANNEL_NAME);
-        bcRef.current.onmessage = () => setLeagues(readLeagues());
+    const loadLeagues = async () => {
+      setLoading(true);
+      try {
+        const userLeagues = userId ? await fetchUserLeagues(userId) : [];
+        const publicLeagues = await fetchAllPublicLeagues();
+        const combined = [...publicLeagues];
+        userLeagues.forEach(ul => {
+          if (ul.visibility === 'private' && !combined.find(l => l.id === ul.id)) {
+            combined.push(ul);
+          }
+        });
+        setLeagues(combined);
+      } catch (err) {
+        console.error('Failed to load leagues:', err);
+        setLeagues(readLeagues);
       }
-    } catch {} // eslint-disable-line no-empty
-    return () => { try { bcRef.current?.close(); } catch {} }; // eslint-disable-line no-empty
-  }, []);
+      setLoading(false);
+    };
+    loadLeagues();
+    const interval = setInterval(loadLeagues, 3000);
+    return () => clearInterval(interval);
+  }, [userId]);
 
-  // ── Poll localStorage for cross-tab changes ────────────────────────────────
-  useEffect(() => {
-    const sync = () => setLeagues(readLeagues());
-    window.addEventListener('storage', sync);
-    const id = setInterval(sync, 1500);
-    return () => { window.removeEventListener('storage', sync); clearInterval(id); };
-  }, []);
-
-  // ── Vocab popup close handlers ─────────────────────────────────────────────
   useEffect(() => {
     const onDocClick = (e) => {
       if (vocabRef.current && !vocabRef.current.contains(e.target))
@@ -146,75 +216,60 @@ export default function LeagueScreen({ currentUser: propCurrentUser }) {
     setVocabPopup({ visible: true, key, x: (e?.clientX || window.innerWidth / 2) + 8, y: (e?.clientY || window.innerHeight / 2) + 8 });
   };
 
-  // ── League CRUD ────────────────────────────────────────────────────────────
-  const handleCreate = () => {
+  const handleCreate = async () => {
     if (!newLeagueName.trim()) return;
     const code = Math.random().toString(36).substring(2, 8).toUpperCase();
     const newL = {
-      id: Date.now().toString(),
       name: newLeagueName.trim(),
-      // players is now an array of objects: { username, joinedAt }
-      // so we always store the real username alongside its join time.
-      players: [{ username: currentUser, joinedAt: Date.now() }],
+      players: [currentUser],
       code,
       visibility: leaguePrivacy,
-      createdBy: currentUser, // ← always the ACTUAL currentUser at creation time
+      creator_id: userId,
+      created_at: new Date().toISOString()
     };
-    const updated = [...readLeagues(), newL];
-    writeLeagues(updated, bcRef.current);
-    setLeagues(updated);
-    setNewLeagueName("");
-    alert(`League created! Share this code: ${code}`);
-  };
-
-  const handleJoin = () => {
-    const code = joinCode.trim().toUpperCase();
-    if (!code) return;
-
-    // Always read fresh from storage to avoid stale state
-    const fresh = readLeagues();
-    const idx = fresh.findIndex(l => l.code.toUpperCase() === code);
-
-    if (idx === -1) {
-      alert("Invalid code — no league found with that code.");
+    const success = await createLeagueInDb(newL, userId);
+    if (!success) {
+      alert('Failed to create league. Please try again.');
       return;
     }
+    const localLeagues = readLeagues();
+    writeLeagues([...localLeagues, { ...newL, id: Date.now().toString() }], null);
+    setNewLeagueName("");
+    alert(`League created! Share code: ${code}`);
+  };
 
-    const league = fresh[idx];
-
-    // Ensure players is the new object format (migrate old string entries)
-    const normalizedPlayers = (league.players || []).map(p =>
-      typeof p === 'string' ? { username: p, joinedAt: 0 } : p
-    );
-
-    // Check if already a member
-    const alreadyMember = normalizedPlayers.some(p => p.username === currentUser);
-    if (!alreadyMember) {
-      normalizedPlayers.push({ username: currentUser, joinedAt: Date.now() });
-    }
-
-    fresh[idx] = { ...league, players: normalizedPlayers };
-    writeLeagues(fresh, bcRef.current);
-    setLeagues(fresh);
-    setSelectedLeague(fresh[idx]);
+  const handleJoin = async () => {
+    const code = joinCode.trim().toUpperCase();
+    if (!code) return;
+    const league = leagues.find(l => l.code.toUpperCase() === code);
+    if (!league) { alert("Invalid code — no league found."); return; }
+    const players = Array.isArray(league.players) ? league.players : [];
+    if (players.includes(currentUser)) { setView('detail'); setSelectedLeague(league); setJoinCode(""); return; }
+    const updatedPlayers = [...players, currentUser];
+    const updateSuccess = await updateLeagueInDb(league.id, { players: updatedPlayers });
+    if (!updateSuccess) { alert('Failed to join league.'); return; }
+    setSelectedLeague({ ...league, players: updatedPlayers });
     setJoinCode("");
     setView('detail');
   };
 
-  const handleDelete = (id) => {
+  const handleDelete = async (id) => {
     if (!window.confirm("Delete this league?")) return;
-    const updated = readLeagues().filter(l => l.id !== id);
-    writeLeagues(updated, bcRef.current);
-    setLeagues(updated);
+    const success = await deleteLeagueFromDb(id);
+    if (!success) { alert('Failed to delete league.'); return; }
+    setLeagues(leagues.filter(l => l.id !== id));
     if (selectedLeague?.id === id) setView('menu');
   };
 
-  // Helper: get array of username strings from a league's players field
-  // (handles both legacy string[] and new object[] formats)
-  const getPlayerNames = (league) =>
-    (league?.players || []).map(p => (typeof p === 'string' ? p : p.username));
+  const getPlayerNames = (league) => league?.players || [];
 
-  // ── Blitz engine ───────────────────────────────────────────────────────────
+  const endMatch = useCallback(() => {
+    const final = money + blitzStocks.reduce((acc, s) => acc + (portfolio[s.id] * s.price), 0);
+    const net = final - gameStats.startMoney;
+    setGameResult({ final, net, buys: gameStats.buys, sells: gameStats.sells, msg: net > 0 ? STOCK_WIN_REASONS[0] : STOCK_FAIL_REASONS[0] });
+    setPlaying(false);
+  }, [money, blitzStocks, portfolio, gameStats.startMoney, gameStats.buys, gameStats.sells]);
+
   useEffect(() => {
     let interval;
     if (playing && timeLeft > 0) {
@@ -223,11 +278,21 @@ export default function LeagueScreen({ currentUser: propCurrentUser }) {
         localStorage.setItem(`FIN_SYNC_${selectedLeague.id}_${currentUser}`, myWealth.toString());
 
         setBlitzStocks(cur => cur.map(s => {
-          const change = (Math.random() - 0.49) * (s.id === 'GIGA' ? 12 : 8);
-          return { ...s, price: Math.max(5, s.price + change), history: [...s.history.slice(-14), Math.max(5, s.price + change)] };
+          // ── REALISTIC FLUCTUATION ENGINE ──
+          // Use percentage-based volatility for natural price movement
+          const volatility = s.id === 'GIGA' ? 0.025 : 0.015; 
+          const randomFactor = (Math.random() - 0.485); // Slight upward bias (0.5 would be neutral)
+          const priceChange = s.price * randomFactor * volatility;
+          const newPrice = Math.max(5, s.price + priceChange);
+          
+          return { 
+            ...s, 
+            price: newPrice, 
+            history: [...s.history.slice(-29), newPrice] 
+          };
         }));
 
-        const liveLeague = readLeagues().find(l => l.id === selectedLeague.id);
+        const liveLeague = readLeagues().find(l => l.id === selectedLeague?.id);
         if (liveLeague) {
           const others = getPlayerNames(liveLeague).filter(p => p !== currentUser);
           setOpponents(others.map(p => ({
@@ -242,7 +307,7 @@ export default function LeagueScreen({ currentUser: propCurrentUser }) {
       endMatch();
     }
     return () => clearInterval(interval);
-  }, [playing, timeLeft, money, portfolio, blitzStocks, selectedLeague.id, currentUser, endMatch]);
+  }, [playing, timeLeft, money, portfolio, blitzStocks, selectedLeague?.id, currentUser, endMatch]);
 
   const trade = (id, type) => {
     const stock = blitzStocks.find(s => s.id === id);
@@ -265,14 +330,6 @@ export default function LeagueScreen({ currentUser: propCurrentUser }) {
     localStorage.setItem(key, JSON.stringify([msg, ...cur].slice(0, 10)));
   };
 
-  const endMatch = useCallback(() => {
-    const final = money + blitzStocks.reduce((acc, s) => acc + (portfolio[s.id] * s.price), 0);
-    const net = final - gameStats.startMoney;
-    setGameResult({ final, net, buys: gameStats.buys, sells: gameStats.sells, msg: net > 0 ? STOCK_WIN_REASONS[0] : STOCK_FAIL_REASONS[0] });
-    setPlaying(false);
-  }, [money, blitzStocks, portfolio, gameStats.startMoney, gameStats.buys, gameStats.sells]);
-
-  // ── Chart popup ────────────────────────────────────────────────────────────
   const YahooFinancePopup = ({ stock, onClose }) => {
     const [zoom, setZoom] = useState(1);
     const [hoverIdx, setHoverIdx] = useState(null);
@@ -298,19 +355,8 @@ export default function LeagueScreen({ currentUser: propCurrentUser }) {
             </div>
           </div>
           <div style={lS.modalGrid}>
-            <div>
-              Previous Close: <strong>{stock.prevClose}</strong><br />
-              Open: <strong>{stock.open}</strong><br />
-              Bid: <strong>{stock.bid}</strong><br />
-              Ask: <strong>{stock.ask}</strong>
-            </div>
-            <div>
-              Market Cap: <strong>{stock.marketCap}</strong><br />
-              52W Range: <strong>{stock.range52}</strong><br />
-              1Y Target Est: <strong>{stock.targetEst}</strong><br />
-              Earnings Date: <strong>{stock.earnings}</strong><br />
-              EPS (TTM): <strong>{stock.eps}</strong>
-            </div>
+            <div>Previous Close: <strong>{stock.prevClose}</strong><br />Open: <strong>{stock.open}</strong><br />Bid: <strong>{stock.bid}</strong><br />Ask: <strong>{stock.ask}</strong></div>
+            <div>Market Cap: <strong>{stock.marketCap}</strong><br />52W Range: <strong>{stock.range52}</strong><br />1Y Target Est: <strong>{stock.targetEst}</strong><br />Earnings Date: <strong>{stock.earnings}</strong><br />EPS (TTM): <strong>{stock.eps}</strong></div>
           </div>
           <div style={lS.modalChartArea}>
             <svg width={w} height={h} onMouseMove={e => {
@@ -327,14 +373,13 @@ export default function LeagueScreen({ currentUser: propCurrentUser }) {
               <polyline fill="none" stroke="#6366f1" strokeWidth={2} points={points} strokeLinecap="round" strokeLinejoin="round" />
               {slice.map((v, i) => <circle key={i} cx={scaleX(i)} cy={scaleY(v)} r={hoverIdx === i ? 5 : 3} fill={hoverIdx === i ? "#ef4444" : "#6366f1"} />)}
             </svg>
-            {hoverIdx !== null && <div style={{ marginTop: 8, fontSize: 13, color: '#334155' }}>Point: ${slice[hoverIdx].toFixed(2)} ({hoverIdx + 1 - slice.length} days)</div>}
+            {hoverIdx !== null && <div style={{ marginTop: 8, fontSize: 13, color: '#334155' }}>Point: ${slice[hoverIdx].toFixed(2)}</div>}
           </div>
         </div>
       </div>
     );
   };
 
-  // ── Render: game result ────────────────────────────────────────────────────
   if (gameResult) return (
     <div style={lS.resultContainer}><div style={lS.resultCard}>
       <h1>SESSION REPORT</h1>
@@ -348,9 +393,16 @@ export default function LeagueScreen({ currentUser: propCurrentUser }) {
     </div></div>
   );
 
-  // ── Render: playing ────────────────────────────────────────────────────────
   if (playing) return (
     <div style={{ ...lS.pageWrapper, background: '#0f172a', padding: '20px' }}>
+      {/* ── VISUAL FLUCTUATION ANIMATION STYLES ── */}
+      <style>{`
+        @keyframes flashGreen { 0% { color: #10b981; } 100% { color: #fff; } }
+        @keyframes flashRed { 0% { color: #ef4444; } 100% { color: #fff; } }
+        .price-up { animation: flashGreen 0.8s ease-out; }
+        .price-down { animation: flashRed 0.8s ease-out; }
+      `}</style>
+      
       {activePopupStock && <YahooFinancePopup stock={activePopupStock} onClose={() => setActivePopupStock(null)} />}
       {vocabPopup.visible && (
         <div ref={vocabRef} style={{ ...lS.vocabPopup, top: vocabPopup.y, left: vocabPopup.x }}>
@@ -361,10 +413,7 @@ export default function LeagueScreen({ currentUser: propCurrentUser }) {
       <div style={lS.blitzGrid}>
         <div style={lS.sidePanel}>
           <h3>🏆 Standings</h3>
-          <div style={lS.standRow}>
-            <span>1. {currentUser} (You)</span>
-            <span>${Math.round(money + blitzStocks.reduce((acc, s) => acc + (portfolio[s.id] * s.price), 0))}</span>
-          </div>
+          <div style={lS.standRow}><span>1. {currentUser} (You)</span><span>${Math.round(money + blitzStocks.reduce((acc, s) => acc + (portfolio[s.id] * s.price), 0))}</span></div>
           {opponents.sort((a, b) => b.wealth - a.wealth).map((o, i) => (
             <div key={o.name} style={lS.standRow}><span>{i + 2}. {o.name}</span><span>${Math.round(o.wealth)}</span></div>
           ))}
@@ -377,20 +426,28 @@ export default function LeagueScreen({ currentUser: propCurrentUser }) {
             <h2 style={{ color: '#ef4444' }}>⏳ {Math.floor(timeLeft / 60)}:{String(timeLeft % 60).padStart(2, '0')}</h2>
           </div>
           <table style={lS.table}>
-            <thead><tr>
-              <th onClick={e => handleVocabClick('ticker', e)}>Ticker (?)</th>
-              <th>Price</th>
-              <th onClick={e => handleVocabClick('sentiment', e)}>Sentiment (?)</th>
-            </tr></thead>
-            <tbody>{blitzStocks.map(s => (
-              <tr key={s.id} onClick={() => setSelectedStock(s)} style={{ background: selectedStock.id === s.id ? '#f8fafc' : 'none' }}>
-                <td onClick={e => { e.stopPropagation(); setActivePopupStock(s); }} style={{ color: '#6366f1', textDecoration: 'underline', cursor: 'pointer' }}>{s.id}</td>
-                <td>${s.price.toFixed(2)}</td>
-                <td>{s.sentiment}</td>
-              </tr>
-            ))}</tbody>
+            <thead><tr><th onClick={e => handleVocabClick('ticker', e)}>Ticker (?)</th><th>Price</th><th onClick={e => handleVocabClick('sentiment', e)}>Sentiment (?)</th></tr></thead>
+            <tbody>{blitzStocks.map(s => {
+              // ── FLUCTUATION LOGIC ──
+              const lastTwo = s.history.slice(-2);
+              const isUp = lastTwo.length === 2 && lastTwo[1] > lastTwo[0];
+              const isDown = lastTwo.length === 2 && lastTwo[1] < lastTwo[0];
+              const flashClass = isUp ? "price-up" : isDown ? "price-down" : "";
+
+              return (
+                <tr key={s.id} onClick={() => setSelectedStock(s)} style={{ background: selectedStock.id === s.id ? '#f8fafc' : 'none', color: selectedStock.id === s.id ? '#1e293b' : '#fff' }}>
+                  <td onClick={e => { e.stopPropagation(); setActivePopupStock(s); }} style={{ color: '#6366f1', textDecoration: 'underline', cursor: 'pointer' }}>{s.id}</td>
+                  <td className={flashClass} style={{ fontWeight: 'bold', fontFamily: 'monospace' }}>
+                    ${s.price.toFixed(2)}
+                    {isUp && <span style={{ color: '#10b981', marginLeft: '4px', fontSize: '10px' }}>▲</span>}
+                    {isDown && <span style={{ color: '#ef4444', marginLeft: '4px', fontSize: '10px' }}>▼</span>}
+                  </td>
+                  <td>{s.sentiment}</td>
+                </tr>
+              );
+            })}</tbody>
           </table>
-          <div style={lS.tradeBar}>
+          <div style={{ ...lS.tradeBar, color: '#1e293b' }}>
             <h3>{selectedStock.name}</h3>
             <p style={{ fontSize: '12px', color: '#64748b' }}>Cash: ${money.toFixed(2)} · Holdings: {portfolio[selectedStock.id]} shares</p>
             <div style={{ display: 'flex', gap: '10px' }}>
@@ -403,12 +460,10 @@ export default function LeagueScreen({ currentUser: propCurrentUser }) {
     </div>
   );
 
-  // ── Render: league detail ──────────────────────────────────────────────────
   if (view === 'detail' && selectedLeague) {
-    // Re-read fresh league data from storage so player list is always current
-    const freshLeague = readLeagues().find(l => l.id === selectedLeague.id) || selectedLeague;
+    const freshLeague = leagues.find(l => l.id === selectedLeague.id) || selectedLeague;
     const playerNames = getPlayerNames(freshLeague);
-    const isCreator = freshLeague.createdBy === currentUser; // ← strict equality with THIS account
+    const isCreator = freshLeague.creator_id === userId;
 
     return (
       <div style={lS.menuContainer}>
@@ -416,22 +471,12 @@ export default function LeagueScreen({ currentUser: propCurrentUser }) {
         <div style={lS.leagueBanner}>
           <h1>{freshLeague.name}</h1>
           <p>Competition Hub · Logged in as: <strong>{currentUser}</strong></p>
-          {freshLeague.createdBy && (
-            <p style={{ fontSize: '12px', color: 'rgba(255,255,255,0.7)' }}>
-              Created by: {freshLeague.createdBy}{isCreator ? ' (you)' : ''}
-            </p>
-          )}
+          {isCreator && <p style={{ fontSize: '12px', color: 'rgba(255,255,255,0.7)' }}>Created by: You</p>}
         </div>
         <div style={lS.detailLayout}>
           <div style={lS.card}>
             <h3>Players ({playerNames.length})</h3>
-            {playerNames.map((p, i) => (
-              <div key={p} style={lS.standRow}>
-                {i + 1}. {p}
-                {p === freshLeague.createdBy && <span style={{ fontSize: '11px', color: '#6366f1', marginLeft: 4 }}>(Creator)</span>}
-                {p === currentUser && <span style={{ fontSize: '11px', color: '#10b981', marginLeft: 4 }}>(You)</span>}
-              </div>
-            ))}
+            {playerNames.map((p, i) => <div key={p} style={lS.standRow}>{i + 1}. {p} {p === currentUser && <span style={{ fontSize: '11px', color: '#10b981', marginLeft: 4 }}>(You)</span>}</div>)}
           </div>
           <div style={lS.card}>
             <h3>Blitz Sim</h3>
@@ -443,81 +488,45 @@ export default function LeagueScreen({ currentUser: propCurrentUser }) {
               setGameStats({ buys: 0, sells: 0, startMoney: 1000 });
               setPlaying(true);
             }}>🚀 Start Match</button>
-            {isCreator && (
-              <button style={{ ...lS.playBtn, background: '#ef4444', marginTop: '10px' }} onClick={() => handleDelete(freshLeague.id)}>
-                🗑 Delete League
-              </button>
-            )}
+            {isCreator && <button style={{ ...lS.playBtn, background: '#ef4444', marginTop: '10px' }} onClick={() => handleDelete(freshLeague.id)}>🗑 Delete League</button>}
           </div>
         </div>
       </div>
     );
   }
 
-  // ── Render: main menu ──────────────────────────────────────────────────────
   return (
     <div style={lS.pageWrapper}>
       <div style={lS.menuContainer}>
-        {/* User identity banner */}
         <div style={{ background: '#eef2ff', border: '2px solid #6366f1', borderRadius: '12px', padding: '12px 20px', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '10px' }}>
           <span style={{ fontSize: '20px' }}>👤</span>
           <span style={{ fontWeight: 'bold', color: '#3730a3' }}>Logged in as: {currentUser}</span>
         </div>
-
-        {/* Create / Join */}
         <div style={{ ...lS.joinBox, background: '#eef2ff', border: '2px solid #6366f1', flexDirection: 'column' }}>
           <h3 style={{ margin: 0 }}>Tournament Hub</h3>
-          <p style={{ fontSize: '12px', color: '#6366f1' }}>Create or join hubs with unique codes.</p>
           <div style={{ display: 'flex', gap: '10px', width: '100%', margin: '15px 0' }}>
             <input style={lS.joinInput} placeholder="New League Name..." value={newLeagueName} onChange={e => setNewLeagueName(e.target.value)} />
-            <select style={lS.joinInput} value={leaguePrivacy} onChange={e => setLeaguePrivacy(e.target.value)}>
-              <option value="public">Public</option>
-              <option value="private">Private</option>
-            </select>
+            <select style={lS.joinInput} value={leaguePrivacy} onChange={e => setLeaguePrivacy(e.target.value)}><option value="public">Public</option><option value="private">Private</option></select>
             <button style={lS.joinBtn} onClick={handleCreate}>Create</button>
           </div>
           <div style={{ width: '100%', borderTop: '1px solid #d1d5db', paddingTop: '15px' }}>
-            <label style={{ fontSize: '11px', fontWeight: '900' }}>JOIN BY CODE</label>
             <div style={{ display: 'flex', gap: '10px', marginTop: '5px' }}>
               <input style={lS.joinInput} placeholder="Enter code..." value={joinCode} onChange={e => setJoinCode(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleJoin()} />
               <button style={lS.joinBtn} onClick={handleJoin}>Join</button>
             </div>
           </div>
         </div>
-
-        {/* League list */}
         <h2>Available Hubs</h2>
         <div style={lS.grid}>
-          {leagues.filter(l => {
-            // ✅ Public leagues: always visible to everyone
-            if (l.visibility === 'public') return true;
-            // ✅ Private leagues: visible only if you created it or are already a member
-            if (l.createdBy === currentUser) return true;
-            if (getPlayerNames(l).includes(currentUser)) return true;
-            return false;
-          }).map(l => {
-            const playerNames = getPlayerNames(l);
-            const isCreator = l.createdBy === currentUser;
+          {leagues.map(l => {
+            const names = getPlayerNames(l);
+            const isMember = names.includes(currentUser);
+            if (l.visibility === 'private' && !isMember && l.creator_id !== userId) return null;
             return (
               <div key={l.id} style={lS.leagueCard} onClick={() => { setSelectedLeague(l); setView('detail'); }}>
                 <span>{l.visibility === 'public' ? '🏫' : '🔒'}</span>
-                <div>
-                  <strong>{l.name}</strong>
-                  <br />
-                  <small>
-                    {playerNames.length} Player{playerNames.length !== 1 ? 's' : ''}
-                    {l.createdBy ? ` · Creator: ${l.createdBy}` : ''}
-                    {l.visibility === 'public' ? ` · Code: ${l.code}` : isCreator || playerNames.includes(currentUser) ? ` · Code: ${l.code}` : ''}
-                  </small>
-                </div>
-                <div style={{ marginLeft: 'auto', display: 'flex', gap: '5px' }}>
-                  {(isCreator || playerNames.includes(currentUser)) && (
-                    <button onClick={e => { e.stopPropagation(); navigator.clipboard.writeText(l.code); alert("Code copied!"); }} style={lS.copyBtn}>Copy</button>
-                  )}
-                  {isCreator && (
-                    <button onClick={e => { e.stopPropagation(); handleDelete(l.id); }} style={{ ...lS.copyBtn, color: '#ef4444' }}>Delete</button>
-                  )}
-                </div>
+                <div><strong>{l.name}</strong><br /><small>{names.length} Players · Code: {l.code}</small></div>
+                <div style={{ marginLeft: 'auto' }}><button onClick={e => { e.stopPropagation(); navigator.clipboard.writeText(l.code); alert("Code copied!"); }} style={lS.copyBtn}>Copy</button></div>
               </div>
             );
           })}
@@ -542,14 +551,14 @@ const lS = {
   standRow: { display: 'flex', justifyContent: 'space-between', padding: '10px 0', borderBottom: '1px solid #f1f5f9', alignItems: 'center' },
   blitzGrid: { display: 'grid', gridTemplateColumns: '250px 1fr', gap: '20px', maxWidth: '1200px', margin: '0 auto' },
   sidePanel: { background: '#1e293b', padding: '20px', borderRadius: '15px', color: '#fff' },
-  mainPanel: { background: '#fff', padding: '20px', borderRadius: '15px' },
+  mainPanel: { background: '#1e293b', padding: '20px', borderRadius: '15px', color: '#fff' },
   table: { width: '100%', borderCollapse: 'collapse', marginTop: '20px' },
   tradeBar: { marginTop: '20px', padding: '20px', background: '#f8fafc', borderRadius: '15px' },
   playBtn: { flex: 1, padding: '15px', border: 'none', borderRadius: '10px', color: '#fff', fontWeight: 'bold', cursor: 'pointer', display: 'block', width: '100%' },
-  vocabPopup: { position: 'fixed', zIndex: 9999, background: '#fff', padding: '15px', borderRadius: '12px', width: '200px', boxShadow: '0 10px 25px rgba(0,0,0,0.2)', border: '1px solid #6366f1' },
+  vocabPopup: { position: 'fixed', zIndex: 9999, background: '#fff', padding: '15px', borderRadius: '12px', width: '200px', boxShadow: '0 10px 25px rgba(0,0,0,0.2)', border: '1px solid #6366f1', color: '#1e293b' },
   minBtn: { border: 'none', background: 'none', cursor: 'pointer', fontWeight: 'bold' },
   modalOverlay: { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.8)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10000 },
-  modalContent: { background: '#fff', padding: '30px', borderRadius: '25px', maxWidth: '500px', width: '90%', maxHeight: '90vh', overflowY: 'auto' },
+  modalContent: { background: '#fff', padding: '30px', borderRadius: '25px', maxWidth: '500px', width: '90%', maxHeight: '90vh', overflowY: 'auto', color: '#1e293b' },
   modalHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
   modalPriceRow: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', margin: '10px 0' },
   modalGrid: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', fontSize: '14px', margin: '10px 0' },

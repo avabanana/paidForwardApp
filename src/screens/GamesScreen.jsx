@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useCallback } from "react";
 
 const STOCK_FAIL_REASONS = [
   "The company missed its quarterly earnings by 40%. Investors panicked and sold off.",
@@ -22,33 +22,140 @@ const STOCK_WIN_REASONS = [
   "A prominent hedge fund disclosed a large stake. Retail investors followed the signal."
 ];
 
+// Generate insights based on game performance
+const generateGameInsight = (activeGame, gameStats, finalMoney, startMoney, config) => {
+  const netProfit = finalMoney - startMoney;
+  const isWin = finalMoney >= (config.startingCash * config.marketWinMultiplier);
+  const profitPercentage = ((netProfit / startMoney) * 100).toFixed(1);
+
+  if (activeGame === 'Market' || activeGame === 'Crypto') {
+    const totalTrades = (gameStats.buys || 0) + (gameStats.sells || 0);
+    const buyToSellRatio = gameStats.buys / Math.max(1, gameStats.sells);
+    
+    if (netProfit > 0) {
+      if (buyToSellRatio > 3) {
+        return `You made ${profitPercentage}% profit! 📈 Notice: You bought much more than you sold (${gameStats.buys} buys vs ${gameStats.sells} sells). Consider locking in gains faster to reduce risk exposure.`;
+      } else if (buyToSellRatio < 0.5) {
+        return `You made ${profitPercentage}% profit! 📈 Smart timing on your exits. You sold at favorable prices (${gameStats.sells} sells vs ${gameStats.buys} buys). Keep your profit-taking discipline sharp.`;
+      } else {
+        return `You made ${profitPercentage}% profit! 📈 Balanced trading approach. You executed ${totalTrades} trades with discipline. Look for ways to increase position size on high-conviction bets.`;
+      }
+    } else {
+      if (gameStats.buys === 0) {
+        return `You lost ${Math.abs(profitPercentage)}% by sitting in cash. 😬 Fear of missing out? In volatile markets, even bad timing beats zero participation. Start smaller next time.`;
+      } else if (buyToSellRatio > 2) {
+        return `You lost ${Math.abs(profitPercentage)}% by holding losers too long. 📉 You bought ${gameStats.buys} times but only sold ${gameStats.sells} times. Cut losses faster and preserve capital.`;
+      } else {
+        return `You lost ${Math.abs(profitPercentage)}%. 📉 Market volatility got the better of you. Review: avoid trading based on emotion. Set stop-losses before entering positions.`;
+      }
+    }
+  } else if (activeGame === 'Budget') {
+    if (finalMoney > startMoney * 1.2) {
+      return `You budgeted excellently—nearly ${profitPercentage}% growth! 💰 You made smart spending cuts and avoided temptation. This discipline is the foundation of financial success.`;
+    } else if (finalMoney > startMoney * 0.9) {
+      return `Solid budget management—${profitPercentage}% net change. 💭 You stayed mostly on track. Next challenge: find even bigger wins by cutting discretionary spending further.`;
+    } else {
+      return `You struggled with the budget—lost ${Math.abs(profitPercentage)}%. 📉 Identify one major expense category to cut by 20% next time. Small changes compound.`;
+    }
+  } else if (activeGame === 'Credit') {
+    if (finalMoney >= startMoney * 0.8) {
+      return `You survived credit challenges well—only ${Math.abs(profitPercentage)}% loss. 🎯 You prioritized minimum payments and avoided maxing cards. Keep that discipline!`;
+    } else if (finalMoney > 0) {
+      return `Your credit decisions cost you. Lost ${Math.abs(profitPercentage)}%. 😰 Too many high-interest purchases. In the real world, one missed payment can tank your credit score for years`;
+    } else {
+      return `Bankruptcy. 🚫 You took on debt without a repayment plan. Real lesson: never borrow without a clear way to pay it back within 6 months.`;
+    }
+  } else if (activeGame === 'Save') {
+    if (finalMoney >= startMoney * 1.5) {
+      return `Exceptional savings discipline—${profitPercentage}% growth! 🏆 You resisted spending and let compound interest work. This mentality builds generational wealth.`;
+    } else if (finalMoney > startMoney) {
+      return `Good saving—${profitPercentage}% growth. 📈 Solid start! Remember: even 5-10% annual growth compounds to life-changing wealth over decades.`;
+    } else {
+      return `You couldn't save. Spent ${Math.abs(profitPercentage)}% of your money. 😞 Identify where your money goes each month. Can't save what you don't track.`;
+    }
+  } else if (activeGame === 'Hustle') {
+    if (finalMoney >= startMoney * 2) {
+      return `Your side hustle thrived—${profitPercentage}% ROI! 🚀 Smart investment in tools and marketing. In reality, the first $1k is hardest; keep reinvesting profits.`;
+    } else if (finalMoney > startMoney) {
+      return `Your business is profitable—${profitPercentage}% gain. 📊 You invested wisely in growth. Next: scale by hiring or expanding into new products/markets.`;
+    } else {
+      return `Your startup failed—lost ${Math.abs(profitPercentage)}%. 💔 Lesson: most businesses take $500-$2k upfront to even start making money. Budget conservatively.`;
+    }
+  }
+  
+  return `You ${isWin ? 'won' : 'lost'}. Final wealth: $${Math.round(finalMoney)}. ${netProfit > 0 ? STOCK_WIN_REASONS[Math.floor(Math.random() * STOCK_WIN_REASONS.length)] : STOCK_FAIL_REASONS[Math.floor(Math.random() * STOCK_FAIL_REASONS.length)]}`;
+};
+
 const INITIAL_STOCKS = [
   { 
     id: 'GIGA', name: 'GigaSoft Tech', price: 250, history: [240, 245, 238, 252, 248, 255, 250], sector: 'Technology', pe: '45.2', sentiment: 'Bullish', yield: '0.5%', 
     prevClose: 248.12, open: 249.50, bid: "250.10 x 1200", ask: "250.45 x 800", range52: "180.50 - 310.20", volume: "45.2M", marketCap: "2.4T", beta: "1.45", eps: "5.12", earnings: "Oct 24, 2024", targetEst: "320.00",
-    desc: "A high-growth software giant specializing in Enterprise AI and Cloud Infrastructure." 
+    desc: "A high-growth software giant specializing in Enterprise AI and Cloud Infrastructure.",
+    basePrice: 250,
+    volatility: 0.15,
+    trend: 0.02
   },
   { 
     id: 'VOY', name: 'Voyager Energy', price: 85, history: [82, 84, 86, 85, 87, 86, 85], sector: 'Energy', pe: '9.4', sentiment: 'Neutral', yield: '6.2%', 
     prevClose: 84.50, open: 85.10, bid: "84.90 x 400", ask: "85.20 x 1100", range52: "62.00 - 95.40", volume: "12.8M", marketCap: "450B", beta: "0.85", eps: "8.90", earnings: "Nov 02, 2024", targetEst: "105.00",
-    desc: "A traditional oil producer pivoting to offshore wind and hydrogen storage." 
+    desc: "A traditional oil producer pivoting to offshore wind and hydrogen storage.",
+    basePrice: 85,
+    volatility: 0.10,
+    trend: -0.01
   },
   { 
     id: 'MART', name: 'MegaMart Corp', price: 120, history: [125, 122, 121, 119, 118, 122, 120], sector: 'Retail', pe: '18.2', sentiment: 'Bearish', yield: '2.1%', 
     prevClose: 121.20, open: 120.50, bid: "119.80 x 2000", ask: "120.10 x 1500", range52: "105.00 - 158.00", volume: "22.1M", marketCap: "890B", beta: "1.10", eps: "4.25", earnings: "Sep 15, 2024", targetEst: "110.00",
-    desc: "Global retail chain facing high labor costs and fierce e-commerce competition." 
+    desc: "Global retail chain facing high labor costs and fierce e-commerce competition.",
+    basePrice: 120,
+    volatility: 0.12,
+    trend: -0.03
   },
   { 
     id: 'SPY', name: 'S&P Lite Index', price: 400, history: [395, 398, 402, 399, 401, 399, 400], sector: 'Index Fund', pe: '21.0', sentiment: 'Bullish', yield: '1.8%', 
     prevClose: 399.10, open: 400.00, bid: "400.05 x 5000", ask: "400.15 x 5000", range52: "350.00 - 460.00", volume: "85M", marketCap: "N/A", beta: "1.00", eps: "N/A", earnings: "N/A", targetEst: "480.00",
-    desc: "A basket of the 500 largest US companies. Lower risk, diversified exposure." 
+    desc: "A basket of the 500 largest US companies. Lower risk, diversified exposure.",
+    basePrice: 400,
+    volatility: 0.08,
+    trend: 0.01
   },
   { 
     id: 'GLD', name: 'Digital Gold', price: 1800, history: [1780, 1795, 1810, 1805, 1790, 1800, 1800], sector: 'Commodity', pe: 'N/A', sentiment: 'Neutral', yield: '0%', 
     prevClose: 1798.50, open: 1800.00, bid: "1799.50 x 100", ask: "1801.00 x 150", range52: "1600 - 2100", volume: "2.1M", marketCap: "N/A", beta: "0.15", eps: "N/A", earnings: "N/A", targetEst: "2200.00",
-    desc: "A digital asset backed by physical gold bullion stored in secure vaults." 
+    desc: "A digital asset backed by physical gold bullion stored in secure vaults.",
+    basePrice: 1800,
+    volatility: 0.09,
+    trend: 0.005
   }
 ];
+
+// Realistic price update algorithm
+const updateStockPrice = (stock, marketSentiment = 0) => {
+  const { price, basePrice, volatility, trend } = stock;
+  
+  // 1. Add trend component (momentum)
+  const trendComponent = trend * price * (Math.random() - 0.3); // Momentum with some noise
+  
+  // 2. Add volatility component (random walk, adjusted by market sentiment)
+  const volatilityComponent = (Math.random() - 0.5) * volatility * price * (1 + marketSentiment * 0.5);
+  
+  // 3. Add mean reversion (price tends back toward basePrice)
+  const deviationFromBase = price - basePrice;
+  const meanReversionComponent = -deviationFromBase * 0.02; // Pull back 2% per period
+  
+  // 4. Calculate new price
+  let newPrice = price + trendComponent + volatilityComponent + meanReversionComponent;
+  
+  // 5. Add floor/ceiling based on 52-week range  
+  const range52Low = basePrice * 0.7;
+  const range52High = basePrice * 1.4;
+  newPrice = Math.max(range52Low, Math.min(range52High, newPrice));
+  
+  // Ensure minimum price of $5
+  newPrice = Math.max(5, newPrice);
+  
+  return newPrice;
+};
 
 const VOCAB_HELPER = {
   pe: "Price-to-Earnings Ratio: Measures a company's current share price relative to its per-share earnings. High P/E often means investors expect high growth.",
@@ -152,10 +259,10 @@ export default function GamesScreen({ userTier, onGameEnd, onNavigate, userName 
     const finalWealth = calculateTotalWealth();
     setMoney(finalWealth);
     const net = finalWealth - gameStats.startMoney;
-    const qualitative = net > 0 ? STOCK_WIN_REASONS[Math.floor(Math.random() * STOCK_WIN_REASONS.length)] : STOCK_FAIL_REASONS[Math.floor(Math.random() * STOCK_FAIL_REASONS.length)];
+    const insight = generateGameInsight('Crypto', gameStats, finalWealth, gameStats.startMoney, config);
     
     setGameResult('report');
-    setTradeMessage(`Blitz Competition Report: You made ${gameStats.buys} buys and ${gameStats.sells} sells. Your net profit/loss was $${Math.round(net)}. ${qualitative}`);
+    setTradeMessage(insight);
     if (onGameEnd) onGameEnd(net > 0 ? 'won' : 'lost');
   };
 
@@ -163,17 +270,16 @@ export default function GamesScreen({ userTier, onGameEnd, onNavigate, userName 
     let interval;
     if (playing && activeGame === 'Blitz' && timeLeft > 0) {
       interval = setInterval(() => {
+        // ── RANDOMIZED PRICE FLUCTUATION LOGIC ──
+        setBlitzStocks(current => current.map(s => {
+          const marketSentiment = Math.random() - 0.5; // New sentiment every second
+          const newPrice = updateStockPrice(s, marketSentiment);
+          return { ...s, price: newPrice, history: [...s.history.slice(-14), newPrice] };
+        }));
+
         // Broadcast local user wealth to global space
         const myWealth = calculateTotalWealth();
         localStorage.setItem(`FIN_SYNC_LEAGUE_${selectedLeague.id}_USER_${currentUser}`, myWealth.toString());
-
-        // Update local market prices
-        setBlitzStocks(current => current.map(s => {
-          const vol = s.id === 'GIGA' ? 12 : (s.id === 'SPY' ? 3 : 8);
-          const change = (Math.random() - 0.49) * vol;
-          const next = Math.max(5, s.price + change);
-          return { ...s, price: next, history: [...s.history.slice(-14), next] };
-        }));
 
         // Read opponent wealth from shared storage
         const currentLeagueData = JSON.parse(localStorage.getItem("FIN_LEAGUES_GLOBAL") || "[]").find(l => l.id === selectedLeague.id);
@@ -329,7 +435,13 @@ export default function GamesScreen({ userTier, onGameEnd, onNavigate, userName 
   const endGame = (finalMoney) => {
     const winThreshold = (activeGame === 'Market' || activeGame === 'Crypto') ? config.startingCash * config.marketWinMultiplier : activeGame === 'Save' ? config.startingCash * config.saveWinMultiplier : config.startingCash * config.winMultiplier;
     const won = finalMoney >= winThreshold;
-    setMoney(finalMoney); setGameResult(won ? 'won' : 'lost');
+    
+    // Generate detailed insight
+    const insight = generateGameInsight(activeGame, gameStats, finalMoney, gameStats.startMoney || config.startingCash, config);
+    setTradeMessage(insight);
+    
+    setMoney(finalMoney); 
+    setGameResult(won ? 'won' : 'lost');
     if (onGameEnd) onGameEnd(won ? 'won' : 'lost');
   };
 
@@ -643,7 +755,7 @@ const gS = {
   tradeMsg: { padding:'16px', borderRadius:'16px', border:'2px solid', marginBottom:'20px', fontSize:'14px', fontWeight:'600' },
   choiceRow: { display:'flex', flexDirection:'column', gap:'12px' },
   choiceBtn: { display:'flex', justifyContent:'space-between', padding:'18px', borderRadius:'16px', border:'none', color:'#fff', cursor:'pointer', fontWeight:'700' },
-  choiceBtnSecondary: { display:'flex', justifyContent:'space-between', padding:'18px', borderRadius:'16px', border:'2px solid #e2e8f0', background:'#fff', cursor:'pointer', fontWeight:'700' },
+  choiceBtnSecondary: { display:'flex', justifyContent:'space-between', padding:'18px', borderRadius:'16px', border:'1px solid #e2e8f0', background:'#fff', cursor:'pointer', fontWeight:'700' },
   quitBtn: { display:'block', margin:'20px auto', background:'none', border:'none', color:'#94a3b8', fontWeight:'700', cursor:'pointer' },
   resultContainer: { minHeight:'100vh', display:'flex', alignItems:'center', justifyContent:'center', padding:'20px' },
   resultCard: { maxWidth:'450px', width:'100%', padding:'40px', borderRadius:'32px', textAlign:'center', color:'#fff', boxShadow:'0 30px 60px rgba(0,0,0,0.2)' },

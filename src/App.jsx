@@ -13,6 +13,8 @@ import LeagueScreen from './screens/LeagueScreen.jsx';
 import MapScreen from './screens/MapScreen.jsx';
 import SettingsScreen from './screens/SettingsScreen.jsx';
 import OnboardingScreen from './screens/OnboardingScreen.jsx';
+import WelcomeScreen from './screens/WelcomeScreen.jsx';
+import TourOverlay from './components/TourOverlay.jsx';
 
 const EMPTY_STATS = {
   xp: 0,
@@ -33,6 +35,9 @@ function App() {
   const [activeTab, setActiveTab] = useState('Home');
   const [achievementPopup, setAchievementPopup] = useState('');
   const [stats, setStats] = useState(EMPTY_STATS);
+  const [showWelcome, setShowWelcome] = useState(false);
+  const [showTour, setShowTour] = useState(false);
+  const [createdAt, setCreatedAt] = useState(null);
 
   const displayName = stats.username || user?.user_metadata?.username || user?.email?.split('@')[0] || 'Guest';
 
@@ -44,6 +49,8 @@ function App() {
   useEffect(() => {
     if (!user) {
       setStats(EMPTY_STATS);
+      setShowWelcome(false);
+      setShowTour(false);
       return;
     }
 
@@ -60,6 +67,24 @@ function App() {
           ...data,
           username: data.username || user.user_metadata?.username || user.email?.split('@')[0],
         });
+        
+        // Check if user just signed up (created less than 2 minutes ago)
+        if (data.created_at) {
+          const createdTime = new Date(data.created_at);
+          const now = new Date();
+          const ageInMinutes = (now - createdTime) / (1000 * 60);
+          const hasSeenWelcome = localStorage.getItem(`welcome_shown_${user.id}`);
+          
+          if (ageInMinutes < 2 && !hasSeenWelcome) {
+            setShowWelcome(true);
+          }
+        }
+      } else {
+        // If user doesn't exist in DB, they just signed up
+        const hasSeenWelcome = localStorage.getItem(`welcome_shown_${user.id}`);
+        if (!hasSeenWelcome) {
+          setShowWelcome(true);
+        }
       }
     };
 
@@ -130,6 +155,15 @@ function App() {
     setActiveTab('Home');
   };
 
+  const handleWelcomeComplete = (result) => {
+    setShowWelcome(false);
+    localStorage.setItem(`welcome_shown_${user?.id}`, 'true');
+    
+    if (result?.startTour) {
+      setShowTour(true);
+    }
+  };
+
   const handleUsernameUpdate = (newName) => {
     setStats((prev) => ({ ...prev, username: newName }));
   };
@@ -137,7 +171,7 @@ function App() {
   const renderScreen = () => {
     switch (activeTab) {
       case 'Home': return <HomeScreen userTier={stats.tier} onNavigate={(tab) => setActiveTab(tab)} />;
-      case 'Courses': return <CoursesScreen courseProgressMap={stats.courseProgressMap} setCourseProgressMap={(id, prog) => updateData({ [`courseProgressMap.${id}`]: prog })} onCourseComplete={handleCourseComplete} userTier={stats.tier} username={displayName} />;
+      case 'Courses': return <CoursesScreen courseProgressMap={stats.courseProgressMap} setCourseProgressMap={(progressKey, value) => updateData({ courseProgressMap: { ...(stats.courseProgressMap || {}), [progressKey]: value } })} onCourseComplete={handleCourseComplete} userTier={stats.tier} username={displayName} />;
       case 'Games': return <GamesScreen userTier={stats.tier} onGameEnd={handleGameEnd} onNavigate={(tab) => setActiveTab(tab)} />;
       case 'Discussion': return <DiscussionScreen currentUser={displayName} streak={stats.streak} userId={user?.id} />;
       case 'Progress': return <ProgressScreen xp={stats.xp} gameWins={stats.gameWins} gamesPlayed={stats.gamesPlayed} streak={stats.streak} coursesCompleted={stats.coursesCompleted} userTier={stats.tier} userId={user?.id} achievements={stats.achievements || []} updateData={updateData} onAchievementUnlocked={triggerAchievementPopup} onNavigate={(tab) => setActiveTab(tab)} />;
@@ -157,6 +191,20 @@ function App() {
   return (
     <div style={styles.container}>
       {achievementPopup && <div style={styles.achievementToast}>🏆 {achievementPopup}</div>}
+      
+      {showWelcome && (
+        <WelcomeScreen 
+          username={displayName}
+          onWelcomeComplete={handleWelcomeComplete}
+          userTier={stats.tier}
+        />
+      )}
+      
+      {showTour && (
+        <TourOverlay 
+          onTourComplete={() => setShowTour(false)}
+        />
+      )}
 
       <header style={styles.header}>
         <div style={styles.headerLeft}>
@@ -173,6 +221,7 @@ function App() {
             return (
               <button
                 key={tab}
+                data-tour={tab.toLowerCase()}
                 onClick={() => setActiveTab(tab)}
                 style={{
                   ...styles.navItem,
