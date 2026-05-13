@@ -13,15 +13,15 @@ const dailyTips = [
 
 const countryData = [
   { 
-    name: "Norway", rate: "71%", left: "51.5%", top: "20%", 
+    name: "Norway", rate: "71%", left: "43%", top: "26%", 
     info: "Global leader. Norway integrates financial education into the national curriculum from a very young age, focusing heavily on the social security system and long-term equity savings." 
   },
   { 
-    name: "Canada", rate: "68%", left: "18%", top: "26%", 
+    name: "Canada", rate: "68%", left: "12%", top: "26%", 
     info: "Strong performance across all demographics. Canadians excel in understanding interest and inflation, supported by high transparency in the banking sector and accessible public resources." 
   },
   { 
-    name: "United Kingdom", rate: "67%", left: "46.5%", top: "33%", 
+    name: "United Kingdom", rate: "67%", left: "40%", top: "31%", 
     info: "The UK has a robust 'Money and Pensions Service' providing free advice. Literacy is driven by high engagement with digital banking and a mature mortgage market." 
   },
   { 
@@ -29,23 +29,23 @@ const countryData = [
     info: "Australia's mandatory retirement saving (Superannuation) forces early engagement with investment concepts, leading to high literacy in compound interest and market risk." 
   },
   { 
-    name: "United States", rate: "57%", left: "18%", top: "41%", 
+    name: "United States", rate: "57%", left: "12%", top: "37%", 
     info: "The US has strong credit knowledge but a significant gap in understanding investment risk. 401(k) plans are the primary driver for middle-class financial engagement." 
   },
   { 
-    name: "South Africa", rate: "42%", left: "54.5%", top: "76%", 
+    name: "South Africa", rate: "42%", left: "48%", top: "75%", 
     info: "The highest in Africa. South Africa uses 'Stokvels' (communal saving clubs) as a primary vehicle for financial literacy, teaching budgeting through community trust." 
   },
   { 
-    name: "Brazil", rate: "35%", left: "28%", top: "68%", 
+    name: "Brazil", rate: "35%", left: "24%", top: "63%", 
     info: "Brazil is rapidly improving literacy through Fintech. The 'Pix' instant payment system and high-yield digital accounts have introduced millions to basic banking concepts recently." 
   },
   { 
-    name: "India", rate: "24%", left: "71%", top: "54%", 
+    name: "India", rate: "24%", left: "67%", top: "48%", 
     info: "India is closing the gap via a 'Mobile First' strategy. Unified Payments Interface (UPI) has revolutionized how rural populations manage money and understand digital transactions." 
   },
   { 
-    name: "China", rate: "28%", left: "79%", top: "43%", 
+    name: "China", rate: "28%", left: "69%", top: "38%", 
     info: "High mathematical proficiency, but lower familiarity with diverse financial products. The transition from cash to Alipay/WeChat Pay has fundamentally shifted how citizens track spending." 
   },
 ];
@@ -115,7 +115,13 @@ export default function HomeScreen({ onNavigate, userTier }) {
                 ))}
 
                 {hoveredCountry && (
-                  <div style={styles.mapTooltip}>
+                  <div style={{ 
+                    ...styles.mapTooltip, 
+                    top: hoveredCountry.top, 
+                    left: hoveredCountry.left, 
+                    bottom: 'auto',
+                    transform: 'translate(15px, -50%)' 
+                  }}>
                     <div style={styles.tooltipHeader}>
                       <strong>{hoveredCountry.name}</strong>
                       <span style={styles.rateBadge}>{hoveredCountry.rate} Literate</span>
@@ -240,7 +246,7 @@ const styles = {
   mapImage: { width: '100%', display: 'block', borderRadius: '12px' },
   hotspot: { position: 'absolute', width: '12px', height: '12px', background: '#6366f1', border: '3px solid #fff', borderRadius: '50%', cursor: 'pointer', transform: 'translate(-50%, -50%)', zIndex: 5 },
   ping: { position: 'absolute', inset: -6, background: '#6366f1', borderRadius: '50%', animation: 'pulse 2s infinite' },
-  mapTooltip: { position: 'absolute', bottom: '20px', left: '20px', width: '300px', background: '#1e1b4b', color: '#fff', padding: '20px', borderRadius: '20px', zIndex: 20, boxShadow: '0 10px 30px rgba(0,0,0,0.5)' },
+  mapTooltip: { position: 'absolute', bottom: '20px', left: '20px', width: '300px', background: '#1e1b4b', color: '#fff', padding: '20px', borderRadius: '20px', zIndex: 20, boxShadow: '0 10px 30px rgba(0,0,0,0.5)', pointerEvents: 'none' },
   tooltipHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' },
   rateBadge: { background: '#10b981', padding: '2px 8px', borderRadius: '6px', fontSize: '12px', fontWeight: 'bold' },
   tooltipText: { fontSize: '13px', lineHeight: '1.5', margin: 0, opacity: 0.9 },

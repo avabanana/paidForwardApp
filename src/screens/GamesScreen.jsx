@@ -28,7 +28,7 @@ const generateGameInsight = (activeGame, gameStats, finalMoney, startMoney, conf
   const isWin = finalMoney >= (config.startingCash * config.marketWinMultiplier);
   const profitPercentage = ((netProfit / startMoney) * 100).toFixed(1);
 
-  if (activeGame === 'Market' || activeGame === 'Crypto') {
+  if (activeGame === 'Market' || activeGame === 'Crypto' || activeGame === 'Blitz') {
     const totalTrades = (gameStats.buys || 0) + (gameStats.sells || 0);
     const buyToSellRatio = gameStats.buys / Math.max(1, gameStats.sells);
     
@@ -83,7 +83,7 @@ const generateGameInsight = (activeGame, gameStats, finalMoney, startMoney, conf
     }
   }
   
-  return `You ${isWin ? 'won' : 'lost'}. Final wealth: $${Math.round(finalMoney)}. ${netProfit > 0 ? STOCK_WIN_REASONS[Math.floor(Math.random() * STOCK_WIN_REASONS.length)] : STOCK_FAIL_REASONS[Math.floor(Math.random() * STOCK_FAIL_REASONS.length)]}`;
+  return `You ${finalMoney >= startMoney ? 'won' : 'lost'}. Final wealth: $${Math.round(finalMoney)}. ${netProfit > 0 ? STOCK_WIN_REASONS[Math.floor(Math.random() * STOCK_WIN_REASONS.length)] : STOCK_FAIL_REASONS[Math.floor(Math.random() * STOCK_FAIL_REASONS.length)]}`;
 };
 
 const INITIAL_STOCKS = [
@@ -132,28 +132,15 @@ const INITIAL_STOCKS = [
 // Realistic price update algorithm
 const updateStockPrice = (stock, marketSentiment = 0) => {
   const { price, basePrice, volatility, trend } = stock;
-  
-  // 1. Add trend component (momentum)
-  const trendComponent = trend * price * (Math.random() - 0.3); // Momentum with some noise
-  
-  // 2. Add volatility component (random walk, adjusted by market sentiment)
+  const trendComponent = trend * price * (Math.random() - 0.3);
   const volatilityComponent = (Math.random() - 0.5) * volatility * price * (1 + marketSentiment * 0.5);
-  
-  // 3. Add mean reversion (price tends back toward basePrice)
   const deviationFromBase = price - basePrice;
-  const meanReversionComponent = -deviationFromBase * 0.02; // Pull back 2% per period
-  
-  // 4. Calculate new price
+  const meanReversionComponent = -deviationFromBase * 0.02;
   let newPrice = price + trendComponent + volatilityComponent + meanReversionComponent;
-  
-  // 5. Add floor/ceiling based on 52-week range  
   const range52Low = basePrice * 0.7;
   const range52High = basePrice * 1.4;
   newPrice = Math.max(range52Low, Math.min(range52High, newPrice));
-  
-  // Ensure minimum price of $5
   newPrice = Math.max(5, newPrice);
-  
   return newPrice;
 };
 
@@ -175,18 +162,13 @@ export default function GamesScreen({ userTier, onGameEnd, onNavigate, userName 
   const [waitingNext, setWaitingNext] = useState(false);
   const [gameStats, setGameStats] = useState({ buys: 0, sells: 0, startMoney: 0 });
   
-  // Persistent Username Identification
   const [currentUser] = useState(() => {
-    // Prefer explicit prop (auth). If not provided, try shared localStorage.
     if (userName) return userName;
     const saved = localStorage.getItem("FIN_USERNAME");
     if (saved) return saved;
-    // Generate a per-session fallback name but DO NOT overwrite shared localStorage
-    const fresh = "Investor_" + Math.floor(Math.random() * 9000);
-    return fresh;
+    return "Investor_" + Math.floor(Math.random() * 9000);
   });
 
-  // Global Multi-Account Syncing State
   const [leagues, setLeagues] = useState(() => {
     const saved = localStorage.getItem("FIN_LEAGUES_GLOBAL");
     const base = [
@@ -196,19 +178,17 @@ export default function GamesScreen({ userTier, onGameEnd, onNavigate, userName 
     return saved ? JSON.parse(saved) : base;
   });
 
-  // Sync to Storage
   useEffect(() => {
     localStorage.setItem("FIN_LEAGUES_GLOBAL", JSON.stringify(leagues));
   }, [leagues]);
 
-  // Global storage listener (updates across accounts/tabs)
   useEffect(() => {
     const handleSync = () => {
       const updated = localStorage.getItem("FIN_LEAGUES_GLOBAL");
       if (updated) setLeagues(JSON.parse(updated));
     };
     window.addEventListener('storage', handleSync);
-    const poller = setInterval(handleSync, 1000);
+    const poller = setInterval(handleSync, 2000);
     return () => { window.removeEventListener('storage', handleSync); clearInterval(poller); };
   }, []);
 
@@ -226,12 +206,10 @@ export default function GamesScreen({ userTier, onGameEnd, onNavigate, userName 
   const [opponents, setOpponents] = useState([]);
   const [leagueFeed, setLeagueFeed] = useState([]);
 
-  // Vocab State
   const [vocabPopup, setVocabPopup] = useState({ visible: false, key: null, x: 0, y: 0 });
   const vocabRef = useRef(null);
   const moneyRef = useRef(0);
 
-  // Close vocab on click outside
   useEffect(() => {
     const clickOutside = (e) => {
       if (vocabRef.current && !vocabRef.current.contains(e.target)) {
@@ -247,185 +225,184 @@ export default function GamesScreen({ userTier, onGameEnd, onNavigate, userName 
     setVocabPopup({ visible: true, key, x: e.clientX, y: e.clientY });
   };
 
-  // --- BLITZ MULTIPLAYER ENGINE ---
-
-  const calculateTotalWealth = () => {
-    let stockValue = 0;
-    blitzStocks.forEach(s => stockValue += portfolio[s.id] * s.price);
-    return money + stockValue;
-  };
-
-  const endBlitzCompetition = () => {
-    const finalWealth = calculateTotalWealth();
-    setMoney(finalWealth);
-    const net = finalWealth - gameStats.startMoney;
-    const insight = generateGameInsight('Crypto', gameStats, finalWealth, gameStats.startMoney, config);
-    
-    setGameResult('report');
-    setTradeMessage(insight);
-    if (onGameEnd) onGameEnd(net > 0 ? 'won' : 'lost');
-  };
-
-  useEffect(() => {
-    let interval;
-    if (playing && activeGame === 'Blitz' && timeLeft > 0) {
-      interval = setInterval(() => {
-        // ── RANDOMIZED PRICE FLUCTUATION LOGIC ──
-        setBlitzStocks(current => current.map(s => {
-          const marketSentiment = Math.random() - 0.5; // New sentiment every second
-          const newPrice = updateStockPrice(s, marketSentiment);
-          return { ...s, price: newPrice, history: [...s.history.slice(-14), newPrice] };
-        }));
-
-        // Broadcast local user wealth to global space
-        const myWealth = calculateTotalWealth();
-        localStorage.setItem(`FIN_SYNC_LEAGUE_${selectedLeague.id}_USER_${currentUser}`, myWealth.toString());
-
-        // Read opponent wealth from shared storage
-        const currentLeagueData = JSON.parse(localStorage.getItem("FIN_LEAGUES_GLOBAL") || "[]").find(l => l.id === selectedLeague.id);
-        if (currentLeagueData) {
-          const liveOpponents = currentLeagueData.players
-            .filter(p => p !== currentUser)
-            .map(p => ({
-              name: p,
-              wealth: parseFloat(localStorage.getItem(`FIN_SYNC_LEAGUE_${selectedLeague.id}_USER_${p}`) || "1000")
-            }));
-          setOpponents(liveOpponents);
-        }
-
-        // Shared Feed Sync
-        const feedKey = `FIN_SYNC_FEED_${selectedLeague.id}`;
-        setLeagueFeed(JSON.parse(localStorage.getItem(feedKey) || "[]"));
-
-        setTimeLeft(t => t - 1);
-      }, 1000);
-    } else if (timeLeft === 0 && playing && activeGame === 'Blitz') {
-      endBlitzCompetition();
-    }
-    return () => clearInterval(interval);
-  }, [playing, activeGame, timeLeft, currentUser, selectedLeague, calculateTotalWealth, endBlitzCompetition]);
-
   const tierSettings = {
     elementary: {
       currencySymbol: "⭐", startingCash: 50, icon: "🦁", themeColor: "#f59e0b", gradient: "linear-gradient(135deg,#f59e0b,#f97316)",
       winMultiplier: 0.75, saveWinMultiplier: 1.2, marketWinMultiplier: 1.1,
       scenarios: [
-        { q: "You found a cool toy for 5⭐! Buy it or keep your stars?", optA: ["Buy Toy", 5], optB: ["Save Stars", 0] },
-        { q: "You're thirsty! Buy fancy juice for 4⭐ or drink water for free?", optA: ["Fancy Juice", 4], optB: ["Free Water", 0] },
-        { q: "Pay 3⭐ for a rare sticker or keep your stars?", optA: ["Rare Sticker", 3], optB: ["Keep Stars", 0] },
-        { q: "You earned 8⭐ helping clean up! Save it or spend on snacks (3⭐)?", optA: ["Spend on Snacks", 3], optB: ["Save All", 0] },
-        { q: "Ice cream truck! Spend 5⭐ or skip it?", optA: ["Buy Ice Cream", 5], optB: ["Skip It", 0] },
-        { q: "New card game for 8⭐. Buy it or pass?", optA: ["Buy Game", 8], optB: ["Pass", 0] },
-        { q: "Friend's birthday gift — spend 4⭐ or make something free?", optA: ["Nice Gift", 4], optB: ["Homemade", 0] },
-        { q: "New pencils for 3⭐?", optA: ["Buy", 3], optB: ["Save", 0] },
-        { q: "Candy bar for 2⭐?", optA: ["Buy", 2], optB: ["Save", 0] },
-        { q: "Final challenge: Big Star Box for 12⭐?", optA: ["Buy", 12], optB: ["Save", 0] },
+        { q: "You found a cool toy for 5⭐! Buy it or keep your stars?", optA: ["Buy Toy", 5], optB: ["Save Stars", 0], msgA: "❌ Toy time! You bought it, but your star balance is lower now.", msgB: "✅ Patience pays off! You saved your stars for a bigger goal later." },
+        { q: "You're thirsty! Buy fancy juice for 4⭐ or drink water for free?", optA: ["Fancy Juice", 4], optB: ["Free Water", 0], msgA: "❌ Yum! That juice was tasty, but it cost you stars.", msgB: "✅ Healthy and smart! You stayed hydrated for free and kept your stars." },
+        { q: "Pay 3⭐ for a rare sticker or keep your stars?", optA: ["Rare Sticker", 3], optB: ["Keep Stars", 0], msgA: "❌ Shiny! You have a new sticker for your collection.", msgB: "✅ Stickers are cool, but having extra stars is cooler!" },
+        { q: "You earned 8⭐ helping clean up! Save it or spend on snacks (3⭐)?", optA: ["Spend on Snacks", 3], optB: ["Save All", 0], msgA: "❌ Snack attack! You enjoyed the treat, but saved 5 stars.", msgB: "✅ Great job! You saved all 8 stars for your future fund." },
+        { q: "Ice cream truck! Spend 5⭐ or skip it?", optA: ["Buy Ice Cream", 5], optB: ["Skip It", 0], msgA: "❌ Sweet! Ice cream is a great reward for hard work.", msgB: "✅ Determination! You resisted the truck to keep your stars growing." },
+        { q: "New card game for 8⭐. Buy it or pass?", optA: ["Buy Game", 8], optB: ["Pass", 0], msgA: "❌ Let's play! A new game is fun, but it was a big purchase.", msgB: "✅ You passed on the game to keep your star count high. Smart!" },
+        { q: "Friend's birthday gift — spend 4⭐ or make something free?", optA: ["Nice Gift", 4], optB: ["Homemade", 0], msgA: "❌ Thoughtful! You bought a nice gift to celebrate your friend.", msgB: "✅ Creative! Your friend loved the handmade gift and you saved stars." },
+        { q: "New pencils for 3⭐?", optA: ["Buy", 3], optB: ["Save", 0], msgA: "❌ Ready for school! You have fresh tools for your desk.", msgB: "✅ You decided to use your old pencils and keep your stars." },
+        { q: "Candy bar for 2⭐?", optA: ["Buy", 2], optB: ["Save", 0], msgA: "❌ A quick treat! It didn't cost much, but stars add up.", msgB: "✅ One less candy bar means you're closer to a bigger prize!" },
+        { q: "Final challenge: Big Star Box for 12⭐?", optA: ["Buy", 12], optB: ["Save", 0], msgA: "❌ Grand Prize! You bought the big box with your hard-earned stars.", msgB: "✅ You're a master of saving! You finished with a huge star balance." },
       ],
       marketScenarios: [
-        { q: "Lemonade Stand: Spend 10⭐ on lemons. Risk it for profit!", optA: ["Invest", 10], optB: ["Skip", 0] },
-        { q: "Cookie Sale: Spend 15⭐ to bake. Will it pay off?", optA: ["Bake Cookies", 15], optB: ["Skip", 0] },
-        { q: "Snow cone stand: Risk 12⭐ or save?", optA: ["Set Up", 12], optB: ["Save", 0] },
-        { q: "Craft market: Spend 8⭐ on supplies.", optA: ["Try It", 8], optB: ["Skip", 0] },
-        { q: "Tutoring: Invest 10⭐ in materials.", optA: ["Invest", 10], optB: ["Skip", 0] },
-        { q: "Pool cleaning: Spend 8⭐ on tools.", optA: ["Invest", 8], optB: ["Skip", 0] },
-        { q: "Yard Sale: 5⭐ for signs.", optA: ["Buy", 5], optB: ["Skip", 0] },
-        { q: "Dog walking: 4⭐ for leashes.", optA: ["Buy", 4], optB: ["Skip", 0] },
-        { q: "Plant sale: 6⭐ for seeds.", optA: ["Buy", 6], optB: ["Skip", 0] },
-        { q: "Final Venture: 20⭐ big project!", optA: ["Go Big", 20], optB: ["Play Safe", 0] }
+        { q: "Lemonade Stand: Spend 10⭐ on lemons. Risk it for profit!", optA: ["Invest", 10], optB: ["Skip", 0], msgB: "⏭ You decided not to start the stand this time. Your stars stay safe." },
+        { q: "Cookie Sale: Spend 15⭐ to bake. Will it pay off?", optA: ["Bake Cookies", 15], optB: ["Skip", 0], msgB: "⏭ You skipped the bake sale. No risk, but no chance for profit today." },
+        { q: "Snow cone stand: Risk 12⭐ or save?", optA: ["Set Up", 12], optB: ["Save", 0], msgB: "⏭ You chose to save your stars instead of risking them on the stand." },
+        { q: "Craft market: Spend 8⭐ on supplies.", optA: ["Try It", 8], optB: ["Skip", 0], msgB: "⏭ You decided to hold onto your craft supplies stars." },
+        { q: "Tutoring: Invest 10⭐ in materials.", optA: ["Invest", 10], optB: ["Skip", 0], msgB: "⏭ You didn't invest in tutoring materials this time." },
+        { q: "Pool cleaning: Spend 8⭐ on tools.", optA: ["Invest", 8], optB: ["Skip", 0], msgB: "⏭ You skipped the pool cleaning venture." },
+        { q: "Yard Sale: 5⭐ for signs.", optA: ["Buy", 5], optB: ["Skip", 0], msgB: "⏭ No yard sale today. Stars remain in your piggy bank." },
+        { q: "Dog walking: 4⭐ for leashes.", optA: ["Buy", 4], optB: ["Skip", 0], msgB: "⏭ You decided dog walking wasn't the right move today." },
+        { q: "Plant sale: 6⭐ for seeds.", optA: ["Buy", 6], optB: ["Skip", 0], msgB: "⏭ You're keeping your seeds stars for now." },
+        { q: "Final Venture: 20⭐ big project!", optA: ["Go Big", 20], optB: ["Play Safe", 0], msgB: "⏭ You finished the game with a cautious and steady approach." }
       ],
       savingScenarios: [
-        { q: "Found 5⭐ under pillow. Save?", optA: ["Spend", 5], optB: ["Save", 0] },
-        { q: "Piggy bank full. 10⭐ toy?", optA: ["Buy", 10], optB: ["Save", 0] },
-        { q: "Found 5⭐. Save?", optA: ["Spend", 5], optB: ["Save", 0] },
-        { q: "Piggy bank full. 10⭐ toy?", optA: ["Buy", 10], optB: ["Save", 0] },
-        { q: "Found 5⭐. Save?", optA: ["Spend", 5], optB: ["Save", 0] },
-        { q: "Piggy bank full. 10⭐ toy?", optA: ["Buy", 10], optB: ["Save", 0] },
-        { q: "Found 5⭐. Save?", optA: ["Spend", 5], optB: ["Save", 0] },
-        { q: "Piggy bank full. 10⭐ toy?", optA: ["Buy", 10], optB: ["Save", 0] },
-        { q: "Found 5⭐. Save?", optA: ["Spend", 5], optB: ["Save", 0] },
-        { q: "Piggy bank full. 10⭐ toy?", optA: ["Buy", 10], optB: ["Save", 0] },
+        { q: "Found 5⭐ under pillow. Save?", optA: ["Spend", 5], optB: ["Save", 0], msgA: "❌ You spent your pillow money! It's gone, but it was fun.", msgB: "✅ Great! That 5 stars is now earning interest in your bank." },
+        { q: "Piggy bank full. 10⭐ toy?", optA: ["Buy", 10], optB: ["Save", 0], msgA: "❌ The toy is yours! But the piggy bank is empty.", msgB: "✅ Discipline! You're letting your money grow even bigger." },
+        { q: "Found 5⭐. Save?", optA: ["Spend", 5], optB: ["Save", 0], msgA: "❌ Money spent is money gone! Hope the treat was worth it.", msgB: "✅ Building wealth! Every star counts." },
+        { q: "Piggy bank full. 10⭐ toy?", optA: ["Buy", 10], optB: ["Save", 0], msgA: "❌ New toy alert! Your balance took a hit.", msgB: "✅ Patience pays! You are becoming a master saver." },
+        { q: "Found 5⭐. Save?", optA: ["Spend", 5], optB: ["Save", 0], msgA: "❌ Spent! Your star balance decreased.", msgB: "✅ Saved! Your future self will thank you." },
+        { q: "Piggy bank full. 10⭐ toy?", optA: ["Buy", 10], optB: ["Save", 0], msgA: "❌ You bought it! Time to start saving from zero.", msgB: "✅ Smart choice. Let that interest compound." },
+        { q: "Found 5⭐. Save?", optA: ["Spend", 5], optB: ["Save", 0], msgA: "❌ Short term fun, long term cost.", msgB: "✅ A little bit saved today becomes a lot tomorrow." },
+        { q: "Piggy bank full. 10⭐ toy?", optA: ["Buy", 10], optB: ["Save", 0], msgA: "❌ You treated yourself! Balance is now lower.", msgB: "✅ You are consistent! Your savings are booming." },
+        { q: "Found 5⭐. Save?", optA: ["Spend", 5], optB: ["Save", 0], msgA: "❌ Gone! Keep an eye on your balance.", msgB: "✅ Savings growth! You earned extra interest." },
+        { q: "Piggy bank full. 10⭐ toy?", optA: ["Buy", 10], optB: ["Save", 0], msgA: "❌ The grand prize toy! You spent your stash.", msgB: "✅ Legendary saver! You finished with a huge balance." },
       ]
     },
     adult: {
       currencySymbol: "$", startingCash: 1000, icon: "💼", themeColor: "#6366f1", gradient: "linear-gradient(135deg,#6366f1,#4f46e5)",
       winMultiplier: 0.7, saveWinMultiplier: 1.4, marketWinMultiplier: 1.25,
       scenarios: [
-        { q: "Housing: $400 studio or $200 shared house?", optA: ["Luxury Studio", 400], optB: ["Shared House", 200] },
-        { q: "Commute: $140 Uber budget or $60 monthly bus pass?", optA: ["Uber Habits", 140], optB: ["Bus Pass", 60] },
-        { q: "Food: $120 Organic Whole Foods or $50 Bulk Mart?", optA: ["Whole Foods", 120], optB: ["Bulk Mart", 50] },
-        { q: "Insurance: Pay $70/mo now or risk a $5000 bill later?", optA: ["Skip Insurance", 0], optB: ["Pay Premium", 70] },
-        { q: "Streaming: $15 Basic or $95 Premium Cable Bundle?", optA: ["Cable TV", 95], optB: ["One Service", 15] },
-        { q: "Social: $80 Bar Night or $15 Board Game night?", optA: ["Clubbing", 80], optB: ["Game Night", 15] },
-        { q: "Upgrade: $200 Phone Installment or keep old phone?", optA: ["New iPhone", 200], optB: ["Keep Old", 0] },
-        { q: "Lunch: $20 Daily takeout or $5 Meal prep?", optA: ["Takeout", 20], optB: ["Meal Prep", 5] },
-        { q: "Gym: $100 Boutique CrossFit or $10 Basic Gym?", optA: ["CrossFit", 100], optB: ["Basic Gym", 10] },
-        { q: "Impulse: $50 'Limited Edition' Sneakers. Buy?", optA: ["Buy Them", 50], optB: ["Ignore", 0] },
+        { q: "Housing: $400 studio or $200 shared house?", optA: ["Luxury Studio", 400], optB: ["Shared House", 200], msgA: "❌ Privacy is great, but that extra $200 per month will be missed in your savings.", msgB: "✅ Smart move! Shared housing is the fastest way to build an emergency fund." },
+        { q: "Commute: $140 Uber budget or $60 monthly bus pass?", optA: ["Uber Habits", 140], optB: ["Bus Pass", 60], msgA: "❌ Convenience costs! You're spending nearly 3x more than necessary on transport.", msgB: "✅ Excellent discipline. Public transit is a wealth-builder's secret weapon." },
+        { q: "Food: $120 Organic Whole Foods or $50 Bulk Mart?", optA: ["Whole Foods", 120], optB: ["Bulk Mart", 50], msgA: "❌ Healthy, but expensive. Make sure your income can support these grocery bills.", msgB: "✅ Buying in bulk is a pro-move. You just saved $70 without skipping a meal." },
+        { q: "Insurance: Pay $70/mo now or risk a $5000 bill later?", optA: ["Skip Insurance", 0], optB: ["Pay Premium", 70], msgA: "❌ You're 'self-insuring.' It works until it doesn't. Hope you have a big emergency fund!", msgB: "✅ Insurance is about risk management. You've protected yourself from financial ruin." },
+        { q: "Streaming: $15 Basic or $95 Premium Cable Bundle?", optA: ["Cable TV", 95], optB: ["One Service", 15], msgA: "❌ The 'Cable Trap.' You're paying for 200 channels you'll never actually watch.", msgB: "✅ Cutting the cord! You saved $80 and still have plenty to watch." },
+        { q: "Social: $80 Bar Night or $15 Board Game night?", optA: ["Clubbing", 80], optB: ["Game Night", 15], msgA: "❌ Expensive drinks add up fast. Your social life is currently your biggest expense.", msgB: "✅ Great memories for 1/5th the price. Low-cost social hobbies are key to staying rich." },
+        { q: "Upgrade: $200 Phone Installment or keep old phone?", optA: ["New iPhone", 200], optB: ["Keep Old", 0], msgA: "❌ The shiny new object cost you $200. Does it really do anything your old one didn't?", msgB: "✅ Status is a trap. By keeping your old phone, you kept your cash working for you." },
+        { q: "Lunch: $20 Daily takeout or $5 Meal prep?", optA: ["Takeout", 20], optB: ["Meal Prep", 5], msgA: "❌ The 'Latte Factor' in action. $20 a day is $600 a month on lunch alone.", msgB: "✅ Meal prepping is like giving yourself a $4,000 annual raise. Well done." },
+        { q: "Gym: $100 Boutique CrossFit or $10 Basic Gym?", optA: ["CrossFit", 100], optB: ["Basic Gym", 10], msgA: "❌ Community is good, but $100/mo is a luxury membership. Use it every day to make it worth it!", msgB: "✅ A barbell weighs the same at a $10 gym. You're paying for results, not aesthetics." },
+        { q: "Impulse: $50 'Limited Edition' Sneakers. Buy?", optA: ["Buy Them", 50], optB: ["Ignore", 0], msgA: "❌ Impulse buys are the enemy of a solid budget. They look good, but the bank account looks worse.", msgB: "✅ Discipline! You walked away and your net worth stayed intact." },
       ],
       marketScenarios: [
-        { q: "Penny Stock: $200 in 'BioTech X'. Very volatile!", optA: ["Buy In", 200], optB: ["Skip", 0] },
-        { q: "Blue Chip: $400 in Apple shares. Solid but slower growth.", optA: ["Invest", 400], optB: ["Skip", 0] },
-        { q: "Index Fund: $300 in S&P 500. Balanced risk.", optA: ["Buy Fund", 300], optB: ["Skip", 0] },
-        { q: "IPO: $350 in a trendy new social media app.", optA: ["Buy IPO", 350], optB: ["Skip", 0] },
-        { q: "Commodities: $250 in Crude Oil futures.", optA: ["Trade Oil", 250], optB: ["Skip", 0] },
-        { q: "Real Estate: $450 in a REIT. Reliable dividends?", optA: ["Invest", 450], optB: ["Skip", 0] },
-        { q: "Tech: $300 in AI Semiconductors. Huge hype.", optA: ["Buy AI", 300], optB: ["Skip", 0] },
-        { q: "Bonds: $150 in Treasury Notes. Very safe.", optA: ["Buy Bonds", 150], optB: ["Skip", 0] },
-        { q: "Energy: $200 in Solar Power startup.", optA: ["Go Green", 200], optB: ["Skip", 0] },
-        { q: "Arbitrage: $400 in a complex currency swap.", optA: ["Execute", 400], optB: ["Skip", 0] },
+        { q: "Penny Stock: $200 in 'BioTech X'. Very volatile!", optA: ["Buy In", 200], optB: ["Skip", 0], msgB: "⏭ You avoided the high-risk gamble. Stability is its own reward." },
+        { q: "Blue Chip: $400 in Apple shares. Solid but slower growth.", optA: ["Invest", 400], optB: ["Skip", 0], msgB: "⏭ You passed on a reliable company. Sometimes cash is king." },
+        { q: "Index Fund: $300 in S&P 500. Balanced risk.", optA: ["Buy Fund", 300], optB: ["Skip", 0], msgB: "⏭ You skipped the broad market. You're betting on your own timing." },
+        { q: "IPO: $350 in a trendy new social media app.", optA: ["Buy IPO", 350], optB: ["Skip", 0], msgB: "⏭ IPOs are often overhyped. You played it safe." },
+        { q: "Commodities: $250 in Crude Oil futures.", optA: ["Trade Oil", 250], optB: ["Skip", 0], msgB: "⏭ Commodity trading is complex. You decided to sit this one out." },
+        { q: "Real Estate: $450 in a REIT. Reliable dividends?", optA: ["Invest", 450], optB: ["Skip", 0], msgB: "⏭ Dividends are nice, but you chose to keep your liquidity." },
+        { q: "Tech: $300 in AI Semiconductors. Huge hype.", optA: ["Buy AI", 300], optB: ["Skip", 0], msgB: "⏭ Hype cycles can be dangerous. You avoided the potential bubble." },
+        { q: "Bonds: $150 in Treasury Notes. Very safe.", optA: ["Buy Bonds", 150], optB: ["Skip", 0], msgB: "⏭ Safety is good, but you're skipping the (small) guaranteed return." },
+        { q: "Energy: $200 in Solar Power startup.", optA: ["Go Green", 200], optB: ["Skip", 0], msgB: "⏭ Green energy is the future, but startups are risky. You passed." },
+        { q: "Arbitrage: $400 in a complex currency swap.", optA: ["Execute", 400], optB: ["Skip", 0], msgB: "⏭ You avoided a complicated trade. Keeping it simple is a valid strategy." }
       ],
       cryptoScenarios: [
-        { q: "Memecoin: $300 in 'DogePluto'. 1000x or zero.", optA: ["Ape In", 300], optB: ["Skip", 0] },
-        { q: "DeFi: $400 in a Yield Farm. 40% APY but risky code.", optA: ["Farm", 400], optB: ["Skip", 0] },
-        { q: "Bitcoin: $500 in the King. Stable (for crypto).", optA: ["Buy BTC", 500], optB: ["Skip", 0] },
-        { q: "NFT: $250 for a digital Bored Cat. Trend is dying.", optA: ["Buy NFT", 250], optB: ["Skip", 0] },
-        { q: "Altcoin: $200 in Solana ecosys.", optA: ["Buy SOL", 200], optB: ["Skip", 0] },
-        { q: "Mining: $400 in ASIC hardware.", optA: ["Invest", 400], optB: ["Skip", 0] },
-        { q: "Web3: $300 in ENS domain names.", optA: ["Ape", 300], optB: ["Skip", 0] },
-        { q: "DEX: $350 in liquidity providing.", optA: ["Provide", 350], optB: ["Skip", 0] },
-        { q: "Gaming: $200 in Play-to-earn tokens.", optA: ["Play", 200], optB: ["Skip", 0] },
-        { q: "Layer 2: $300 in Arbitrum ecosystem.", optA: ["Invest", 300], optB: ["Skip", 0] },
+        { q: "Memecoin: $300 in 'DogePluto'. 1000x or zero.", optA: ["Ape In", 300], optB: ["Skip", 0], msgB: "⏭ You avoided the 'rug pull' risk. Solid discipline." },
+        { q: "DeFi: $400 in a Yield Farm. 40% APY but risky code.", optA: ["Farm", 400], optB: ["Skip", 0], msgB: "⏭ 40% returns usually mean 40% risk. You played it safe." },
+        { q: "Bitcoin: $500 in the King. Stable (for crypto).", optA: ["Buy BTC", 500], optB: ["Skip", 0], msgB: "⏭ Even the 'safe' crypto is volatile. You kept your cash." },
+        { q: "NFT: $250 for a digital Bored Cat. Trend is dying.", optA: ["Buy NFT", 250], optB: ["Skip", 0], msgB: "⏭ Buying at the top of a trend is dangerous. Good skip." },
+        { q: "Altcoin: $200 in Solana ecosys.", optA: ["Buy SOL", 200], optB: ["Skip", 0], msgB: "⏭ You avoided the altcoin casino this time." },
+        { q: "Mining: $400 in ASIC hardware.", optA: ["Invest", 400], optB: ["Skip", 0], msgB: "⏭ Electricity costs and hardware rot are real. You passed." },
+        { q: "Web3: $300 in ENS domain names.", optA: ["Ape", 300], optB: ["Skip", 0], msgB: "⏭ Speculating on digital names is a gamble. You stayed out." },
+        { q: "DEX: $350 in liquidity providing.", optA: ["Provide", 350], optB: ["Skip", 0], msgB: "⏭ Impermanent loss is a real threat. You kept your tokens." },
+        { q: "Gaming: $200 in Play-to-earn tokens.", optA: ["Play", 200], optB: ["Skip", 0], msgB: "⏭ Crypto games often crash hard. You avoided the trap." },
+        { q: "Layer 2: $300 in Arbitrum ecosystem.", optA: ["Invest", 300], optB: ["Skip", 0], msgB: "⏭ The tech is great, but the market is wild. You stayed in cash." },
       ],
       savingScenarios: [
-        { q: "Bonus: $200 bonus. Save or Spend?", optA: ["Splurge", 200], optB: ["Save It", 0] },
-        { q: "Found Cash: $50 in jacket. Treat or Piggy Bank?", optA: ["Fancy Meal", 50], optB: ["Save It", 0] },
-        { q: "Refund: $80 check from IRS. Save or Spend?", optA: ["New Tech", 80], optB: ["Save It", 0] },
-        { q: "Cash Back: $40 earned. Save or Spend?", optA: ["Takeout", 40], optB: ["Save It", 0] },
-        { q: "Gift: $100 from Grandma. Save or Spend?", optA: ["Shopping", 100], optB: ["Save It", 0] },
-        { q: "Dividend: $30 paid out. Save or Spend?", optA: ["Movie Night", 30], optB: ["Save It", 0] },
-        { q: "Side Gig: $150 earned. Save or Spend?", optA: ["Night Out", 150], optB: ["Save It", 0] },
-        { q: "Garage Sale: $60 earned. Save or Spend?", optA: ["Gadgets", 60], optB: ["Save It", 0] },
-        { q: "Rebate: $25 back. Save or Spend?", optA: ["Lunch", 25], optB: ["Save It", 0] },
-        { q: "Interest: $10 earned. Save or Spend?", optA: ["Small Treat", 10], optB: ["Save It", 0] },
+        { q: "Bonus: $200 bonus. Save or Spend?", optA: ["Splurge", 200], optB: ["Save It", 0], msgA: "❌ You treated yourself! The bonus is gone, but you're happy.", msgB: "✅ Pro move! That $200 is now the seed of your future wealth." },
+        { q: "Found Cash: $50 in jacket. Treat or Piggy Bank?", optA: ["Fancy Meal", 50], optB: ["Save It", 0], msgA: "❌ Delicious! But that $50 won't be earning interest anymore.", msgB: "✅ Found money is the best money to save. Net worth +$50!" },
+        { q: "Refund: $80 check from IRS. Save or Spend?", optA: ["New Tech", 80], optB: ["Save It", 0], msgA: "❌ New gadgets are cool, but they lose value instantly.", msgB: "✅ You're returning that money to your own future. Smart." },
+        { q: "Cash Back: $40 earned. Save or Spend?", optA: ["Takeout", 40], optB: ["Save It", 0], msgA: "❌ You spent your rewards! It's like you never got them.", msgB: "✅ Compounding your rewards is how you really win the game." },
+        { q: "Gift: $100 from Grandma. Save or Spend?", optA: ["Shopping", 100], optB: ["Save It", 0], msgA: "❌ Shopping spree! Grandma's gift is now a new outfit.", msgB: "✅ Grandma would be proud of your financial discipline." },
+        { q: "Dividend: $30 paid out. Save or Spend?", optA: ["Movie Night", 30], optB: ["Save It", 0], msgA: "❌ You spent your passive income. It's a fun cycle!", msgB: "✅ Reinvesting dividends is the secret to getting truly rich." },
+        { q: "Side Gig: $150 earned. Save or Spend?", optA: ["Night Out", 150], optB: ["Save It", 0], msgA: "❌ Work hard, play hard! You spent your extra earnings.", msgB: "✅ You turned your labor into long-term capital. Exceptional." },
+        { q: "Garage Sale: $60 earned. Save or Spend?", optA: ["Gadgets", 60], optB: ["Save It", 0], msgA: "❌ Turned old stuff into new stuff. Balance: Neutral.", msgB: "✅ You turned clutter into cash and cash into savings. Perfect." },
+        { q: "Rebate: $25 back. Save or Spend?", optA: ["Lunch", 25], optB: ["Save It", 0], msgA: "❌ Spent! The rebate didn't last long.", msgB: "✅ Every $25 counts when it's earning compound interest." },
+        { q: "Interest: $10 earned. Save or Spend?", optA: ["Small Treat", 10], optB: ["Save It", 0], msgA: "❌ You spent the interest your money made. Growth: Slow.", msgB: "✅ You're letting your interest make its own interest. You're winning." },
       ],
       creditScenarios: [
-        { q: "Credit Score: Pay $100 off card to boost score?", optA: ["Keep Cash", 0], optB: ["Pay Card", 100] },
-        { q: "Bad Debt: Friend wants $200 loan for 'sure thing'.", optA: ["Lend It", 200], optB: ["Decline", 0] },
-        { q: "Balance: Pay $150 minimum or keep cash?", optA: ["Keep Cash", 0], optB: ["Pay Balance", 150] },
-        { q: "Interest: Card has 24% APR. Pay $300 now?", optA: ["Wait", 0], optB: ["Pay Debt", 300] },
-        { q: "Late Fee: $35 due. Pay now or later?", optA: ["Later", 0], optB: ["Pay Fee", 35] },
-        { q: "Financing: $500 for a couch @ 0%. Pay now?", optA: ["Finance", 0], optB: ["Pay Cash", 500] },
-        { q: "Limit: Increase limit or stay safe?", optA: ["Increase", 0], optB: ["Stay safe", 0] },
-        { q: "Rewards: Spend $100 to get $20 back?", optA: ["Spend", 100], optB: ["Save", 0] },
-        { q: "Annual Fee: $95 card fee. Pay or cancel?", optA: ["Pay Fee", 95], optB: ["Cancel", 0] },
-        { q: "Identity: Pay $10 for monitoring?", optA: ["Skip", 0], optB: ["Pay", 10] },
+        { q: "Credit Score: Pay $100 off card to boost score?", optA: ["Keep Cash", 0], optB: ["Pay Card", 100], msgA: "❌ You have more cash now, but your credit score might drop.", msgB: "✅ Investing in your score saves you thousands in future interest." },
+        { q: "Bad Debt: Friend wants $200 loan for 'sure thing'.", optA: ["Lend It", 200], optB: ["Decline", 0], msgA: "❌ Lending to friends often means losing money and the friend.", msgB: "✅ Wise. Never lend more than you can afford to lose forever." },
+        { q: "Balance: Pay $150 minimum or keep cash?", optA: ["Keep Cash", 0], optB: ["Pay Balance", 150], msgA: "❌ The interest on that remaining balance is going to be high.", msgB: "✅ Great job. Staying ahead of the minimum keeps you out of the debt trap." },
+        { q: "Interest: Card has 24% APR. Pay $300 now?", optA: ["Wait", 0], optB: ["Pay Debt", 300], msgA: "❌ 24% interest is a financial emergency. Paying it later is costly.", msgB: "✅ Excellent! You just avoided the highest interest rate 'tax' there is." },
+        { q: "Late Fee: $35 due. Pay now or later?", optA: ["Later", 0], optB: ["Pay Fee", 35], msgA: "❌ Late fees compound and wreck your credit history. Dangerous.", msgB: "✅ Stopping the bleeding. Always pay fees the moment they appear." },
+        { q: "Financing: $500 for a couch @ 0%. Pay now?", optA: ["Finance", 0], optB: ["Pay Cash", 500], msgA: "❌ 0% is great, but don't forget the payments. It's still debt!", msgB: "✅ Zero debt is the ultimate peace of mind. Couch is yours, free and clear." },
+        { q: "Limit: Increase limit or stay safe?", optA: ["Increase", 0], optB: ["Stay safe", 0], msgA: "❌ A higher limit can help your score, but only if you don't spend it!", msgB: "✅ Knowing your limits is a key part of financial self-awareness." },
+        { q: "Rewards: Spend $100 to get $20 back?", optA: ["Spend", 100], optB: ["Save", 0], msgA: "❌ Spending $100 to 'save' $20 is a net loss of $80. Retail trap!", msgB: "✅ You didn't fall for the 'spending for rewards' trick. Nice." },
+        { q: "Annual Fee: $95 card fee. Pay or cancel?", optA: ["Pay Fee", 95], optB: ["Cancel", 0], msgA: "❌ Make sure the benefits of the card outweigh that $95 price tag.", msgB: "✅ If the perks don't pay for the fee, canceling is the right move." },
+        { q: "Identity: Pay $10 for monitoring?", optA: ["Skip", 0], optB: ["Pay", 10], msgA: "❌ Risk vs Reward. You're betting that your identity stays safe.", msgB: "✅ A small price for massive peace of mind in a digital world." },
       ],
       hustleScenarios: [
-        { q: "Equipment: $300 for pro camera.", optA: ["Buy Pro", 300], optB: ["Use Phone", 0] },
-        { q: "Ads: $100 for Instagram ads.", optA: ["Run Ads", 100], optB: ["Organic", 0] },
-        { q: "Software: $50/mo subscription.", optA: ["Subscribe", 50], optB: ["Free version", 0] },
-        { q: "Networking: $40 event ticket.", optA: ["Attend", 40], optB: ["Skip", 0] },
-        { q: "Outsourcing: $80 for logo design.", optA: ["Hire", 80], optB: ["DIY", 0] },
-        { q: "Stock: $200 in raw materials.", optA: ["Bulk Buy", 200], optB: ["Buy small", 50] },
-        { q: "Shipping: $30 for faster courier.", optA: ["Expedited", 30], optB: ["Standard", 10] },
-        { q: "Legal: $150 to register LLC.", optA: ["Register", 150], optB: ["Stay Sole", 0] },
-        { q: "Space: $100 for shared desk.", optA: ["Rent", 100], optB: ["Work Home", 0] },
-        { q: "Final push: $250 for a trade show.", optA: ["Ape In", 250], optB: ["Skip", 0] },
+        { q: "Equipment: $300 for pro camera.", optA: ["Buy Pro", 300], optB: ["Use Phone", 0], msgA: "❌ High quality brings high-paying clients, but you're $300 in the hole.", msgB: "✅ Starting lean is smart. Most pros start with what they already have." },
+        { q: "Ads: $100 for Instagram ads.", optA: ["Run Ads", 100], optB: ["Organic", 0], msgA: "❌ Ads buy you time and visibility. Let's see if the leads follow.", msgB: "✅ Organic growth is slower, but your profit margins remain 100%." },
+        { q: "Software: $50/mo subscription.", optA: ["Subscribe", 50], optB: ["Free version", 0], msgA: "❌ Pro tools speed up your work. Time is money in a hustle.", msgB: "✅ Good choice for now. Don't add fixed costs until you have fixed income." },
+        { q: "Networking: $40 event ticket.", optA: ["Attend", 40], optB: ["Skip", 0], msgA: "❌ One connection could be worth $4,000. Hustling is about people.", msgB: "✅ You saved $40, but you might have missed a key partnership." },
+        { q: "Outsourcing: $80 for logo design.", optA: ["Hire", 80], optB: ["DIY", 0], msgA: "❌ A pro logo builds trust instantly. You look like a real brand now.", msgB: "✅ DIY is fine for day one. Just don't let bad design hurt your sales." },
+        { q: "Stock: $200 in raw materials.", optA: ["Bulk Buy", 200], optB: ["Buy small", 50], msgA: "❌ Bulk buying lowers your cost per unit. This is how you scale.", msgB: "✅ Lower risk, but your profit per item will be much smaller." },
+        { q: "Shipping: $30 for faster courier.", optA: ["Expedited", 30], optB: ["Standard", 10], msgA: "❌ Happy customers are repeat customers. Speed matters.", msgB: "✅ Standard is fine, as long as you're honest about the timeline." },
+        { q: "Legal: $150 to register LLC.", optA: ["Register", 150], optB: ["Stay Sole", 0], msgA: "❌ Liability protection is huge. You're a legitimate business owner now.", msgB: "✅ Fine for a side gig, but be careful with your personal assets." },
+        { q: "Space: $100 for shared desk.", optA: ["Rent", 100], optB: ["Work Home", 0], msgA: "❌ No distractions! Productivity is usually higher in a pro space.", msgB: "✅ Zero rent is the best way to keep your hustle profitable early on." },
+        { q: "Final push: $250 for a trade show.", optA: ["Ape In", 250], optB: ["Skip", 0], msgA: "❌ Big risk, big reward! You're putting your brand in front of thousands.", msgB: "✅ You finished with a healthy profit and a low-risk mindset." },
       ]
     }
   };
 
   const config = tierSettings[userTier] || tierSettings.adult;
   const scenarios = activeGame === 'Market' ? config.marketScenarios : activeGame === 'Crypto' ? config.cryptoScenarios : activeGame === 'Save' ? config.savingScenarios : activeGame === 'Credit' ? config.creditScenarios : activeGame === 'Hustle' ? config.hustleScenarios : config.scenarios;
+
+  const calculateTotalWealth = useCallback(() => {
+    let stockValue = 0;
+    blitzStocks.forEach(s => stockValue += (portfolio[s.id] || 0) * s.price);
+    return money + stockValue;
+  }, [money, blitzStocks, portfolio]);
+
+  const endBlitzCompetition = useCallback(() => {
+    const finalWealth = calculateTotalWealth();
+    setMoney(finalWealth);
+    const insight = generateGameInsight('Blitz', gameStats, finalWealth, gameStats.startMoney, config);
+    setTradeMessage(insight);
+    setGameResult('report');
+    if (onGameEnd) onGameEnd(finalWealth >= gameStats.startMoney ? 'won' : 'lost');
+  }, [calculateTotalWealth, gameStats, config, onGameEnd]);
+
+  // High-performance timer/logic engine
+  useEffect(() => {
+    let interval;
+    if (playing && activeGame === 'Blitz' && timeLeft > 0) {
+      interval = setInterval(() => {
+        // Update prices once per second irl
+        setBlitzStocks(current => current.map(s => {
+          const marketSentiment = Math.random() - 0.5;
+          const newPrice = updateStockPrice(s, marketSentiment);
+          return { ...s, price: newPrice, history: [...s.history.slice(-14), newPrice] };
+        }));
+        
+        // Timer countdown once per second irl
+        setTimeLeft(t => Math.max(0, t - 1));
+      }, 1000);
+    } else if (timeLeft === 0 && playing && activeGame === 'Blitz') {
+      endBlitzCompetition();
+    }
+    return () => clearInterval(interval);
+  }, [playing, activeGame, timeLeft, endBlitzCompetition]);
+
+  // Logic to broadcast/receive wealth data
+  useEffect(() => {
+    if (playing && activeGame === 'Blitz' && selectedLeague) {
+      const myWealth = calculateTotalWealth();
+      localStorage.setItem(`FIN_SYNC_LEAGUE_${selectedLeague.id}_USER_${currentUser}`, myWealth.toString());
+
+      const currentLeagueData = JSON.parse(localStorage.getItem("FIN_LEAGUES_GLOBAL") || "[]").find(l => l.id === selectedLeague.id);
+      if (currentLeagueData) {
+        const liveOpponents = currentLeagueData.players
+          .filter(p => p !== currentUser)
+          .map(p => ({
+            name: p,
+            wealth: parseFloat(localStorage.getItem(`FIN_SYNC_LEAGUE_${selectedLeague.id}_USER_${p}`) || "1000")
+          }));
+        setOpponents(liveOpponents);
+      }
+      const feedKey = `FIN_SYNC_FEED_${selectedLeague.id}`;
+      setLeagueFeed(JSON.parse(localStorage.getItem(feedKey) || "[]"));
+    }
+  }, [blitzStocks, money, portfolio, playing, activeGame, selectedLeague, currentUser, calculateTotalWealth]);
 
   const resetGame = (countAsPlayed = false) => {
     if (countAsPlayed && onGameEnd) onGameEnd('lost');
@@ -435,27 +412,48 @@ export default function GamesScreen({ userTier, onGameEnd, onNavigate, userName 
   const endGame = (finalMoney) => {
     const winThreshold = (activeGame === 'Market' || activeGame === 'Crypto') ? config.startingCash * config.marketWinMultiplier : activeGame === 'Save' ? config.startingCash * config.saveWinMultiplier : config.startingCash * config.winMultiplier;
     const won = finalMoney >= winThreshold;
-    
-    // Generate detailed insight
     const insight = generateGameInsight(activeGame, gameStats, finalMoney, gameStats.startMoney || config.startingCash, config);
     setTradeMessage(insight);
-    
     setMoney(finalMoney); 
     setGameResult(won ? 'won' : 'lost');
     if (onGameEnd) onGameEnd(won ? 'won' : 'lost');
   };
 
-  const handleChoice = (cost) => {
-    let updated = (activeGame === 'Save') ? (cost === 0 ? money + Math.max(10, Math.round(config.startingCash * 0.1)) : money - cost) : money - cost;
-    if (updated <= 0) { setMoney(0); setGameResult('lost'); if (onGameEnd) onGameEnd('lost'); return; }
-    if (day >= scenarios.length) { endGame(updated); return; }
-    setMoney(updated); setDay(d => d + 1);
+  const handleNextStep = () => {
+    const currentMoney = moneyRef.current;
+    if (currentMoney <= 0) {
+      setGameResult('lost');
+    } else if (day >= scenarios.length) {
+      endGame(currentMoney);
+    } else {
+      setDay(d => d + 1);
+      setTradeMessage(null);
+    }
+    setWaitingNext(false);
   };
 
-  const handleMarketChoice = (opt) => {
+  const handleChoice = (cost, feedbackMsg) => {
+    let updated;
+    if (activeGame === 'Save') {
+      updated = (cost === 0) ? money + Math.max(10, Math.round(config.startingCash * 0.1)) : money - cost;
+    } else {
+      updated = money - cost;
+    }
+    setMoney(updated);
+    moneyRef.current = updated;
+    setTradeMessage(feedbackMsg);
+    setWaitingNext(true);
+  };
+
+  const handleMarketChoice = (opt, scenarioIdx) => {
     if (waitingNext) return;
     const amount = opt[1];
-    if (amount === 0) { setDay(d => d + 1); setTradeMessage(`⏭ Skipped trade.`); if (day >= scenarios.length) { endGame(moneyRef.current); } return; }
+    if (amount === 0) { 
+      const currentScenario = scenarios[scenarioIdx];
+      setTradeMessage(currentScenario.msgB || `⏭ Skipped trade.`); 
+      setWaitingNext(true); 
+      return; 
+    }
     const success = Math.random() < (activeGame === 'Crypto' ? 0.38 : 0.48);
     const currentMoney = moneyRef.current;
     let newMoney, msg;
@@ -468,10 +466,10 @@ export default function GamesScreen({ userTier, onGameEnd, onNavigate, userName 
       newMoney = Math.max(0, currentMoney - loss); msg = `❌ -${config.currencySymbol}${loss} LOSS. ${STOCK_FAIL_REASONS[Math.floor(Math.random() * STOCK_FAIL_REASONS.length)]}`;
       setGameStats(s => ({ ...s, sells: s.sells + 1 }));
     }
-    moneyRef.current = newMoney; setMoney(newMoney); setTradeMessage(msg); setWaitingNext(true);
-    if (newMoney <= 0) { setTimeout(() => { setGameResult('lost'); setWaitingNext(false); }, 1800); } 
-    else if (day >= scenarios.length) { setTimeout(() => { endGame(newMoney); setWaitingNext(false); }, 1800); } 
-    else { setTimeout(() => { setDay(d => d + 1); setTradeMessage(null); setWaitingNext(false); }, 1800); }
+    moneyRef.current = newMoney; 
+    setMoney(newMoney); 
+    setTradeMessage(msg); 
+    setWaitingNext(true);
   };
 
   const handleCreateLeague = () => {
@@ -480,8 +478,6 @@ export default function GamesScreen({ userTier, onGameEnd, onNavigate, userName 
     const newL = { id: Date.now().toString(), name: newLeagueName, players: [currentUser], code, activeMatch: false, visibility: leaguePrivacy, createdBy: currentUser };
     const updated = [newL, ...leagues];
     localStorage.setItem("FIN_LEAGUES_GLOBAL", JSON.stringify(updated));
-    // nudge other tabs by touching a timestamp
-    try { localStorage.setItem('FIN_LEAGUES_LAST_SYNC', Date.now().toString()); } catch {}
     setLeagues(updated);
     setNewLeagueName("");
     alert(`League Created! Code: ${code}`);
@@ -495,12 +491,10 @@ export default function GamesScreen({ userTier, onGameEnd, onNavigate, userName 
       const updatedPlayers = Array.from(new Set([...globalLeagues[foundIdx].players, currentUser]));
       globalLeagues[foundIdx].players = updatedPlayers;
       localStorage.setItem("FIN_LEAGUES_GLOBAL", JSON.stringify(globalLeagues));
-      try { localStorage.setItem('FIN_LEAGUES_LAST_SYNC', Date.now().toString()); } catch {}
-      // re-read and refresh local state to avoid race/overwrite
       const fresh = JSON.parse(localStorage.getItem("FIN_LEAGUES_GLOBAL") || "[]");
       setLeagues(fresh);
       const leagueObj = fresh.find(l => l.code.toUpperCase() === target);
-      setSelectedLeague(leagueObj || globalLeagues[foundIdx]);
+      setSelectedLeague(leagueObj);
       setView('leagueDetail');
     } else {
       alert("Invalid League Code!");
@@ -518,7 +512,6 @@ export default function GamesScreen({ userTier, onGameEnd, onNavigate, userName 
   const handleBlitzTrade = (stockId, action) => {
     const stock = blitzStocks.find(s => s.id === stockId);
     if (!stock) return;
-
     if (action === 'buy') {
       const cost = Math.round(stock.price);
       if (money >= cost) {
@@ -583,8 +576,6 @@ export default function GamesScreen({ userTier, onGameEnd, onNavigate, userName 
     );
   };
 
-  // --- RENDER LOGIC ---
-
   if (gameResult) {
     const isWin = gameResult === 'won' || gameResult === 'report';
     return (
@@ -614,7 +605,7 @@ export default function GamesScreen({ userTier, onGameEnd, onNavigate, userName 
             <div style={{ background: '#1e293b', borderRadius: '16px', padding: '20px', color: '#fff' }}>
               <h3 style={{ margin: '0 0 15px', color: '#6366f1' }}>🏆 Standings</h3>
               <div style={gS.leaderRow}><span style={{color:'#facc15'}}>1. {currentUser} (You)</span> <span>${Math.round(calculateTotalWealth())}</span></div>
-              {opponents.sort((a,b)=>b.wealth-a.wealth).map((o, i)=>(<div key={o.name} style={{...gS.leaderRow, borderBottom:'1px solid #334155'}}><span>{i+2}. {o.name}</span> <span>${Math.round(o.wealth)}</span></div>))}
+              {[...opponents].sort((a,b)=>b.wealth-a.wealth).map((o, i)=>(<div key={o.name} style={{...gS.leaderRow, borderBottom:'1px solid #334155'}}><span>{i+2}. {o.name}</span> <span>${Math.round(o.wealth)}</span></div>))}
               <h3 style={{ margin: '30px 0 15px', color: '#10b981' }}>📡 Activity Feed</h3>
               {leagueFeed.map((f, i) => <div key={i} style={{fontSize:'11px', marginBottom:'10px', color: '#94a3b8'}}>{f}</div>)}
             </div>
@@ -658,8 +649,15 @@ export default function GamesScreen({ userTier, onGameEnd, onNavigate, userName 
         </div>
         <div style={gS.progressTrack}><div style={{ ...gS.progressBar, width:`${((day - 1) / scenarios.length) * 100}%`, background: themeGradient }} /></div>
         <div style={gS.scenarioCard} className="scenario-entry"><p style={gS.scenarioText}>{currentScenario.q}</p>
-          {tradeMessage && (<div style={{ ...gS.tradeMsg, background: tradeMessage.includes('✅') ? '#d1fae5' : tradeMessage.includes('⏭') ? '#f1f5f9' : '#fee2e2', borderColor: tradeMessage.includes('✅') ? '#6ee7b7' : '#fca5a5' }}>{tradeMessage}</div>)}
-          {!waitingNext && (<div style={gS.choiceRow}><button style={{ ...gS.choiceBtn, background: themeGradient }} onClick={() => (activeGame === 'Market' || activeGame === 'Crypto') ? handleMarketChoice(currentScenario.optA) : handleChoice(currentScenario.optA[1])}><span>{currentScenario.optA[0]}</span><b>{config.currencySymbol}{currentScenario.optA[1]}</b></button><button style={gS.choiceBtnSecondary} onClick={() => (activeGame === 'Market' || activeGame === 'Crypto') ? handleMarketChoice(currentScenario.optB) : handleChoice(currentScenario.optB[1])}><span>{currentScenario.optB[0]}</span><span style={{color:'#64748b'}}>{currentScenario.optB[1] > 0 ? `${config.currencySymbol}${currentScenario.optB[1]}` : 'FREE'}</span></button></div>)}
+          {tradeMessage && (<div style={{ ...gS.tradeMsg, background: tradeMessage.includes('✅') || tradeMessage.includes('🌟') ? '#d1fae5' : tradeMessage.includes('⏭') ? '#f1f5f9' : '#fee2e2', borderColor: tradeMessage.includes('✅') || tradeMessage.includes('🌟') ? '#6ee7b7' : '#fca5a5' }}>{tradeMessage}</div>)}
+          {!waitingNext ? (
+            <div style={gS.choiceRow}>
+              <button style={{ ...gS.choiceBtn, background: themeGradient }} onClick={() => (activeGame === 'Market' || activeGame === 'Crypto') ? handleMarketChoice(currentScenario.optA, day - 1) : handleChoice(currentScenario.optA[1], currentScenario.msgA)}><span>{currentScenario.optA[0]}</span><b>{config.currencySymbol}{currentScenario.optA[1]}</b></button>
+              <button style={gS.choiceBtnSecondary} onClick={() => (activeGame === 'Market' || activeGame === 'Crypto') ? handleMarketChoice(currentScenario.optB, day - 1) : handleChoice(currentScenario.optB[1], currentScenario.msgB)}><span>{currentScenario.optB[0]}</span><span style={{color:'#64748b'}}>{currentScenario.optB[1] > 0 ? `${config.currencySymbol}${currentScenario.optB[1]}` : 'FREE'}</span></button>
+            </div>
+          ) : (
+            <button style={{ ...gS.playBtn, background: themeGradient, marginTop: '10px' }} onClick={handleNextStep}>Next Decision →</button>
+          )}
         </div>
         <button onClick={() => resetGame(true)} style={gS.quitBtn}>Quit game</button>
       </div>
