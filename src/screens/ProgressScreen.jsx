@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useMemo } from "react";
 import ProgressBar from "../components/ProgressBar";
+import BudgetTracker from "../components/BudgetTracker";
 
 const ACHIEVEMENT_DEFS = [
   {
@@ -307,6 +308,9 @@ export default function ProgressScreen({
           </div>
         </div>
       </div>
+
+      <BudgetTracker />
+
     </div>
   );
 }
