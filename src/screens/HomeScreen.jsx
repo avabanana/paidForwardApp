@@ -191,7 +191,7 @@ export default function HomeScreen({ onNavigate, userTier }) {
             <div style={{ ...styles.featureIconWrap, background: "#fef2f2" }}>🏆</div>
             <h3 style={styles.featureTitle}>Compete</h3>
             <p style={styles.featureDesc}>Join a League and compete with friends on literacy challenges.</p>
-            <button onClick={() => onNavigate("Leagues")} style={{ ...styles.featureBtn, color: "#ef4444", background: "#fef2f2" }}>Join a League →</button>
+            <button onClick={() => { onNavigate("Games"); setTimeout(() => { window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' }); }, 300); }} style={{ ...styles.featureBtn, color: "#ef4444", background: "#fef2f2" }}>Join a League →</button>
           </div>
         </div>
 

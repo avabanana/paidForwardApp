@@ -153,13 +153,16 @@ export default function GoalScreen({ currentUser = 'guest', userTier = 'adult', 
   }
 
   return (
-    <div style={{
-      padding: '24px',
-      fontFamily: isChild ? 'Comic Sans MS, Comic Neue, cursive' : "'Inter', system-ui, sans-serif",
-      maxWidth: '900px',
-      margin: '0 auto',
-      position: 'relative'
-    }}>
+    <div style={styles.outerWrapper}>
+      <div style={styles.bgLayer} />
+      <div style={{
+        padding: '24px',
+        fontFamily: isChild ? 'Comic Sans MS, Comic Neue, cursive' : "'Inter', system-ui, sans-serif",
+        maxWidth: '900px',
+        margin: '0 auto',
+        position: 'relative',
+        zIndex: 1
+      }}>
 
       {/* Celebration overlay */}
       {showCelebration && (
@@ -322,11 +325,14 @@ export default function GoalScreen({ currentUser = 'guest', userTier = 'adult', 
           })}
         </div>
       )}
+      </div>
     </div>
   );
 }
 
 const styles = {
+  outerWrapper: { position: 'relative', minHeight: '100vh', margin: '-24px', padding: '24px', background: 'linear-gradient(160deg, #f0f0ff 0%, #e8f5f0 30%, #fff8e8 60%, #fff0f0 100%)', fontFamily: "'Inter', system-ui, sans-serif" },
+  bgLayer: { position: 'absolute', inset: 0, background: 'radial-gradient(ellipse at 10% 10%, rgba(99,102,241,0.12) 0%, transparent 50%), radial-gradient(ellipse at 90% 80%, rgba(16,185,129,0.1) 0%, transparent 50%)', pointerEvents: 'none', zIndex: 0 },
   pageHeader: { marginBottom: '24px' },
   pageBadge: {
     display: 'inline-flex', alignItems: 'center', gap: '6px',

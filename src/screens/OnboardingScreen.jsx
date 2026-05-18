@@ -1,64 +1,71 @@
 import React, { useState } from 'react';
-import { supabase } from '../supabaseClient';
 
-function OnboardingScreen() {
+const getLocalUsers = () => JSON.parse(localStorage.getItem('PAIDFORWARD_USERS') || '[]');
+const saveLocalUsers = (users) => localStorage.setItem('PAIDFORWARD_USERS', JSON.stringify(users));
+
+function OnboardingScreen({ onAuth }) {
   const [isSignUp, setIsSignUp] = useState(false);
-  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [username, setUsername] = useState('');
   const [birthYear, setBirthYear] = useState('');
+  const [error, setError] = useState('');
 
-  const handleAuth = async (e) => {
+  const handleAuth = (e) => {
     e.preventDefault();
+    setError('');
+
     try {
+      const users = getLocalUsers();
+
       if (isSignUp) {
-        if (!birthYear) throw new Error('Please enter your birth year.');
         if (!username.trim()) throw new Error('Please choose a username.');
-        
+        if (!birthYear) throw new Error('Please enter your birth year.');
+        if (!password || password.length < 6) throw new Error('Password must be at least 6 characters.');
+
+        const exists = users.find(u => u.username.toLowerCase() === username.trim().toLowerCase());
+        if (exists) throw new Error('That username is already taken.');
+
         const numericYear = parseInt(birthYear, 10);
         const age = new Date().getFullYear() - numericYear;
         const tier = age >= 14 ? 'adult' : 'elementary';
 
-        const { data, error } = await supabase.auth.signUp({
-          email,
+        const newUser = {
+          id: `local_${Date.now()}`,
+          username: username.trim(),
           password,
-          options: {
-            data: {
-              username: username.trim(),
-              tier: tier,
-              birthYear: numericYear
-            }
-          }
-        });
+          tier,
+          birthYear: numericYear,
+          xp: 0,
+          gameWins: 0,
+          gamesPlayed: 0,
+          coursesCompleted: 0,
+          streak: 1,
+          courseProgressMap: {},
+          achievements: [],
+          lastLogin: new Date().toISOString().slice(0, 10),
+          createdAt: new Date().toISOString()
+        };
 
-        if (error) throw error;
-
-        // Create the initial profile in the 'users' table
-        const { error: profileError } = await supabase
-          .from('users')
-          .insert([{
-            id: data.user.id,
-            username: username.trim(),
-            email,
-            xp: 0,
-            gameWins: 0,
-            gamesPlayed: 0,
-            coursesCompleted: 0,
-            streak: 1,
-            tier,
-            birthYear: numericYear,
-            courseProgressMap: {},
-            achievements: [],
-            lastLogin: new Date().toISOString().slice(0, 10)
-          }]);
-        
-        if (profileError) throw profileError;
+        saveLocalUsers([...users, newUser]);
+        onAuth(newUser);
       } else {
-        const { error } = await supabase.auth.signInWithPassword({ email, password });
-        if (error) throw error;
+        if (!username.trim()) throw new Error('Please enter your username.');
+        if (!password) throw new Error('Please enter your password.');
+
+        const found = users.find(u => u.username.toLowerCase() === username.trim().toLowerCase());
+        if (!found) throw new Error('No account found with that username.');
+        if (found.password !== password) throw new Error('Incorrect password.');
+
+        // Update lastLogin
+        const updatedUsers = users.map(u =>
+          u.id === found.id ? { ...u, lastLogin: new Date().toISOString().slice(0, 10) } : u
+        );
+        saveLocalUsers(updatedUsers);
+
+        onAuth({ ...found, lastLogin: new Date().toISOString().slice(0, 10) });
       }
     } catch (err) {
-      alert(err.message);
+      setError(err.message);
     }
   };
 
@@ -72,42 +79,62 @@ function OnboardingScreen() {
           <p style={styles.authSubtitle}>Learn money, play games, and build lifetime habits.</p>
           <div style={styles.pillRow}><span style={styles.pill}>📈 Investing</span><span style={styles.pill}>💰 Saving</span><span style={styles.pill}>🎮 Games</span></div>
         </div>
+
         <form style={styles.authForm} onSubmit={handleAuth}>
+          <div style={styles.inputWrap}>
+            <span style={styles.inputIcon}>👤</span>
+            <input style={styles.input} placeholder="Username" value={username} onChange={(e) => setUsername(e.target.value)} required />
+          </div>
+
           {isSignUp && (
-            <>
-              <div style={styles.inputWrap}><span style={styles.inputIcon}>👤</span><input style={styles.input} placeholder="Choose a username" value={username} onChange={(e) => setUsername(e.target.value)} /></div>
-              <div style={styles.inputWrap}><span style={styles.inputIcon}>🎂</span><input style={styles.input} type="number" min="1900" max={new Date().getFullYear()} placeholder="Birth year" value={birthYear} onChange={(e) => setBirthYear(e.target.value)} /></div>
-            </>
+            <div style={styles.inputWrap}>
+              <span style={styles.inputIcon}>🎂</span>
+              <input style={styles.input} type="number" min="1900" max={new Date().getFullYear()} placeholder="Birth year" value={birthYear} onChange={(e) => setBirthYear(e.target.value)} />
+            </div>
           )}
-          <div style={styles.inputWrap}><span style={styles.inputIcon}>✉️</span><input style={styles.input} type="email" placeholder="Email address" value={email} onChange={(e) => setEmail(e.target.value)} required /></div>
-          <div style={styles.inputWrap}><span style={styles.inputIcon}>🔒</span><input style={styles.input} type="password" placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} required /></div>
-          <button type="submit" style={styles.authBtn}>{isSignUp ? '🚀 Create Free Account' : '✨ Sign In'}</button>
+
+          <div style={styles.inputWrap}>
+            <span style={styles.inputIcon}>🔒</span>
+            <input style={styles.input} type="password" placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} required />
+          </div>
+
+          {error && (
+            <div style={styles.errorBox}>⚠️ {error}</div>
+          )}
+
+          <button type="submit" style={styles.authBtn}>
+            {isSignUp ? '🚀 Create Free Account' : '✨ Sign In'}
+          </button>
         </form>
-        <p style={styles.switchText} onClick={() => setIsSignUp(!isSignUp)}>{isSignUp ? 'Already have an account? Sign In →' : "New here? Create an account →"}</p>
+
+        <p style={styles.switchText} onClick={() => { setIsSignUp(!isSignUp); setError(''); }}>
+          {isSignUp ? 'Already have an account? Sign In →' : 'New here? Create an account →'}
+        </p>
       </div>
     </div>
   );
 }
 
 const styles = {
-  authPage: { minHeight:'100vh', display:'flex', alignItems:'center', justifyContent:'center', background:'linear-gradient(135deg, #1e1b4b 0%, #312e81 40%, #4f46e5 70%, #7c3aed 100%)', fontFamily:"'Inter', system-ui, sans-serif", position:'relative', overflow:'hidden' },
-  blob1: { position:'absolute', top:'-80px', left:'-80px', width:'320px', height:'320px', borderRadius:'50%', background:'rgba(139,92,246,0.35)', filter:'blur(60px)', zIndex:0 },
-  blob2: { position:'absolute', bottom:'-60px', right:'-60px', width:'280px', height:'280px', borderRadius:'50%', background:'rgba(99,102,241,0.4)', filter:'blur(50px)', zIndex:0 },
-  blob3: { position:'absolute', top:'40%', left:'60%', width:'200px', height:'200px', borderRadius:'50%', background:'rgba(236,72,153,0.25)', filter:'blur(50px)', zIndex:0 },
-  authCard: { background:'rgba(255,255,255,0.08)', backdropFilter:'blur(24px)', padding:'44px 40px', borderRadius:'28px', boxShadow:'0 24px 64px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.15)', maxWidth:'420px', width:'100%', position:'relative', zIndex:1, border:'1px solid rgba(255,255,255,0.15)' },
-  brandBar: { textAlign:'center', marginBottom:'32px' },
-  logoWrap: { display:'flex', alignItems:'center', justifyContent:'center', gap:'10px', marginBottom:'10px' },
-  logoIcon: { fontSize:'36px' },
-  authLogo: { fontSize:'34px', fontWeight:'800', margin:0, color:'#fff', letterSpacing:'-0.5px' },
-  authSubtitle: { color:'rgba(255,255,255,0.75)', fontSize:'15px', margin:'8px 0 16px' },
-  pillRow: { display:'flex', gap:'8px', justifyContent:'center', flexWrap:'wrap' },
-  pill: { background:'rgba(255,255,255,0.15)', color:'#fff', borderRadius:'999px', padding:'4px 12px', fontSize:'12px', fontWeight:'600', border:'1px solid rgba(255,255,255,0.2)' },
-  authForm: { display:'flex', flexDirection:'column', gap:'14px' },
-  inputWrap: { display:'flex', alignItems:'center', gap:'10px', background:'rgba(255,255,255,0.12)', borderRadius:'14px', padding:'4px 14px', border:'1px solid rgba(255,255,255,0.2)' },
-  inputIcon: { fontSize:'18px' },
-  input: { flex:1, padding:'13px 4px', background:'transparent', border:'none', color:'#fff', fontSize:'15px', outline:'none' },
-  authBtn: { padding:'16px', borderRadius:'14px', border:'none', background:'linear-gradient(135deg,#6366f1,#8b5cf6)', color:'#fff', fontSize:'16px', fontWeight:'700', cursor:'pointer', boxShadow:'0 8px 24px rgba(99,102,241,0.5)', marginTop:'4px' },
-  switchText: { textAlign:'center', marginTop:'20px', cursor:'pointer', color:'rgba(255,255,255,0.7)', fontSize:'14px', fontWeight:'600' },
+  authPage: { minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(135deg, #1e1b4b 0%, #312e81 40%, #4f46e5 70%, #7c3aed 100%)', fontFamily: "'Inter', system-ui, sans-serif", position: 'relative', overflow: 'hidden' },
+  blob1: { position: 'absolute', top: '-80px', left: '-80px', width: '320px', height: '320px', borderRadius: '50%', background: 'rgba(139,92,246,0.35)', filter: 'blur(60px)', zIndex: 0 },
+  blob2: { position: 'absolute', bottom: '-60px', right: '-60px', width: '280px', height: '280px', borderRadius: '50%', background: 'rgba(99,102,241,0.4)', filter: 'blur(50px)', zIndex: 0 },
+  blob3: { position: 'absolute', top: '40%', left: '60%', width: '200px', height: '200px', borderRadius: '50%', background: 'rgba(236,72,153,0.25)', filter: 'blur(50px)', zIndex: 0 },
+  authCard: { background: 'rgba(255,255,255,0.08)', backdropFilter: 'blur(24px)', padding: '44px 40px', borderRadius: '28px', boxShadow: '0 24px 64px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.15)', maxWidth: '420px', width: '100%', position: 'relative', zIndex: 1, border: '1px solid rgba(255,255,255,0.15)' },
+  brandBar: { textAlign: 'center', marginBottom: '32px' },
+  logoWrap: { display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', marginBottom: '10px' },
+  logoIcon: { fontSize: '36px' },
+  authLogo: { fontSize: '34px', fontWeight: '800', margin: 0, color: '#fff', letterSpacing: '-0.5px' },
+  authSubtitle: { color: 'rgba(255,255,255,0.75)', fontSize: '15px', margin: '8px 0 16px' },
+  pillRow: { display: 'flex', gap: '8px', justifyContent: 'center', flexWrap: 'wrap' },
+  pill: { background: 'rgba(255,255,255,0.15)', color: '#fff', borderRadius: '999px', padding: '4px 12px', fontSize: '12px', fontWeight: '600', border: '1px solid rgba(255,255,255,0.2)' },
+  authForm: { display: 'flex', flexDirection: 'column', gap: '14px' },
+  inputWrap: { display: 'flex', alignItems: 'center', gap: '10px', background: 'rgba(255,255,255,0.12)', borderRadius: '14px', padding: '4px 14px', border: '1px solid rgba(255,255,255,0.2)' },
+  inputIcon: { fontSize: '18px' },
+  input: { flex: 1, padding: '13px 4px', background: 'transparent', border: 'none', color: '#fff', fontSize: '15px', outline: 'none' },
+  errorBox: { background: 'rgba(239,68,68,0.2)', border: '1px solid rgba(239,68,68,0.4)', color: '#fca5a5', padding: '12px 16px', borderRadius: '12px', fontSize: '14px', fontWeight: '600' },
+  authBtn: { padding: '16px', borderRadius: '14px', border: 'none', background: 'linear-gradient(135deg,#6366f1,#8b5cf6)', color: '#fff', fontSize: '16px', fontWeight: '700', cursor: 'pointer', boxShadow: '0 8px 24px rgba(99,102,241,0.5)', marginTop: '4px' },
+  switchText: { textAlign: 'center', marginTop: '20px', cursor: 'pointer', color: 'rgba(255,255,255,0.7)', fontSize: '14px', fontWeight: '600' },
 };
 
 export default OnboardingScreen;

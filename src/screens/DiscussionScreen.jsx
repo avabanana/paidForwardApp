@@ -137,153 +137,164 @@ export default function DiscussionScreen({ currentUser, streak = 0, db, userId }
   const visiblePosts = showMine ? posts.filter((p) => isPostOwner(p)) : posts;
 
   return (
-    <div style={dStyles.container}>
-      <h2 style={dStyles.title}>💬 Community Discussion</h2>
-      <div style={dStyles.topRow}>
-        <span style={dStyles.subText}>Share questions, tips, and wins with others.</span>
-        <button style={dStyles.toggleBtn} onClick={() => setShowMine((p) => !p)}>
-          {showMine ? "Showing: My Posts" : "Showing: All Posts"}
-        </button>
-      </div>
-
-      <form onSubmit={handlePost} style={dStyles.postBox}>
-        <div style={dStyles.postInputHeader}>
-          <span style={dStyles.postingAs}>Posting as <strong>{currentUser || "Guest"}</strong></span>
+    <div style={dStyles.outerWrapper}>
+      <div style={dStyles.bgLayer} />
+      <div style={dStyles.outerContainer}>
+        <div style={dStyles.header}>
+          <div style={dStyles.headerBadge}>💬 Community Discussion</div>
+          <h2 style={dStyles.title}>Share & Connect</h2>
+          <p style={dStyles.subtitle}>Ask questions, share wins, and learn from others.</p>
         </div>
-        <textarea
-          style={dStyles.textarea}
-          placeholder="Ask a question or share a win..."
-          value={newPost}
-          onChange={(e) => setNewPost(e.target.value)}
-        />
-        <button type="submit" style={dStyles.postBtn}>Post</button>
-      </form>
 
-      <div style={dStyles.feed}>
-        {loading && posts.length === 0 ? (
-          <div style={dStyles.emptyState}><p>Loading posts...</p></div>
-        ) : visiblePosts.length === 0 ? (
-          <div style={dStyles.emptyState}>
-            <p style={{ margin: 0 }}>No posts found.</p>
-            <p style={{ margin: 0, color: "#64748b", fontSize: '13px' }}>
-              {showMine ? "You haven't posted anything yet." : "Be the first to start the conversation!"}
-            </p>
+        <div style={dStyles.topRow}>
+          <button style={dStyles.toggleBtn} onClick={() => setShowMine((p) => !p)}>
+            {showMine ? "Showing: My Posts" : "Showing: All Posts"}
+          </button>
+        </div>
+
+        <form onSubmit={handlePost} style={dStyles.postBox}>
+          <div style={dStyles.postInputHeader}>
+            <span style={dStyles.postingAs}>Posting as <strong>{currentUser || "Guest"}</strong></span>
           </div>
-        ) : (
-          visiblePosts.map((post) => {
-            const isOwner = isPostOwner(post);
-            const actorId = userId || currentUser || "Guest";
+          <textarea
+            style={dStyles.textarea}
+            placeholder="Ask a question or share a win..."
+            value={newPost}
+            onChange={(e) => setNewPost(e.target.value)}
+          />
+          <button type="submit" style={dStyles.postBtn}>Post</button>
+        </form>
 
-            return (
-              <div key={post.id} style={dStyles.postCard}>
-                <div style={dStyles.postHeader}>
-                  <div style={dStyles.userInfo}>
-                    <span style={dStyles.userAvatar}>{(post.user || "G")[0].toUpperCase()}</span>
-                    <div>
-                      <span style={dStyles.userName}>{post.user}</span>
-                      {isOwner && streak > 1 && <span style={dStyles.streakTag}>🔥 {streak}</span>}
-                      {isOwner && <span style={dStyles.youBadge}>you</span>}
+        <div style={dStyles.feed}>
+          {loading && posts.length === 0 ? (
+            <div style={dStyles.emptyState}><p>Loading posts...</p></div>
+          ) : visiblePosts.length === 0 ? (
+            <div style={dStyles.emptyState}>
+              <p style={{ margin: 0 }}>No posts found.</p>
+              <p style={{ margin: 0, color: "#64748b", fontSize: '13px' }}>
+                {showMine ? "You haven't posted anything yet." : "Be the first to start the conversation!"}
+              </p>
+            </div>
+          ) : (
+            visiblePosts.map((post) => {
+              const isOwner = isPostOwner(post);
+              const actorId = userId || currentUser || "Guest";
+
+              return (
+                <div key={post.id} style={dStyles.postCard}>
+                  <div style={dStyles.postHeader}>
+                    <div style={dStyles.userInfo}>
+                      <span style={dStyles.userAvatar}>{(post.user || "G")[0].toUpperCase()}</span>
+                      <div>
+                        <span style={dStyles.userName}>{post.user}</span>
+                        {isOwner && streak > 1 && <span style={dStyles.streakTag}>🔥 {streak}</span>}
+                        {isOwner && <span style={dStyles.youBadge}>you</span>}
+                      </div>
+                    </div>
+                    <span style={dStyles.time}>
+                      {post.createdAt ? new Date(post.createdAt).toLocaleString() : "just now"}
+                    </span>
+                  </div>
+
+                  <p style={dStyles.postText}>{post.text}</p>
+
+                  <div style={dStyles.actions}>
+                    <button
+                      onClick={() => toggleReaction(post.id, "like", post)}
+                      style={{
+                        ...dStyles.actionLink,
+                        color: (post.likes || []).includes(actorId) ? "#e11d48" : "#64748b"
+                      }}
+                    >
+                      ❤️ {(post.likes || []).length}
+                    </button>
+                    <button
+                      onClick={() => toggleReaction(post.id, "thumbs", post)}
+                      style={{
+                        ...dStyles.actionLink,
+                        color: (post.reactions?.thumbs || []).includes(actorId) ? "#2563eb" : "#64748b"
+                      }}
+                    >
+                      👍 {(post.reactions?.thumbs || []).length}
+                    </button>
+                    <button
+                      onClick={() => toggleReaction(post.id, "laugh", post)}
+                      style={{
+                        ...dStyles.actionLink,
+                        color: (post.reactions?.laugh || []).includes(actorId) ? "#d97706" : "#64748b"
+                      }}
+                    >
+                      😂 {(post.reactions?.laugh || []).length}
+                    </button>
+                    
+                    {/* DELETE BUTTON: Only visible to original poster */}
+                    {isOwner && (
+                      <button onClick={() => deletePost(post.id)} style={dStyles.deleteBtn}>
+                        🗑 Delete
+                      </button>
+                    )}
+                  </div>
+
+                  <div style={dStyles.repliesSection}>
+                    {(post.replies || []).map((reply) => {
+                      const isReplyOwner = (userId && reply.userId) ? String(reply.userId) === String(userId) : reply.user === currentUser;
+                      return (
+                        <div key={reply.id} style={dStyles.replyItem}>
+                          <span style={dStyles.replyUser}>{reply.user}</span>
+                          {isReplyOwner && <span style={dStyles.youBadgeSmall}>you</span>}
+                          <span style={dStyles.replySep}>·</span>
+                          <span style={dStyles.replyText}>{reply.text}</span>
+                          {isReplyOwner && (
+                            <button
+                              onClick={() => deleteReply(post.id, reply.id, post.replies)}
+                              style={dStyles.replyDeleteBtn}
+                            >
+                              delete
+                            </button>
+                          )}
+                        </div>
+                      );
+                    })}
+
+                    <div style={dStyles.replyInputRow}>
+                      <input
+                        style={dStyles.replyInput}
+                        placeholder="Write a reply..."
+                        value={replyText[post.id] || ""}
+                        onChange={(e) =>
+                          setReplyText((prev) => ({ ...prev, [post.id]: e.target.value }))
+                        }
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") handleReply(post.id, post.replies);
+                        }}
+                      />
+                      <button
+                        onClick={() => handleReply(post.id, post.replies)}
+                        style={dStyles.replyBtn}
+                      >
+                        Reply
+                      </button>
                     </div>
                   </div>
-                  <span style={dStyles.time}>
-                    {post.createdAt ? new Date(post.createdAt).toLocaleString() : "just now"}
-                  </span>
                 </div>
-
-                <p style={dStyles.postText}>{post.text}</p>
-
-                <div style={dStyles.actions}>
-                  <button
-                    onClick={() => toggleReaction(post.id, "like", post)}
-                    style={{
-                      ...dStyles.actionLink,
-                      color: (post.likes || []).includes(actorId) ? "#e11d48" : "#64748b"
-                    }}
-                  >
-                    ❤️ {(post.likes || []).length}
-                  </button>
-                  <button
-                    onClick={() => toggleReaction(post.id, "thumbs", post)}
-                    style={{
-                      ...dStyles.actionLink,
-                      color: (post.reactions?.thumbs || []).includes(actorId) ? "#2563eb" : "#64748b"
-                    }}
-                  >
-                    👍 {(post.reactions?.thumbs || []).length}
-                  </button>
-                  <button
-                    onClick={() => toggleReaction(post.id, "laugh", post)}
-                    style={{
-                      ...dStyles.actionLink,
-                      color: (post.reactions?.laugh || []).includes(actorId) ? "#d97706" : "#64748b"
-                    }}
-                  >
-                    😂 {(post.reactions?.laugh || []).length}
-                  </button>
-                  
-                  {/* DELETE BUTTON: Only visible to original poster */}
-                  {isOwner && (
-                    <button onClick={() => deletePost(post.id)} style={dStyles.deleteBtn}>
-                      🗑 Delete
-                    </button>
-                  )}
-                </div>
-
-                <div style={dStyles.repliesSection}>
-                  {(post.replies || []).map((reply) => {
-                    const isReplyOwner = (userId && reply.userId) ? String(reply.userId) === String(userId) : reply.user === currentUser;
-                    return (
-                      <div key={reply.id} style={dStyles.replyItem}>
-                        <span style={dStyles.replyUser}>{reply.user}</span>
-                        {isReplyOwner && <span style={dStyles.youBadgeSmall}>you</span>}
-                        <span style={dStyles.replySep}>·</span>
-                        <span style={dStyles.replyText}>{reply.text}</span>
-                        {isReplyOwner && (
-                          <button
-                            onClick={() => deleteReply(post.id, reply.id, post.replies)}
-                            style={dStyles.replyDeleteBtn}
-                          >
-                            delete
-                          </button>
-                        )}
-                      </div>
-                    );
-                  })}
-
-                  <div style={dStyles.replyInputRow}>
-                    <input
-                      style={dStyles.replyInput}
-                      placeholder="Write a reply..."
-                      value={replyText[post.id] || ""}
-                      onChange={(e) =>
-                        setReplyText((prev) => ({ ...prev, [post.id]: e.target.value }))
-                      }
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") handleReply(post.id, post.replies);
-                      }}
-                    />
-                    <button
-                      onClick={() => handleReply(post.id, post.replies)}
-                      style={dStyles.replyBtn}
-                    >
-                      Reply
-                    </button>
-                  </div>
-                </div>
-              </div>
-            );
-          })
-        )}
+              );
+            })
+          )}
+        </div>
       </div>
     </div>
   );
 }
 
 const dStyles = {
-  container: { maxWidth: "700px", margin: "0 auto", fontFamily: "'Inter', system-ui, sans-serif" },
-  title: { color: "#1e293b", marginBottom: "20px", fontSize: "28px" },
+  outerWrapper: { position: 'relative', minHeight: '100vh', margin: '-24px', padding: '24px', background: 'linear-gradient(160deg, #f0f0ff 0%, #e8f5f0 30%, #fff8e8 60%, #fff0f0 100%)', fontFamily: "'Inter', system-ui, sans-serif" },
+  bgLayer: { position: 'absolute', inset: 0, background: 'radial-gradient(ellipse at 10% 10%, rgba(99,102,241,0.12) 0%, transparent 50%), radial-gradient(ellipse at 90% 80%, rgba(16,185,129,0.1) 0%, transparent 50%)', pointerEvents: 'none', zIndex: 0 },
+  outerContainer: { maxWidth: '700px', margin: '0 auto', position: 'relative', zIndex: 1 },
+  header: { marginBottom: '32px' },
+  headerBadge: { display: 'inline-block', background: 'rgba(99,102,241,0.12)', borderRadius: '999px', padding: '8px 16px', fontSize: '13px', fontWeight: '700', color: '#4338ca', marginBottom: '12px' },
+  title: { color: "#1e293b", margin: '0 0 8px', fontSize: '32px', fontWeight: '900' },
+  subtitle: { margin: '0', fontSize: '15px', color: '#64748b', lineHeight: 1.6 },
   topRow: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" },
-  subText: { color: "#64748b", fontSize: "14px" },
   toggleBtn: {
     background: "#f1f5f9", border: "1px solid #e2e8f0",
     borderRadius: "999px", padding: "6px 14px", cursor: "pointer", fontSize: "12px", fontWeight: "600"

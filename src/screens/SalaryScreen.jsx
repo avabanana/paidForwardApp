@@ -129,6 +129,7 @@ export default function SalaryScreen() {
           </div>
         </div>
       </div>
+      </div>
     </div>
   );
 }

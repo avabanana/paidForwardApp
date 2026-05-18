@@ -1,3 +1,4 @@
+//Games page:
 import React, { useState, useRef, useEffect, useCallback } from "react";
 
 const STOCK_FAIL_REASONS = [
