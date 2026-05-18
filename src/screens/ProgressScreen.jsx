@@ -1,6 +1,11 @@
 import React, { useEffect, useRef, useMemo } from "react";
 import ProgressBar from "../components/ProgressBar";
 import BudgetTracker from "../components/BudgetTracker";
+import LatteFactorCalculator from "../components/LatteFactorCalculator";
+import SubscriptionAudit from "../components/SubscriptionAudit";
+import PricePerUseTracker from "../components/PricePerUseTracker";
+import NoSpendDayTracker from "../components/NoSpendDayTracker";
+import FinancialMoodJournal from "../components/FinancialMoodJournal";
 
 const ACHIEVEMENT_DEFS = [
   {
@@ -209,7 +214,9 @@ export default function ProgressScreen({
   });
 
   return (
-    <div style={{ padding: "10px", fontFamily: "'Inter', system-ui, sans-serif", position: "relative" }}>
+    <div style={styles.outerWrapper}>
+      <div style={styles.bgLayer} />
+      <div style={{ padding: "10px", fontFamily: "'Inter', system-ui, sans-serif", position: "relative", zIndex: 1, maxWidth: "1200px", margin: "0 auto" }}>
       {/* Level header */}
       <div style={styles.levelCard}>
         <div style={styles.levelBadge}>LVL {currentLevel}</div>
@@ -311,6 +318,17 @@ export default function ProgressScreen({
 
       <BudgetTracker />
 
+      <LatteFactorCalculator />
+
+      <SubscriptionAudit />
+
+      <PricePerUseTracker />
+
+      <NoSpendDayTracker />
+
+      <FinancialMoodJournal />
+
+      </div>
     </div>
   );
 }
@@ -326,6 +344,8 @@ const Badge = ({ icon, title, color }) => (
 );
 
 const styles = {
+  outerWrapper: { position: 'relative', minHeight: '100vh', margin: '-24px', padding: '24px', background: 'linear-gradient(160deg, #f0f0ff 0%, #e8f5f0 30%, #fff8e8 60%, #fff0f0 100%)', fontFamily: "'Inter', system-ui, sans-serif" },
+  bgLayer: { position: 'absolute', inset: 0, background: 'radial-gradient(ellipse at 10% 10%, rgba(99,102,241,0.12) 0%, transparent 50%), radial-gradient(ellipse at 90% 80%, rgba(16,185,129,0.1) 0%, transparent 50%)', pointerEvents: 'none', zIndex: 0 },
   levelCard: {
     background: "linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%)",
     padding: "28px", borderRadius: "20px",
