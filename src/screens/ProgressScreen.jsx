@@ -4,8 +4,6 @@ import BudgetTracker from "../components/BudgetTracker";
 import LatteFactorCalculator from "../components/LatteFactorCalculator";
 import SubscriptionAudit from "../components/SubscriptionAudit";
 import PricePerUseTracker from "../components/PricePerUseTracker";
-import NoSpendDayTracker from "../components/NoSpendDayTracker";
-import FinancialMoodJournal from "../components/FinancialMoodJournal";
 
 const ACHIEVEMENT_DEFS = [
   {
@@ -146,6 +144,539 @@ const ToolCard = ({ icon, title, color, children }) => (
     </div>
   </div>
 );
+
+// ─────────────────────────────────────────────
+// FINANCIAL MOOD JOURNAL — redesigned
+// ─────────────────────────────────────────────
+const MOODS = [
+  { emoji: "😰", label: "Stressed",  value: 1, color: "#fee2e2", text: "#b91c1c" },
+  { emoji: "😟", label: "Worried",   value: 2, color: "#fef3c7", text: "#92400e" },
+  { emoji: "😐", label: "Neutral",   value: 3, color: "#e0f2fe", text: "#0369a1" },
+  { emoji: "🙂", label: "Good",      value: 4, color: "#dcfce7", text: "#166534" },
+  { emoji: "😄", label: "Great",     value: 5, color: "#d1fae5", text: "#065f46" },
+];
+
+function FinancialMoodJournal() {
+  const [selectedMood, setSelectedMood] = useState(null);
+  const [amount, setAmount]             = useState("");
+  const [note, setNote]                 = useState("");
+  const [entries, setEntries]           = useState([]);
+  const [view, setView]                 = useState("log"); // "log" | "history"
+
+  const handleLog = () => {
+    if (!selectedMood) return;
+    const entry = {
+      id: Date.now(),
+      mood: selectedMood,
+      amount: parseFloat(amount) || 0,
+      note: note.trim(),
+      date: new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
+      time: new Date().toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" }),
+    };
+    setEntries(prev => [entry, ...prev]);
+    setSelectedMood(null);
+    setAmount("");
+    setNote("");
+    setView("history");
+  };
+
+  const avgMood = entries.length
+    ? (entries.reduce((s, e) => s + e.mood.value, 0) / entries.length).toFixed(1)
+    : null;
+  const totalSpent = entries.reduce((s, e) => s + e.amount, 0);
+  const topMood = entries.length
+    ? MOODS.reduce((best, m) => {
+        const count = entries.filter(e => e.mood.value === m.value).length;
+        return count > best.count ? { ...m, count } : best;
+      }, { count: 0 })
+    : null;
+
+  return (
+    <div style={{ fontFamily: "system-ui, sans-serif" }}>
+      {/* Tab toggle */}
+      <div style={{ display: "flex", gap: "8px", marginBottom: "20px" }}>
+        {["log", "history"].map(v => (
+          <button
+            key={v}
+            onClick={() => setView(v)}
+            style={{
+              padding: "8px 20px", borderRadius: "999px", border: "none",
+              fontWeight: "700", fontSize: "13px", cursor: "pointer",
+              background: view === v ? "#2563eb" : "#f1f5f9",
+              color: view === v ? "#fff" : "#64748b",
+              transition: "all 0.15s"
+            }}
+          >
+            {v === "log" ? "📝 Log Mood" : `📋 History (${entries.length})`}
+          </button>
+        ))}
+      </div>
+
+      {view === "log" && (
+        <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+          {/* Mood picker */}
+          <div style={{
+            background: "#f8fafc", borderRadius: "16px", padding: "16px 20px",
+            border: "1px solid #e2e8f0"
+          }}>
+            <p style={{ margin: "0 0 12px", fontWeight: "700", fontSize: "14px", color: "#374151" }}>
+              How do you feel about money today?
+            </p>
+            <div style={{ display: "flex", gap: "10px", justifyContent: "space-between" }}>
+              {MOODS.map(m => (
+                <button
+                  key={m.value}
+                  onClick={() => setSelectedMood(m)}
+                  style={{
+                    flex: 1,
+                    padding: "12px 6px",
+                    borderRadius: "14px",
+                    border: selectedMood?.value === m.value
+                      ? `2px solid ${m.text}`
+                      : "2px solid transparent",
+                    background: selectedMood?.value === m.value ? m.color : "#fff",
+                    cursor: "pointer",
+                    textAlign: "center",
+                    transition: "all 0.15s",
+                    boxShadow: selectedMood?.value === m.value
+                      ? `0 2px 8px rgba(0,0,0,0.1)`
+                      : "0 1px 3px rgba(0,0,0,0.06)"
+                  }}
+                >
+                  <div style={{ fontSize: "26px", marginBottom: "4px" }}>{m.emoji}</div>
+                  <div style={{
+                    fontSize: "10px", fontWeight: "700",
+                    color: selectedMood?.value === m.value ? m.text : "#94a3b8",
+                    textTransform: "uppercase", letterSpacing: "0.4px"
+                  }}>{m.label}</div>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Amount + note side by side on wider screens, stacked on narrow */}
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+            <div>
+              <label style={{ display: "block", fontSize: "12px", fontWeight: "700", color: "#475569", marginBottom: "6px", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                Amount Spent ($)
+              </label>
+              <input
+                type="number"
+                min="0"
+                placeholder="0.00"
+                value={amount}
+                onChange={e => setAmount(e.target.value)}
+                style={{
+                  width: "100%", boxSizing: "border-box",
+                  padding: "11px 14px", borderRadius: "12px",
+                  border: "1.5px solid #e2e8f0", fontSize: "15px",
+                  fontWeight: "600", color: "#1e293b", outline: "none",
+                  background: "#fff",
+                }}
+              />
+            </div>
+            <div>
+              <label style={{ display: "block", fontSize: "12px", fontWeight: "700", color: "#475569", marginBottom: "6px", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                Category <span style={{ fontWeight: "400", color: "#94a3b8" }}>(optional)</span>
+              </label>
+              <select
+                style={{
+                  width: "100%", boxSizing: "border-box",
+                  padding: "11px 14px", borderRadius: "12px",
+                  border: "1.5px solid #e2e8f0", fontSize: "14px",
+                  color: "#1e293b", outline: "none", background: "#fff", cursor: "pointer"
+                }}
+                defaultValue=""
+              >
+                <option value="">Select category…</option>
+                {["Food & Drink","Transport","Shopping","Bills","Entertainment","Healthcare","Other"].map(c => (
+                  <option key={c} value={c}>{c}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          {/* Note */}
+          <div>
+            <label style={{ display: "block", fontSize: "12px", fontWeight: "700", color: "#475569", marginBottom: "6px", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+              Notes <span style={{ fontWeight: "400", color: "#94a3b8" }}>(optional)</span>
+            </label>
+            <textarea
+              placeholder="What's on your mind about your finances today?"
+              value={note}
+              onChange={e => setNote(e.target.value)}
+              rows={3}
+              style={{
+                width: "100%", boxSizing: "border-box",
+                padding: "12px 14px", borderRadius: "12px",
+                border: "1.5px solid #e2e8f0", fontSize: "14px",
+                color: "#374151", resize: "vertical", outline: "none",
+                fontFamily: "inherit", lineHeight: "1.5"
+              }}
+            />
+          </div>
+
+          <button
+            onClick={handleLog}
+            disabled={!selectedMood}
+            style={{
+              padding: "13px 24px", borderRadius: "14px", border: "none",
+              background: selectedMood ? "#2563eb" : "#cbd5e1",
+              color: "#fff", fontWeight: "800", fontSize: "15px", cursor: selectedMood ? "pointer" : "not-allowed",
+              transition: "all 0.2s", alignSelf: "flex-start",
+              boxShadow: selectedMood ? "0 4px 12px rgba(37,99,235,0.25)" : "none"
+            }}
+          >
+            Log Entry ✓
+          </button>
+        </div>
+      )}
+
+      {view === "history" && (
+        <div>
+          {/* Summary stats */}
+          {entries.length > 0 && (
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "12px", marginBottom: "20px" }}>
+              {[
+                { label: "Avg Mood", value: avgMood ? `${avgMood}/5` : "—", sub: topMood?.count ? `${topMood.emoji} most common` : "", bg: "#eff6ff" },
+                { label: "Total Logged", value: `$${totalSpent.toFixed(2)}`, sub: `across ${entries.length} entries`, bg: "#f0fdf4" },
+                { label: "Entries", value: entries.length, sub: "mood logs", bg: "#faf5ff" },
+              ].map(s => (
+                <div key={s.label} style={{ background: s.bg, borderRadius: "14px", padding: "14px", border: "1px solid #e2e8f0" }}>
+                  <div style={{ fontSize: "10px", fontWeight: "700", color: "#64748b", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: "4px" }}>{s.label}</div>
+                  <div style={{ fontSize: "20px", fontWeight: "800", color: "#1e293b" }}>{s.value}</div>
+                  {s.sub && <div style={{ fontSize: "11px", color: "#94a3b8", marginTop: "2px" }}>{s.sub}</div>}
+                </div>
+              ))}
+            </div>
+          )}
+
+          {entries.length === 0 ? (
+            <div style={{ textAlign: "center", padding: "40px 20px", color: "#94a3b8" }}>
+              <div style={{ fontSize: "40px", marginBottom: "10px" }}>📓</div>
+              <p style={{ fontWeight: "600", margin: 0 }}>No entries yet.</p>
+              <p style={{ fontSize: "13px", margin: "6px 0 0" }}>Switch to Log Mood to add your first entry.</p>
+            </div>
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+              {entries.map(entry => (
+                <div key={entry.id} style={{
+                  display: "flex", alignItems: "flex-start", gap: "14px",
+                  background: entry.mood.color,
+                  borderRadius: "14px", padding: "14px 16px",
+                  border: `1.5px solid ${entry.mood.text}22`
+                }}>
+                  <div style={{ fontSize: "28px", flexShrink: 0 }}>{entry.mood.emoji}</div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "2px" }}>
+                      <span style={{ fontWeight: "800", fontSize: "14px", color: entry.mood.text }}>{entry.mood.label}</span>
+                      <span style={{ fontSize: "11px", color: "#94a3b8" }}>{entry.date} · {entry.time}</span>
+                    </div>
+                    {entry.amount > 0 && (
+                      <div style={{ fontSize: "13px", fontWeight: "700", color: "#374151", marginBottom: "2px" }}>
+                        💸 ${entry.amount.toFixed(2)} spent
+                      </div>
+                    )}
+                    {entry.note && (
+                      <div style={{ fontSize: "13px", color: "#475569", lineHeight: "1.5" }}>{entry.note}</div>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────
+// NO-SPEND DAY TRACKER — enhanced
+// ─────────────────────────────────────────────
+const DAY_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+function NoSpendDayTracker() {
+  const today = new Date();
+  const year  = today.getFullYear();
+  const month = today.getMonth();
+
+  const [currentMonth, setCurrentMonth] = useState(month);
+  const [currentYear, setCurrentYear]   = useState(year);
+  const [noSpendDays, setNoSpendDays]   = useState({}); // key: "YYYY-MM-DD", value: true/false
+  const [goal, setGoal]                 = useState(8);
+  const [editingGoal, setEditingGoal]   = useState(false);
+  const [tempGoal, setTempGoal]         = useState(8);
+  const [streak, setStreak]             = useState(0);
+
+  // Recalculate streak whenever noSpendDays changes
+  useEffect(() => {
+    let s = 0;
+    const d = new Date();
+    while (true) {
+      const key = d.toISOString().slice(0, 10);
+      if (noSpendDays[key]) { s++; d.setDate(d.getDate() - 1); }
+      else break;
+    }
+    setStreak(s);
+  }, [noSpendDays]);
+
+  const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+  const firstDayOfWeek = new Date(currentYear, currentMonth, 1).getDay();
+  const monthName = new Date(currentYear, currentMonth).toLocaleString("default", { month: "long" });
+
+  const noSpendCount = Object.entries(noSpendDays).filter(([k, v]) => {
+    const d = new Date(k);
+    return v && d.getFullYear() === currentYear && d.getMonth() === currentMonth;
+  }).length;
+
+  const progress = Math.min(noSpendCount / goal, 1);
+
+  const toggleDay = (dayNum) => {
+    const key = `${currentYear}-${String(currentMonth + 1).padStart(2, "0")}-${String(dayNum).padStart(2, "0")}`;
+    setNoSpendDays(prev => ({ ...prev, [key]: !prev[key] }));
+  };
+
+  const isNoSpend = (dayNum) => {
+    const key = `${currentYear}-${String(currentMonth + 1).padStart(2, "0")}-${String(dayNum).padStart(2, "0")}`;
+    return !!noSpendDays[key];
+  };
+
+  const isToday = (dayNum) => (
+    dayNum === today.getDate() && currentMonth === today.getMonth() && currentYear === today.getFullYear()
+  );
+
+  const isFuture = (dayNum) => {
+    const d = new Date(currentYear, currentMonth, dayNum);
+    const todayMidnight = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    return d > todayMidnight;
+  };
+
+  const prevMonth = () => {
+    if (currentMonth === 0) { setCurrentMonth(11); setCurrentYear(y => y - 1); }
+    else setCurrentMonth(m => m - 1);
+  };
+  const nextMonth = () => {
+    if (currentMonth === 11) { setCurrentMonth(0); setCurrentYear(y => y + 1); }
+    else setCurrentMonth(m => m + 1);
+  };
+
+  const cells = [];
+  for (let i = 0; i < firstDayOfWeek; i++) cells.push(null);
+  for (let d = 1; d <= daysInMonth; d++) cells.push(d);
+
+  const weeks = [];
+  for (let i = 0; i < cells.length; i += 7) weeks.push(cells.slice(i, i + 7));
+
+  // Monthly summary for all tracked months
+  const allMonthKeys = [...new Set(
+    Object.keys(noSpendDays).filter(k => noSpendDays[k]).map(k => k.slice(0, 7))
+  )].sort();
+
+  const motivationalMsg = () => {
+    if (noSpendCount === 0) return "Start marking your no-spend days!";
+    if (noSpendCount < goal * 0.4) return "Good start — keep going!";
+    if (noSpendCount < goal * 0.7) return "You're building momentum 💪";
+    if (noSpendCount < goal) return "Almost there — so close!";
+    return `🎉 Goal smashed! ${noSpendCount} no-spend days!`;
+  };
+
+  return (
+    <div style={{ fontFamily: "system-ui, sans-serif" }}>
+
+      {/* Top stats row */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "10px", marginBottom: "18px" }}>
+        <div style={{ background: "#f0fdf4", borderRadius: "14px", padding: "14px", border: "1px solid #bbf7d0", textAlign: "center" }}>
+          <div style={{ fontSize: "26px", fontWeight: "900", color: "#16a34a" }}>{noSpendCount}</div>
+          <div style={{ fontSize: "11px", fontWeight: "700", color: "#4ade80", textTransform: "uppercase", letterSpacing: "0.5px" }}>This Month</div>
+        </div>
+        <div style={{ background: "#fff7ed", borderRadius: "14px", padding: "14px", border: "1px solid #fed7aa", textAlign: "center" }}>
+          <div style={{ fontSize: "26px", fontWeight: "900", color: "#ea580c" }}>{streak} 🔥</div>
+          <div style={{ fontSize: "11px", fontWeight: "700", color: "#fb923c", textTransform: "uppercase", letterSpacing: "0.5px" }}>Day Streak</div>
+        </div>
+        <div
+          style={{ background: "#eff6ff", borderRadius: "14px", padding: "14px", border: "1px solid #bfdbfe", textAlign: "center", cursor: "pointer" }}
+          onClick={() => { setEditingGoal(true); setTempGoal(goal); }}
+          title="Click to change goal"
+        >
+          <div style={{ fontSize: "26px", fontWeight: "900", color: "#2563eb" }}>{goal}</div>
+          <div style={{ fontSize: "11px", fontWeight: "700", color: "#60a5fa", textTransform: "uppercase", letterSpacing: "0.5px" }}>Monthly Goal ✏️</div>
+        </div>
+      </div>
+
+      {/* Goal edit modal (inline) */}
+      {editingGoal && (
+        <div style={{
+          background: "#f0f9ff", borderRadius: "14px", padding: "16px",
+          border: "1.5px solid #bae6fd", marginBottom: "16px",
+          display: "flex", alignItems: "center", gap: "12px", flexWrap: "wrap"
+        }}>
+          <span style={{ fontWeight: "700", fontSize: "14px", color: "#0369a1" }}>Set monthly goal:</span>
+          <input
+            type="number" min="1" max={daysInMonth} value={tempGoal}
+            onChange={e => setTempGoal(Number(e.target.value))}
+            style={{
+              width: "70px", padding: "8px 10px", borderRadius: "10px",
+              border: "1.5px solid #7dd3fc", fontSize: "16px", fontWeight: "700",
+              textAlign: "center", outline: "none"
+            }}
+          />
+          <span style={{ fontSize: "13px", color: "#64748b" }}>days per month</span>
+          <button onClick={() => { setGoal(tempGoal); setEditingGoal(false); }}
+            style={{ padding: "8px 16px", borderRadius: "10px", border: "none", background: "#2563eb", color: "#fff", fontWeight: "700", cursor: "pointer", fontSize: "13px" }}>
+            Save
+          </button>
+          <button onClick={() => setEditingGoal(false)}
+            style={{ padding: "8px 14px", borderRadius: "10px", border: "none", background: "#f1f5f9", color: "#64748b", fontWeight: "700", cursor: "pointer", fontSize: "13px" }}>
+            Cancel
+          </button>
+        </div>
+      )}
+
+      {/* Progress bar */}
+      <div style={{ marginBottom: "18px" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "6px" }}>
+          <span style={{ fontSize: "13px", fontWeight: "700", color: "#374151" }}>{motivationalMsg()}</span>
+          <span style={{ fontSize: "12px", fontWeight: "700", color: "#94a3b8" }}>{noSpendCount}/{goal} days</span>
+        </div>
+        <div style={{ height: "10px", background: "#e2e8f0", borderRadius: "999px", overflow: "hidden" }}>
+          <div style={{
+            height: "100%",
+            width: `${progress * 100}%`,
+            background: progress >= 1 ? "#10b981" : "#2563eb",
+            borderRadius: "999px",
+            transition: "width 0.4s ease"
+          }} />
+        </div>
+      </div>
+
+      {/* Calendar nav */}
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "12px" }}>
+        <button onClick={prevMonth} style={navBtnStyle}>‹</button>
+        <span style={{ fontWeight: "800", fontSize: "16px", color: "#1e293b" }}>{monthName} {currentYear}</span>
+        <button onClick={nextMonth} style={navBtnStyle}>›</button>
+      </div>
+
+      {/* Day-of-week header */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: "4px", marginBottom: "4px" }}>
+        {DAY_LABELS.map(d => (
+          <div key={d} style={{ textAlign: "center", fontSize: "10px", fontWeight: "700", color: "#94a3b8", textTransform: "uppercase", padding: "4px 0" }}>
+            {d}
+          </div>
+        ))}
+      </div>
+
+      {/* Calendar grid */}
+      <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+        {weeks.map((week, wi) => (
+          <div key={wi} style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: "4px" }}>
+            {week.map((day, di) => {
+              if (!day) return <div key={`empty-${di}`} />;
+              const ns = isNoSpend(day);
+              const tod = isToday(day);
+              const fut = isFuture(day);
+              return (
+                <button
+                  key={day}
+                  onClick={() => !fut && toggleDay(day)}
+                  disabled={fut}
+                  title={fut ? "Future day" : ns ? "Click to unmark" : "Click to mark as no-spend"}
+                  style={{
+                    aspectRatio: "1",
+                    borderRadius: "10px",
+                    border: tod ? "2px solid #2563eb" : "1.5px solid transparent",
+                    background: ns ? "#16a34a" : fut ? "#f8fafc" : "#f1f5f9",
+                    color: ns ? "#fff" : fut ? "#cbd5e1" : "#374151",
+                    fontWeight: tod ? "900" : "600",
+                    fontSize: "13px",
+                    cursor: fut ? "not-allowed" : "pointer",
+                    transition: "all 0.15s",
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    position: "relative"
+                  }}
+                >
+                  {day}
+                  {ns && (
+                    <span style={{
+                      position: "absolute", bottom: "2px", left: "50%", transform: "translateX(-50%)",
+                      fontSize: "7px"
+                    }}>✓</span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        ))}
+      </div>
+
+      <p style={{ fontSize: "11px", color: "#94a3b8", textAlign: "center", marginTop: "10px", marginBottom: "0" }}>
+        Tap any past or current day to toggle no-spend ✓ · Green = no-spend day
+      </p>
+
+      {/* Savings estimate */}
+      <div style={{
+        marginTop: "20px", background: "linear-gradient(135deg, #f0fdf4, #dcfce7)",
+        borderRadius: "16px", padding: "16px", border: "1px solid #bbf7d0"
+      }}>
+        <h4 style={{ margin: "0 0 10px", fontSize: "14px", fontWeight: "800", color: "#166534" }}>
+          💰 Estimated Savings
+        </h4>
+        <p style={{ margin: "0 0 8px", fontSize: "12px", color: "#4b5563", lineHeight: "1.5" }}>
+          If you typically spend <strong>$30</strong> on small purchases daily, your {noSpendCount} no-spend days this month saved you approximately:
+        </p>
+        <div style={{ fontSize: "28px", fontWeight: "900", color: "#16a34a" }}>
+          ${(noSpendCount * 30).toFixed(2)}
+        </div>
+        <p style={{ margin: "4px 0 0", fontSize: "11px", color: "#86efac" }}>
+          Based on $30/day average discretionary spend · Adjust in settings
+        </p>
+      </div>
+
+      {/* History summary across months */}
+      {allMonthKeys.length > 0 && (
+        <div style={{ marginTop: "20px" }}>
+          <h4 style={{ margin: "0 0 10px", fontSize: "14px", fontWeight: "800", color: "#374151" }}>📅 Monthly History</h4>
+          <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+            {allMonthKeys.slice(-4).reverse().map(mk => {
+              const [y, m] = mk.split("-").map(Number);
+              const count  = Object.entries(noSpendDays).filter(([k, v]) => v && k.startsWith(mk)).length;
+              const label  = new Date(y, m - 1).toLocaleString("default", { month: "long", year: "numeric" });
+              const pct    = Math.min(count / goal, 1);
+              return (
+                <div key={mk} style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                  <span style={{ fontSize: "12px", fontWeight: "600", color: "#475569", width: "120px", flexShrink: 0 }}>{label}</span>
+                  <div style={{ flex: 1, height: "8px", background: "#e2e8f0", borderRadius: "999px", overflow: "hidden" }}>
+                    <div style={{ height: "100%", width: `${pct * 100}%`, background: pct >= 1 ? "#10b981" : "#60a5fa", borderRadius: "999px" }} />
+                  </div>
+                  <span style={{ fontSize: "12px", fontWeight: "700", color: "#374151", width: "30px", textAlign: "right" }}>{count}d</span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Tips */}
+      <div style={{ marginTop: "20px", background: "#fefce8", borderRadius: "16px", padding: "16px", border: "1px solid #fef08a" }}>
+        <h4 style={{ margin: "0 0 8px", fontSize: "14px", fontWeight: "800", color: "#854d0e" }}>💡 Tips for No-Spend Days</h4>
+        <ul style={{ margin: 0, paddingLeft: "18px", fontSize: "12px", color: "#713f12", lineHeight: "1.8" }}>
+          <li>Meal prep on weekends to avoid food spending during the week</li>
+          <li>Delete shopping apps on no-spend days to reduce temptation</li>
+          <li>Plan free activities: walks, library, free events</li>
+          <li>Use cashback or rewards points if you must buy something</li>
+        </ul>
+      </div>
+    </div>
+  );
+}
+
+const navBtnStyle = {
+  width: "34px", height: "34px", borderRadius: "10px",
+  border: "1.5px solid #e2e8f0", background: "#fff",
+  fontSize: "18px", cursor: "pointer", display: "flex",
+  alignItems: "center", justifyContent: "center",
+  color: "#374151", fontWeight: "700"
+};
 
 // Tool Tab definitions
 const TOOL_TABS = [
