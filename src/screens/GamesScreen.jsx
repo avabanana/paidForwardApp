@@ -153,6 +153,16 @@ const VOCAB_HELPER = {
   volatility: "Volatility: How much a stock's price fluctuates over time. High volatility means higher risk and higher potential reward."
 };
 
+// NPC personality archetypes — controls how each bot trades
+const NPC_PERSONALITIES = {
+  aggressive:  { buyChance: 0.55, sellChance: 0.25, maxShares: 3, label: "🔥" },
+  conservative:{ buyChance: 0.25, sellChance: 0.40, maxShares: 1, label: "🛡️" },
+  balanced:    { buyChance: 0.38, sellChance: 0.32, maxShares: 2, label: "⚖️" },
+  yolo:        { buyChance: 0.65, sellChance: 0.15, maxShares: 4, label: "🎲" },
+};
+
+const NPC_PERSONALITY_LIST = ["aggressive", "conservative", "balanced", "yolo"];
+
 export default function GamesScreen({ userTier, onGameEnd, onNavigate, userName }) {
   const [activeGame, setActiveGame] = useState(null);
   const [playing, setPlaying] = useState(false);
@@ -206,6 +216,22 @@ export default function GamesScreen({ userTier, onGameEnd, onNavigate, userName 
   const [timeLeft, setTimeLeft] = useState(600); 
   const [opponents, setOpponents] = useState([]);
   const [leagueFeed, setLeagueFeed] = useState([]);
+
+  // NPC state: { [name]: { cash, portfolio: {GIGA:0,...}, personality } }
+  const npcStateRef = useRef({});
+
+  // Initialize NPC state when opponents are set
+  const initNpcState = useCallback((opponentList, startingCash) => {
+    const state = {};
+    opponentList.forEach((opp, i) => {
+      state[opp.name] = {
+        cash: startingCash,
+        portfolio: { GIGA: 0, VOY: 0, MART: 0, SPY: 0, GLD: 0 },
+        personality: NPC_PERSONALITY_LIST[i % NPC_PERSONALITY_LIST.length]
+      };
+    });
+    npcStateRef.current = state;
+  }, []);
 
   const [vocabPopup, setVocabPopup] = useState({ visible: false, key: null, x: 0, y: 0 });
   const vocabRef = useRef(null);
@@ -354,6 +380,16 @@ export default function GamesScreen({ userTier, onGameEnd, onNavigate, userName 
     return money + stockValue;
   }, [money, blitzStocks, portfolio]);
 
+  const calculateNpcWealth = useCallback((npcName, currentStocks) => {
+    const npc = npcStateRef.current[npcName];
+    if (!npc) return config.startingCash;
+    let stockValue = 0;
+    currentStocks.forEach(s => {
+      stockValue += (npc.portfolio[s.id] || 0) * s.price;
+    });
+    return npc.cash + stockValue;
+  }, [config.startingCash]);
+
   const endBlitzCompetition = useCallback(() => {
     const finalWealth = calculateTotalWealth();
     setMoney(finalWealth);
@@ -363,51 +399,108 @@ export default function GamesScreen({ userTier, onGameEnd, onNavigate, userName 
     if (onGameEnd) onGameEnd(finalWealth >= gameStats.startMoney ? 'won' : 'lost');
   }, [calculateTotalWealth, gameStats, config, onGameEnd]);
 
+  // NPC trading logic — runs every tick, processes each NPC independently
+  const tickNpcs = useCallback((currentStocks) => {
+    const npcState = npcStateRef.current;
+    const stockIds = currentStocks.map(s => s.id);
+    const newFeedEntries = [];
+
+    Object.entries(npcState).forEach(([npcName, npc]) => {
+      const personality = NPC_PERSONALITIES[npc.personality] || NPC_PERSONALITIES.balanced;
+      const roll = Math.random();
+
+      // Only trade ~25% of ticks to keep it realistic
+      if (roll > 0.25) return;
+
+      const stockIdx = Math.floor(Math.random() * currentStocks.length);
+      const stock = currentStocks[stockIdx];
+      const price = Math.round(stock.price);
+      const sharesOwned = npc.portfolio[stock.id] || 0;
+
+      const action = Math.random();
+
+      if (action < personality.buyChance && npc.cash >= price) {
+        // BUY
+        const sharesToBuy = Math.min(
+          personality.maxShares,
+          Math.floor(npc.cash / price)
+        );
+        if (sharesToBuy > 0) {
+          const cost = sharesToBuy * price;
+          npc.cash -= cost;
+          npc.portfolio[stock.id] = (npc.portfolio[stock.id] || 0) + sharesToBuy;
+          newFeedEntries.push({
+            text: `📈 ${npcName} bought $${cost.toLocaleString()} of ${stock.id} (${sharesToBuy} share${sharesToBuy > 1 ? 's' : ''} @ $${price})`,
+            ts: Date.now()
+          });
+        }
+      } else if (action < personality.buyChance + personality.sellChance && sharesOwned > 0) {
+        // SELL
+        const sharesToSell = Math.min(
+          Math.ceil(sharesOwned * (0.4 + Math.random() * 0.6)),
+          sharesOwned
+        );
+        const proceeds = sharesToSell * price;
+        npc.cash += proceeds;
+        npc.portfolio[stock.id] = sharesOwned - sharesToSell;
+        newFeedEntries.push({
+          text: `📉 ${npcName} sold $${proceeds.toLocaleString()} of ${stock.id} (${sharesToSell} share${sharesToSell > 1 ? 's' : ''} @ $${price})`,
+          ts: Date.now()
+        });
+      }
+    });
+
+    if (newFeedEntries.length > 0) {
+      setLeagueFeed(prev => [...newFeedEntries.map(e => e.text), ...prev].slice(0, 30));
+    }
+
+    // Update opponents state with fresh NPC wealth
+    setOpponents(prev =>
+      prev.map(opp => ({
+        ...opp,
+        wealth: calculateNpcWealth(opp.name, currentStocks)
+      }))
+    );
+  }, [calculateNpcWealth]);
+
   // High-performance timer/logic engine
   useEffect(() => {
     let interval;
     if (playing && activeGame === 'Blitz' && timeLeft > 0) {
       interval = setInterval(() => {
-        // Update prices once per second irl
-        setBlitzStocks(current => current.map(s => {
-          const marketSentiment = Math.random() - 0.5;
-          const newPrice = updateStockPrice(s, marketSentiment);
-          return { ...s, price: newPrice, history: [...s.history.slice(-14), newPrice] };
-        }));
+        setBlitzStocks(current => {
+          const updated = current.map(s => {
+            const marketSentiment = Math.random() - 0.5;
+            const newPrice = updateStockPrice(s, marketSentiment);
+            return { ...s, price: newPrice, history: [...s.history.slice(-14), newPrice] };
+          });
+
+          // Run NPC logic with the fresh stock prices
+          tickNpcs(updated);
+
+          return updated;
+        });
         
-        // Timer countdown once per second irl
         setTimeLeft(t => Math.max(0, t - 1));
       }, 1000);
     } else if (timeLeft === 0 && playing && activeGame === 'Blitz') {
       endBlitzCompetition();
     }
     return () => clearInterval(interval);
-  }, [playing, activeGame, timeLeft, endBlitzCompetition]);
+  }, [playing, activeGame, timeLeft, endBlitzCompetition, tickNpcs]);
 
   // Logic to broadcast/receive wealth data
   useEffect(() => {
     if (playing && activeGame === 'Blitz' && selectedLeague) {
       const myWealth = calculateTotalWealth();
       localStorage.setItem(`FIN_SYNC_LEAGUE_${selectedLeague.id}_USER_${currentUser}`, myWealth.toString());
-
-      const currentLeagueData = JSON.parse(localStorage.getItem("FIN_LEAGUES_GLOBAL") || "[]").find(l => l.id === selectedLeague.id);
-      if (currentLeagueData) {
-        const liveOpponents = currentLeagueData.players
-          .filter(p => p !== currentUser)
-          .map(p => ({
-            name: p,
-            wealth: parseFloat(localStorage.getItem(`FIN_SYNC_LEAGUE_${selectedLeague.id}_USER_${p}`) || "1000")
-          }));
-        setOpponents(liveOpponents);
-      }
-      const feedKey = `FIN_SYNC_FEED_${selectedLeague.id}`;
-      setLeagueFeed(JSON.parse(localStorage.getItem(feedKey) || "[]"));
     }
   }, [blitzStocks, money, portfolio, playing, activeGame, selectedLeague, currentUser, calculateTotalWealth]);
 
   const resetGame = (countAsPlayed = false) => {
     if (countAsPlayed && onGameEnd) onGameEnd('lost');
     setPlaying(false); setGameResult(null); setActiveGame(null); setMoney(0); moneyRef.current = 0; setDay(1); setTradeMessage(null); setWaitingNext(false); setView('menu'); setGameStats({ buys: 0, sells: 0, startMoney: 0 });
+    npcStateRef.current = {};
   };
 
   const endGame = (finalMoney) => {
@@ -593,6 +686,12 @@ export default function GamesScreen({ userTier, onGameEnd, onNavigate, userName 
 
   if (playing) {
     if (activeGame === 'Blitz') {
+      // Build combined standings: user + NPCs, sorted by wealth
+      const allPlayers = [
+        { name: currentUser, wealth: calculateTotalWealth(), isYou: true },
+        ...opponents.map(o => ({ name: o.name, wealth: o.wealth, isYou: false }))
+      ].sort((a, b) => b.wealth - a.wealth);
+
       return (
         <div style={{ ...gS.pageWrapper, padding: '20px', background: '#0f172a' }}>
           {activePopupStock && <YahooFinancePopup stock={activePopupStock} onClose={() => setActivePopupStock(null)} />}
@@ -603,13 +702,46 @@ export default function GamesScreen({ userTier, onGameEnd, onNavigate, userName 
              </div>
            )}
           <div style={{ maxWidth: '1200px', margin: '0 auto', display: 'grid', gridTemplateColumns: '250px 1fr 300px', gap: '20px' }}>
+            {/* Left: Standings */}
             <div style={{ background: '#1e293b', borderRadius: '16px', padding: '20px', color: '#fff' }}>
               <h3 style={{ margin: '0 0 15px', color: '#6366f1' }}>🏆 Standings</h3>
-              <div style={gS.leaderRow}><span style={{color:'#facc15'}}>1. {currentUser} (You)</span> <span>${Math.round(calculateTotalWealth())}</span></div>
-              {[...opponents].sort((a,b)=>b.wealth-a.wealth).map((o, i)=>(<div key={o.name} style={{...gS.leaderRow, borderBottom:'1px solid #334155'}}><span>{i+2}. {o.name}</span> <span>${Math.round(o.wealth)}</span></div>))}
-              <h3 style={{ margin: '30px 0 15px', color: '#10b981' }}>📡 Activity Feed</h3>
-              {leagueFeed.map((f, i) => <div key={i} style={{fontSize:'11px', marginBottom:'10px', color: '#94a3b8'}}>{f}</div>)}
+              {allPlayers.map((p, i) => (
+                <div key={p.name} style={{
+                  ...gS.leaderRow,
+                  background: p.isYou ? 'rgba(99,102,241,0.15)' : 'transparent',
+                  borderRadius: '8px',
+                  padding: '8px 4px',
+                  marginBottom: '4px'
+                }}>
+                  <span style={{ color: p.isYou ? '#facc15' : '#94a3b8', fontWeight: p.isYou ? '800' : '400' }}>
+                    {i + 1}. {p.name}{p.isYou ? ' (You)' : ''}
+                  </span>
+                  <span style={{ color: p.wealth >= config.startingCash ? '#10b981' : '#ef4444', fontWeight: '700' }}>
+                    ${Math.round(p.wealth).toLocaleString()}
+                  </span>
+                </div>
+              ))}
+
+              <h3 style={{ margin: '24px 0 12px', color: '#10b981' }}>📡 Activity Feed</h3>
+              <div style={{ maxHeight: '280px', overflowY: 'auto' }}>
+                {leagueFeed.length === 0 ? (
+                  <div style={{ fontSize: '11px', color: '#475569', fontStyle: 'italic' }}>Waiting for trades...</div>
+                ) : (
+                  leagueFeed.map((f, i) => (
+                    <div key={i} style={{
+                      fontSize: '11px',
+                      marginBottom: '8px',
+                      color: f.startsWith('📈') ? '#86efac' : '#fca5a5',
+                      lineHeight: '1.4',
+                      borderBottom: '1px solid #1e293b',
+                      paddingBottom: '6px'
+                    }}>{f}</div>
+                  ))
+                )}
+              </div>
             </div>
+
+            {/* Center: Market Terminal */}
             <div style={{ background: '#fff', borderRadius: '16px', padding: '24px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '20px' }}><h2 style={{margin:0}}>Market Terminal</h2><div style={{fontSize:'20px', fontWeight:'900', color: '#ef4444'}}>⏳ {Math.floor(timeLeft/60)}:{String(timeLeft%60).padStart(2,'0')}</div></div>
               <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '30px' }}>
@@ -632,10 +764,32 @@ export default function GamesScreen({ userTier, onGameEnd, onNavigate, userName 
                 <div style={{ display: 'flex', gap: '10px' }}><button onClick={() => handleBlitzTrade(selectedStock.id, 'buy')} style={{ ...gS.playBtn, background: '#10b981', flex: 1 }}>BUY</button><button onClick={() => handleBlitzTrade(selectedStock.id, 'sell')} style={{ ...gS.playBtn, background: '#ef4444', flex: 1 }}>SELL</button></div>
               </div>
             </div>
+
+            {/* Right: Portfolio */}
             <div style={{ background: '#1e293b', borderRadius: '16px', padding: '20px', color: '#fff' }}>
-              <h3 style={{ margin: '0 0 15px', color: '#6366f1' }}>💼 Portfolio</h3><div style={{fontSize: '24px', fontWeight: '900', marginBottom: '20px'}}>${Math.round(calculateTotalWealth())}</div>
-              <div style={{ color: '#94a3b8', fontSize: '12px', marginBottom: '5px' }}>AVAILABLE CASH</div><div style={{ color: '#10b981', fontSize: '18px', fontWeight: 'bold', marginBottom: '20px' }}>${Math.round(money)}</div>
-              <button onClick={endBlitzCompetition} style={{ width:'100%', marginTop:'40px', background:'#ef4444', color:'#fff', border:'none', padding:'12px', borderRadius:'8px', cursor:'pointer', fontWeight:'bold' }}>End Competition</button>
+              <h3 style={{ margin: '0 0 15px', color: '#6366f1' }}>💼 Portfolio</h3>
+              <div style={{fontSize: '24px', fontWeight: '900', marginBottom: '4px'}}>${Math.round(calculateTotalWealth()).toLocaleString()}</div>
+              <div style={{ color: calculateTotalWealth() >= config.startingCash ? '#86efac' : '#fca5a5', fontSize: '12px', marginBottom: '20px' }}>
+                {calculateTotalWealth() >= config.startingCash ? '▲' : '▼'} ${Math.abs(Math.round(calculateTotalWealth() - config.startingCash)).toLocaleString()} vs start
+              </div>
+              <div style={{ color: '#94a3b8', fontSize: '12px', marginBottom: '5px' }}>AVAILABLE CASH</div>
+              <div style={{ color: '#10b981', fontSize: '18px', fontWeight: 'bold', marginBottom: '20px' }}>${Math.round(money).toLocaleString()}</div>
+              <div style={{ color: '#94a3b8', fontSize: '12px', marginBottom: '8px' }}>HOLDINGS</div>
+              {blitzStocks.filter(s => (portfolio[s.id] || 0) > 0).map(s => (
+                <div key={s.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: '1px solid #334155', fontSize: '13px' }}>
+                  <span style={{ color: '#e2e8f0' }}>{s.id} × {portfolio[s.id]}</span>
+                  <span style={{ color: '#86efac' }}>${Math.round(portfolio[s.id] * s.price).toLocaleString()}</span>
+                </div>
+              ))}
+              {blitzStocks.every(s => (portfolio[s.id] || 0) === 0) && (
+                <div style={{ fontSize: '12px', color: '#475569', fontStyle: 'italic' }}>No positions yet</div>
+              )}
+              {tradeMessage && (
+                <div style={{ marginTop: '16px', padding: '10px', borderRadius: '8px', background: tradeMessage.startsWith('✅') ? 'rgba(16,185,129,0.15)' : 'rgba(239,68,68,0.15)', fontSize: '12px', color: '#e2e8f0' }}>
+                  {tradeMessage}
+                </div>
+              )}
+              <button onClick={endBlitzCompetition} style={{ width:'100%', marginTop:'24px', background:'#ef4444', color:'#fff', border:'none', padding:'12px', borderRadius:'8px', cursor:'pointer', fontWeight:'bold' }}>End Competition</button>
             </div>
           </div>
         </div>
@@ -695,7 +849,25 @@ export default function GamesScreen({ userTier, onGameEnd, onNavigate, userName 
     return (
       <div style={gS.menuContainer}><button onClick={() => setView('leagues')} style={gS.backBtn}>← All Leagues</button><div style={gS.leagueBanner}><h1 style={{margin:0}}>{selectedLeague.name}</h1><p>Competition Logged as: {currentUser}</p></div>
         <div style={gS.leagueLayout}><div style={gS.leaderboard}><h3 style={{marginTop:0}}>Live Leaderboard</h3>{selectedLeague.players.map((p, i) => (<div key={p} style={gS.leaderRow}><span>{i+1}. {p} {p === currentUser ? '(You)' : ''}</span><span style={{fontWeight:'bold'}}>${Math.round(parseFloat(localStorage.getItem(`FIN_SYNC_LEAGUE_${selectedLeague.id}_USER_${p}`) || 1000))}</span></div>))}</div>
-          <div style={gS.leagueActions}><div style={gS.activeMatchCard}><h3>Blitz Stock Simulation</h3><button style={{...gS.playBtn, background: '#6366f1', width:'100%', cursor:'pointer'}} onClick={() => { setMoney(config.startingCash); moneyRef.current = config.startingCash; setGameStats({buys:0, sells:0, startMoney: config.startingCash}); setPortfolio({ GIGA: 0, VOY: 0, MART: 0, SPY: 0, GLD: 0 }); setOpponents(selectedLeague.players.filter(p => p !== currentUser).map(name => ({ name, wealth: config.startingCash }))); setTimeLeft(600); setActiveGame('Blitz'); setPlaying(true); setView('menu'); }}>🚀 Start Match</button></div></div>
+          <div style={gS.leagueActions}><div style={gS.activeMatchCard}><h3>Blitz Stock Simulation</h3><button style={{...gS.playBtn, background: '#6366f1', width:'100%', cursor:'pointer'}} onClick={() => {
+            const startCash = config.startingCash;
+            const opponentList = selectedLeague.players
+              .filter(p => p !== currentUser)
+              .map(name => ({ name, wealth: startCash }));
+
+            setMoney(startCash);
+            moneyRef.current = startCash;
+            setGameStats({ buys: 0, sells: 0, startMoney: startCash });
+            setPortfolio({ GIGA: 0, VOY: 0, MART: 0, SPY: 0, GLD: 0 });
+            setOpponents(opponentList);
+            initNpcState(opponentList, startCash);
+            setLeagueFeed([]);
+            setBlitzStocks(INITIAL_STOCKS);
+            setTimeLeft(600);
+            setActiveGame('Blitz');
+            setPlaying(true);
+            setView('menu');
+          }}>🚀 Start Match</button></div></div>
         </div>
       </div>
     );
@@ -731,6 +903,7 @@ const gS = {
   closeBtn: { background:'none', border:'none', fontSize:'24px', cursor:'pointer' },
   modalPriceRow: { display:'flex', alignItems:'baseline', gap:'20px', marginBottom:'30px' },
   modalGrid: { display:'grid', gridTemplateColumns:'1fr 1fr', gap:'40px' },
+  modalColumn: {},
   modalStat: { display:'flex', justifyContent:'space-between', padding:'12px 0', borderBottom:'1px solid #f1f5f9' },
   modalChartArea: { background:'#f8fafc', padding:'24px', borderRadius:'16px', marginTop:'30px' },
   pageWrapper: { minHeight:'100vh', background:'#f8fafc', paddingBottom:'60px' },
@@ -779,5 +952,6 @@ const gS = {
   leagueLayout: { display:'grid', gridTemplateColumns:'1fr 1.5fr', gap:'24px' },
   leaderboard: { background:'#fff', padding:'24px', borderRadius:'20px' },
   leaderRow: { display:'flex', justifyContent:'space-between', padding:'12px 0', borderBottom:'1px solid #f1f5f9' },
+  leagueActions: { background:'#fff', padding:'24px', borderRadius:'20px' },
   activeMatchCard: { background:'#fff', padding:'30px', borderRadius:'20px', border:'3px solid #6366f1' }
 };

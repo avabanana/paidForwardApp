@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useMemo } from "react";
+import React, { useEffect, useRef, useMemo, useState } from "react";
 import ProgressBar from "../components/ProgressBar";
 import BudgetTracker from "../components/BudgetTracker";
 import LatteFactorCalculator from "../components/LatteFactorCalculator";
@@ -123,6 +123,111 @@ const AchievementBadge = ({ icon, title, requirement, achieved, color }) => (
   </div>
 );
 
+// --- Inline Tool Card Wrapper ---
+const ToolCard = ({ icon, title, color, children }) => (
+  <div style={{
+    background: "#fff",
+    borderRadius: "20px",
+    border: "1px solid #e2e8f0",
+    overflow: "hidden",
+    boxShadow: "0 2px 8px rgba(0,0,0,0.04)"
+  }}>
+    <div style={{
+      display: "flex", alignItems: "center", gap: "10px",
+      padding: "16px 20px",
+      borderBottom: "1px solid #f1f5f9",
+      background: color || "#f8fafc"
+    }}>
+      <span style={{ fontSize: "20px" }}>{icon}</span>
+      <span style={{ fontWeight: "800", fontSize: "15px", color: "#1e293b" }}>{title}</span>
+    </div>
+    <div style={{ padding: "20px" }}>
+      {children}
+    </div>
+  </div>
+);
+
+// Tool Tab definitions
+const TOOL_TABS = [
+  { id: "budget",    label: "Budget",       icon: "📊" },
+  { id: "latte",     label: "Latte Factor", icon: "☕" },
+  { id: "subs",      label: "Subscriptions",icon: "📦" },
+  { id: "ppu",       label: "Price/Use",    icon: "🏷️" },
+  { id: "nospend",   label: "No-Spend Days",icon: "🚫" },
+  { id: "mood",      label: "Mood Journal", icon: "📓" },
+];
+
+function FinancialToolsPanel() {
+  const [activeTab, setActiveTab] = useState("budget");
+
+  return (
+    <div style={{ marginTop: "26px" }}>
+      {/* Tab bar */}
+      <div style={{
+        display: "flex", gap: "8px", overflowX: "auto",
+        paddingBottom: "4px", marginBottom: "16px",
+        scrollbarWidth: "none"
+      }}>
+        {TOOL_TABS.map(tab => (
+          <button
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id)}
+            style={{
+              flexShrink: 0,
+              padding: "9px 16px",
+              borderRadius: "999px",
+              border: "none",
+              fontWeight: "700",
+              fontSize: "13px",
+              cursor: "pointer",
+              transition: "all 0.18s",
+              background: activeTab === tab.id ? "#2563eb" : "#f1f5f9",
+              color: activeTab === tab.id ? "#fff" : "#475569",
+              boxShadow: activeTab === tab.id ? "0 2px 8px rgba(37,99,235,0.18)" : "none"
+            }}
+          >
+            {tab.icon} {tab.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Active panel */}
+      <div>
+        {activeTab === "budget" && (
+          <ToolCard icon="📊" title="Budget Tracker" color="#eff6ff">
+            <BudgetTracker />
+          </ToolCard>
+        )}
+        {activeTab === "latte" && (
+          <ToolCard icon="☕" title="Latte Factor Calculator" color="#fefce8">
+            <LatteFactorCalculator />
+          </ToolCard>
+        )}
+        {activeTab === "subs" && (
+          <ToolCard icon="📦" title="Subscription Audit" color="#f0fdf4">
+            <SubscriptionAudit />
+          </ToolCard>
+        )}
+        {activeTab === "ppu" && (
+          <ToolCard icon="🏷️" title="Price Per Use Tracker" color="#faf5ff">
+            <PricePerUseTracker />
+          </ToolCard>
+        )}
+        {activeTab === "nospend" && (
+          <ToolCard icon="🚫" title="No-Spend Day Tracker" color="#fff7ed">
+            <NoSpendDayTracker />
+          </ToolCard>
+        )}
+        {activeTab === "mood" && (
+          <ToolCard icon="📓" title="Financial Mood Journal" color="#fdf2f8">
+            <FinancialMoodJournal />
+          </ToolCard>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function ProgressScreen({
   coursesCompleted = 0,
   gameWins = 0,
@@ -140,7 +245,6 @@ export default function ProgressScreen({
   const xpIntoLevel = xp % 1000;
   const levelProgress = xpIntoLevel / 1000;
 
-  // Track which achievements have already been popped so we don't re-pop on re-render
   const storageKey = `paidforward-progress-achievements-${userId || 'guest'}`;
   const poppedRef = useRef(new Set());
 
@@ -174,7 +278,6 @@ export default function ProgressScreen({
     const newIds = newlyUnlocked.map((a) => a.id);
     const updated = [...achievements, ...newIds];
 
-    // Save to Firestore (account-scoped)
     updateData({ achievements: updated });
 
     newlyUnlocked.forEach((a, i) => {
@@ -217,131 +320,120 @@ export default function ProgressScreen({
     <div style={styles.outerWrapper}>
       <div style={styles.bgLayer} />
       <div style={{ padding: "10px", fontFamily: "'Inter', system-ui, sans-serif", position: "relative", zIndex: 1, maxWidth: "1200px", margin: "0 auto" }}>
-      {/* Level header */}
-      <div style={styles.levelCard}>
-        <div style={styles.levelBadge}>LVL {currentLevel}</div>
-        <div style={{ flex: 1 }}>
-          <h2 style={{ margin: 0, color: "#fff", fontSize: "22px" }}>
-            {userTier === "elementary" ? "⭐ Junior Builder" : "💼 Wealth Builder"}
-          </h2>
-          <p style={{ color: "#e0f2fe", margin: "6px 0 8px", fontSize: "14px" }}>
-            {xpIntoLevel} / 1000 XP to Level {currentLevel + 1}
-          </p>
-          <ProgressBar progress={levelProgress} />
-        </div>
-      </div>
 
-      {/* Stats grid */}
-      <div style={styles.grid}>
-        <div style={{ ...styles.statCard, background: "#ebf8ff" }}>
-          <span style={styles.icon}>🎓</span>
-          <h4 style={styles.statLabel}>Courses Completed</h4>
-          <h2 style={styles.statValue}>{coursesCompleted} / 3</h2>
-        </div>
-        <div style={{ ...styles.statCard, background: "#f0f4ff" }}>
-          <span style={styles.icon}>🎮</span>
-          <h4 style={styles.statLabel}>Games Played</h4>
-          <h2 style={styles.statValue}>{gamesPlayed}</h2>
-        </div>
-        <div style={{ ...styles.statCard, background: "#fff0f6" }}>
-          <span style={styles.icon}>🏆</span>
-          <h4 style={styles.statLabel}>Game Wins</h4>
-          <h2 style={styles.statValue}>{gameWins}</h2>
-        </div>
-        <div style={{ ...styles.statCard, background: "#f0fdf4" }}>
-          <span style={styles.icon}>💎</span>
-          <h4 style={styles.statLabel}>Total XP</h4>
-          <h2 style={styles.statValue}>{xp}</h2>
-        </div>
-        <div style={{ ...styles.statCard, background: "#fffaf0" }}>
-          <span style={styles.icon}>🔥</span>
-          <h4 style={styles.statLabel}>Streak</h4>
-          <h2 style={styles.statValue}>{streak}</h2>
-        </div>
-      </div>
-
-      {/* Achievements */}
-      <div style={styles.badgeSection}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "18px" }}>
-          <h3 style={{ margin: 0, fontSize: "18px" }}>🏅 Achievements</h3>
-          <span style={styles.achieveCount}>{unlockedCount}/{achievementList.length} unlocked</span>
+        {/* Level header */}
+        <div style={styles.levelCard}>
+          <div style={styles.levelBadge}>LVL {currentLevel}</div>
+          <div style={{ flex: 1 }}>
+            <h2 style={{ margin: 0, color: "#fff", fontSize: "22px" }}>
+              {userTier === "elementary" ? "⭐ Junior Builder" : "💼 Wealth Builder"}
+            </h2>
+            <p style={{ color: "#e0f2fe", margin: "6px 0 8px", fontSize: "14px" }}>
+              {xpIntoLevel} / 1000 XP to Level {currentLevel + 1}
+            </p>
+            <ProgressBar progress={levelProgress} />
+          </div>
         </div>
 
-        {Object.entries(grouped).map(([cat, items]) => (
-          <div key={cat} style={{ marginBottom: "20px" }}>
-            <div style={styles.categoryLabel}>{categoryLabels[cat] || cat}</div>
-            <div style={{ display: "flex", gap: "12px", overflowX: "auto", paddingBottom: "8px" }}>
-              {items.map((a) => (
-                <AchievementBadge
-                  key={a.id}
-                  icon={a.icon}
-                  title={a.title}
-                  requirement={a.requirement}
-                  achieved={a.achieved}
-                  color={a.color}
-                />
-              ))}
+        {/* Stats grid */}
+        <div style={styles.grid}>
+          <div style={{ ...styles.statCard, background: "#ebf8ff" }}>
+            <span style={styles.icon}>🎓</span>
+            <h4 style={styles.statLabel}>Courses Completed</h4>
+            <h2 style={styles.statValue}>{coursesCompleted} / 3</h2>
+          </div>
+          <div style={{ ...styles.statCard, background: "#f0f4ff" }}>
+            <span style={styles.icon}>🎮</span>
+            <h4 style={styles.statLabel}>Games Played</h4>
+            <h2 style={styles.statValue}>{gamesPlayed}</h2>
+          </div>
+          <div style={{ ...styles.statCard, background: "#fff0f6" }}>
+            <span style={styles.icon}>🏆</span>
+            <h4 style={styles.statLabel}>Game Wins</h4>
+            <h2 style={styles.statValue}>{gameWins}</h2>
+          </div>
+          <div style={{ ...styles.statCard, background: "#f0fdf4" }}>
+            <span style={styles.icon}>💎</span>
+            <h4 style={styles.statLabel}>Total XP</h4>
+            <h2 style={styles.statValue}>{xp}</h2>
+          </div>
+          <div style={{ ...styles.statCard, background: "#fffaf0" }}>
+            <span style={styles.icon}>🔥</span>
+            <h4 style={styles.statLabel}>Streak</h4>
+            <h2 style={styles.statValue}>{streak}</h2>
+          </div>
+        </div>
+
+        {/* Achievements */}
+        <div style={styles.badgeSection}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "18px" }}>
+            <h3 style={{ margin: 0, fontSize: "18px" }}>🏅 Achievements</h3>
+            <span style={styles.achieveCount}>{unlockedCount}/{achievementList.length} unlocked</span>
+          </div>
+
+          {Object.entries(grouped).map(([cat, items]) => (
+            <div key={cat} style={{ marginBottom: "20px" }}>
+              <div style={styles.categoryLabel}>{categoryLabels[cat] || cat}</div>
+              <div style={{ display: "flex", gap: "12px", overflowX: "auto", paddingBottom: "8px" }}>
+                {items.map((a) => (
+                  <AchievementBadge
+                    key={a.id}
+                    icon={a.icon}
+                    title={a.title}
+                    requirement={a.requirement}
+                    achieved={a.achieved}
+                    color={a.color}
+                  />
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Savings & Goal Planning */}
+        <div style={styles.goalsSection}>
+          <div style={styles.goalsHeader}>
+            <div>
+              <h3 style={styles.goalsTitle}>🎯 Savings & Goal Planning</h3>
+              <p style={styles.goalsSubtitle}>
+                Your progress now includes goal ideas and planning notes to help you save smarter.
+              </p>
+            </div>
+            {onNavigate && (
+              <button style={styles.goalsButton} onClick={() => onNavigate('Goals')}>
+                Open Goal Planner
+              </button>
+            )}
+          </div>
+          <div style={styles.goalsGrid}>
+            <div style={styles.goalCardSmall}>
+              <strong>Emergency Fund</strong>
+              <p>Save a small amount each week until you have 3-6 months of living costs covered.</p>
+            </div>
+            <div style={styles.goalCardSmall}>
+              <strong>Retirement Habit</strong>
+              <p>Commit to automatic saving so your future self gets a steady boost over time.</p>
+            </div>
+            <div style={styles.goalCardSmall}>
+              <strong>Investment Idea</strong>
+              <p>Consider a diversified low-cost ETF or index fund to start growing your excess cash.</p>
             </div>
           </div>
-        ))}
-      </div>
-
-      <div style={styles.goalsSection}>
-        <div style={styles.goalsHeader}>
-          <div>
-            <h3 style={styles.goalsTitle}>🎯 Savings & Goal Planning</h3>
-            <p style={styles.goalsSubtitle}>
-              Your progress now includes goal ideas and planning notes to help you save smarter.
-            </p>
-          </div>
-          {onNavigate && (
-            <button style={styles.goalsButton} onClick={() => onNavigate('Goals')}>
-              Open Goal Planner
-            </button>
-          )}
         </div>
-        <div style={styles.goalsGrid}>
-          <div style={styles.goalCardSmall}>
-            <strong>Emergency Fund</strong>
-            <p>Save a small amount each week until you have 3-6 months of living costs covered.</p>
+
+        {/* Financial Tools — tabbed panel */}
+        <div style={{ marginTop: "10px" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "16px" }}>
+            <h3 style={{ margin: 0, fontSize: "18px", color: "#1e293b" }}>🛠️ Financial Tools</h3>
+            <span style={{ fontSize: "12px", color: "#94a3b8", fontWeight: "600" }}>Select a tool below</span>
           </div>
-          <div style={styles.goalCardSmall}>
-            <strong>Retirement Habit</strong>
-            <p>Commit to automatic saving so your future self gets a steady boost over time.</p>
-          </div>
-          <div style={styles.goalCardSmall}>
-            <strong>Investment Idea</strong>
-            <p>Consider a diversified low-cost ETF or index fund to start growing your excess cash.</p>
-          </div>
+          <FinancialToolsPanel />
         </div>
-      </div>
-
-      <BudgetTracker />
-
-      <LatteFactorCalculator />
-
-      <SubscriptionAudit />
-
-      <PricePerUseTracker />
-
-      <NoSpendDayTracker />
-
-      <FinancialMoodJournal />
 
       </div>
     </div>
   );
 }
-
-const Badge = ({ icon, title, color }) => (
-  <div style={{ 
-    minWidth: '90px', padding: '15px', borderRadius: '16px', 
-    background: color, textAlign: 'center', border: '1px solid rgba(0,0,0,0.05)' 
-  }}>
-    <div style={{ fontSize: '30px', marginBottom: '5px' }}>{icon}</div>
-    <div style={{ fontSize: '11px', fontWeight: 'bold' }}>{title}</div>
-  </div>
-);
 
 const styles = {
   outerWrapper: { position: 'relative', minHeight: '100vh', margin: '-24px', padding: '24px', background: 'linear-gradient(160deg, #f0f0ff 0%, #e8f5f0 30%, #fff8e8 60%, #fff0f0 100%)', fontFamily: "'Inter', system-ui, sans-serif" },
@@ -368,7 +460,8 @@ const styles = {
   statValue: { margin: "6px 0 0 0", fontSize: "26px", color: "#1e293b", fontWeight: "800" },
   badgeSection: {
     background: "#fff", padding: "24px", borderRadius: "20px",
-    boxShadow: "0 4px 12px rgba(0,0,0,0.04)", border: "1px solid #f1f5f9"
+    boxShadow: "0 4px 12px rgba(0,0,0,0.04)", border: "1px solid #f1f5f9",
+    marginBottom: "24px"
   },
   achieveCount: {
     background: "#e0e7ff", color: "#3730a3",
@@ -380,7 +473,7 @@ const styles = {
     marginBottom: "10px", textTransform: "uppercase", letterSpacing: "0.5px"
   },
   goalsSection: {
-    marginTop: "26px", background: "#f8fafc", borderRadius: "20px", padding: "22px", border: "1px solid #e2e8f0"
+    marginBottom: "6px", background: "#f8fafc", borderRadius: "20px", padding: "22px", border: "1px solid #e2e8f0"
   },
   goalsHeader: {
     display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "16px", marginBottom: "18px"
