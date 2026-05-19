@@ -200,17 +200,17 @@ function App() {
       <header style={styles.header}>
         <div style={styles.headerLeft}>
         <img
-          src="/paidForwardLogo.jpg"
-          alt="PaidForward"
-          onClick={() => setActiveTab('Home')}
-          style={{
-        height: '38px',
-        width: 'auto',
-        cursor: 'pointer',
-        display: 'block'
-    }
-  }
-  />
+  src="/paidForwardLogo.png"
+  alt="PaidForward"
+  onClick={() => setActiveTab('Home')}
+  style={{
+    height: '55px',
+    width: 'auto',
+    cursor: 'pointer',
+    display: 'block',
+    objectFit: 'contain'
+  }}
+/>
 </div>
 
         <nav style={styles.navBar}>
@@ -259,7 +259,7 @@ const styles = {
   achievementToast: { position: 'fixed', top: '70px', right: '20px', background: 'linear-gradient(135deg,#1f2937,#374151)', color: '#fff', borderRadius: '14px', padding: '14px 20px', boxShadow: '0 8px 24px rgba(0,0,0,0.3)', zIndex: 9999, fontWeight: '700', fontSize: '15px', border: '1px solid rgba(255,255,255,0.1)', animation: 'fadeInDown 0.3s ease' },
   container: { minHeight: '100vh', background: 'linear-gradient(180deg, #eef7ff 0%, #f8fafc 35%, #ffffff 100%)', fontFamily: "'Inter', system-ui, sans-serif", paddingTop: '12px' },
   header: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 24px', margin: '0 12px 0 12px', borderRadius: '24px', background: 'linear-gradient(90deg, rgba(240,240,255,0.85), rgba(232,245,240,0.85), rgba(255,248,232,0.85), rgba(255,240,240,0.85))', backdropFilter: 'blur(20px)', border: '1px solid rgba(255,255,255,0.7)', boxShadow: '0 10px 30px -10px rgba(0,0,0,0.05)', position: 'sticky', top: '0', zIndex: 100 },
-  headerLeft: { display: 'flex', alignItems: 'center', gap: '8px' },
+  headerLeft: { display: 'flex', alignItems: 'center', gap: '8px', overflow: 'hidden', maxHeight: '100%' },
   navBar: { display: 'flex', gap: '4px', background: 'rgba(255,255,255,0.55)', padding: '6px', borderRadius: '18px', border: '1px solid rgba(255,255,255,0.55)' },
   navItem: { background: 'none', border: 'none', borderRadius: '12px', fontSize: '14px', cursor: 'pointer', padding: '8px 16px', fontWeight: '700', transition: 'all 0.2s' },
   headerRight: { display: 'flex', alignItems: 'center', gap: '14px' },
