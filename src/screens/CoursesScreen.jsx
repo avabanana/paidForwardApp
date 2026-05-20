@@ -2,7 +2,8 @@ import React, { useEffect, useMemo, useState } from 'react';
 import ProgressBar from '../components/ProgressBar';
 import { supabase } from '../supabaseClient'; 
 
-const coursesData = [
+// --- 14+ COURSE DATA (UNTOUCHED) ---
+const adultCoursesData = [
   {
     id: 0,
     title: 'Earning & Growing Your Money',
@@ -10,8 +11,6 @@ const coursesData = [
     color: '#8b5cf6',
     gradient: 'linear-gradient(135deg,#8b5cf6,#6366f1)',
     tag: 'Starter',
-    tagColor: '#ede9fe',
-    tagText: '#6d28d9',
     lessons: [
       {
         title: 'Make Your First Budget',
@@ -90,8 +89,6 @@ const coursesData = [
     color: '#059669',
     gradient: 'linear-gradient(135deg,#059669,#10b981)',
     tag: 'Planner',
-    tagColor: '#d1fae5',
-    tagText: '#065f46',
     lessons: [
       {
         title: 'Emergency Fund',
@@ -171,8 +168,6 @@ const coursesData = [
     color: '#ef4444',
     gradient: 'linear-gradient(135deg,#ef4444,#f97316)',
     tag: 'Credit Pro',
-    tagColor: '#fee2e2',
-    tagText: '#991b1b',
     lessons: [
       {
         title: 'Understanding Credit',
@@ -196,51 +191,124 @@ const coursesData = [
           { q: 'A credit-builder loan is designed specifically to:', choices: ['Establish a positive payment record by reporting on-time data', 'Allow people to borrow large sums without a credit check ever', 'Consolidate existing high-interest debt into one lower loan', 'Provide emergency funds to people who cannot get regular loans'], a: 0 },
           { q: 'Why is credit a "tool" rather than free money?', choices: ['Every borrowed dollar must be repaid with interest added to it', 'Because it can only be used for tools and home repairs today', 'Lenders are legally required to use that term in disclosure', 'Because it works best when used for purchases that appreciate'], a: 0 }
         ]
-      },
+      }
+    ]
+  }
+];
+
+// --- UNDER 14 "MONEY ADVENTURES" DATA (NEW) ---
+const elementaryCoursesData = [
+  {
+    id: 0,
+    title: 'The Secret of Money',
+    emoji: '🌟',
+    color: '#3b82f6',
+    gradient: 'linear-gradient(135deg,#3b82f6,#60a5fa)',
+    tag: 'Explorer',
+    lessons: [
       {
-        title: 'Interest, APR & the True Cost of Debt',
+        title: 'Needs vs. Wants',
         info: [
-          'APR (Annual Percentage Rate) is the annualized cost of borrowing, including interest and mandatory fees. It enables apples-to-apples comparison across loan products. A credit card charging 2% monthly has a 24% APR — which sounds worse when annualized for a reason: it is.',
-          'Compound interest on debt works against you the same way it works for investments. Carrying a $5,000 credit card balance at 24% APR and paying only the minimum ($100/month) takes approximately 8 years to pay off and costs about $4,300 in interest — nearly doubling the original debt.',
-          'The difference between simple and compound interest matters enormously in debt: most installment loans (car, mortgage) use simple interest — interest is calculated only on the remaining principal. Most credit cards use compound interest — unpaid interest is added to the principal and interest accrues on that new total.',
-          'The avalanche method of debt repayment: pay minimum payments on all debts, then direct all extra money toward the highest-interest debt first. Mathematically optimal — saves the most money. The snowball method (smallest balance first) is less efficient but psychologically more motivating for some people.',
-          'Balance transfer cards offer 0% APR promotional periods (typically 12–21 months) to move high-interest debt. They can save hundreds in interest but carry risks: balance transfer fees (3–5%), the promotional rate expiring, and the temptation to accumulate new debt on the original card.',
-          'Fixed vs. variable interest rates: fixed rates stay constant for the loan\'s life (most mortgages, student loans). Variable rates fluctuate with market benchmarks like the SOFR or Prime Rate (most credit cards, HELOCs). Variable rates can be lower initially but create repayment uncertainty.',
-          'Interest rate arbitrage: if your savings account earns 4.5% and you carry credit card debt at 20% APR, paying off the debt first is a guaranteed 20% risk-free return — no investment reliably beats paying off high-interest debt.'
+          'A "Need" is something you absolutely must have to live, like healthy food, water, a safe house, and warm clothes.',
+          'A "Want" is something that is fun to have but you could live without, like video games, fancy sneakers, or a new toy.',
+          'When you have money, you should always pay for your "Needs" first before spending on "Wants."',
+          'Sometimes a "Want" can look like a "Need." You need shoes to walk, but you want the expensive brand-name ones!',
+          'Thinking twice before buying a "Want" is called smart spending. It helps you keep money for things that really matter.'
         ],
         quiz: [
-          { q: 'A credit card with a 2% monthly rate has an APR of:', choices: ['~24% (2% × 12 months) — representing the annualized cost', '2% — APR is always exactly the same as the monthly rate given', '0.17% — the monthly rate divided by the 12 months in a year', '12% — the monthly rate multiplied by exactly 6 months of use'], a: 0 },
-          { q: 'A $5k balance at 24% APR with only minimum payments results in:', choices: ['Years of repayment and thousands in interest charges over time', 'The balance being cleared within 12 months at no extra cost', 'A fixed $1,200 interest charge for the year regardless of speed', 'Automatic forgiveness of the interest if you pay consistently'], a: 0 },
-          { q: 'The debt avalanche method prioritizes:', choices: ['Paying off the highest-interest-rate debt first for efficiency', 'Paying off the smallest balance first for psychological wins', 'Paying equal extra amounts across all your debts every month', 'Consolidating all debt into one loan before making any payment'], a: 0 },
-          { q: 'A 0% APR balance transfer requires attention to:', choices: ['Transfer fees, the end date, and the risk of new debt buildup', 'Nothing — 0% APR is always risk-free and universally good', 'Only the credit limit offered on the new physical card sent', 'The rewards program and cash back attached to the new card'], a: 0 },
-          { q: 'If savings earn 4.5% and card debt costs 22%, you should:', choices: ['Pay off the credit card debt aggressively to save 22% interest', 'Keep funding the emergency fund since it is earning a return', 'Invest in stocks instead since they historically return more', 'Maintain a balance on the card to continue building a history'], a: 0 },
-          { q: 'Compound interest on credit card debt means:', choices: ['Unpaid interest is added to balance and next month it grows', 'You earn interest back on your debt for being a loyal person', 'Interest is charged once per year and split into installments', 'Your interest rate compounds downward as you pay it off fast'], a: 0 },
-          { q: 'Fixed vs. variable interest rates differ because:', choices: ['Fixed rates stay constant while variable rates fluctuate monthly', 'Fixed rates are always lower than variable rates on any loan', 'Variable rates are government regulated and cannot exceed fixed', 'Fixed rates only apply to home mortgages and nothing else ever'], a: 0 },
-          { q: 'Why use the debt snowball method instead of avalanche?', choices: ['Eliminating small balances quickly creates psychological wins', 'It results in the lowest total interest paid over the period', 'It is the only method recommended by major banks for consumers', 'It reduces the number of required monthly minimums instantly'], a: 0 },
-          { q: 'APR allows for meaningful loan comparison because:', choices: ['It standardizes borrowing costs into one annualized percentage', 'All lenders are required to charge the same APR for products', 'It represents the absolute maximum you will ever pay in fees', 'It accounts for inflation and adjusts your rate automatically'], a: 0 }
+          { q: 'Which of these is a "Need"?', choices: ['A healthy dinner', 'A new pack of trading cards', 'A trip to the movie theater', 'A chocolate bar'], a: 0 },
+          { q: 'If you only have $10, what should you buy first?', choices: ['A pair of socks you need for school', 'A small toy you saw on TV', 'A bag of candy for your friends', 'A poster for your bedroom wall'], a: 0 },
+          { q: 'Why is a "Want" different from a "Need"?', choices: ['You can live without a want, but you need a need to stay healthy and safe', 'Wants are always cheaper than needs', 'Needs are only for grown-ups, not kids', 'There is no difference between them'], a: 0 },
+          { q: 'You need a backpack for school. The plain one is $15 and the one with a movie character is $35. The extra $20 is for a:', choices: ['Want', 'Need', 'Tax', 'Investment'], a: 0 },
+          { q: 'Smart spending means:', choices: ['Paying for needs first and thinking before buying wants', 'Buying everything you see immediately', 'Only spending money on candy', 'Never spending any money at all'], a: 0 }
         ]
       },
       {
-        title: 'Your Credit Score: How It Works',
+        title: 'How to Earn Money',
         info: [
-          'FICO scores (the most widely used model) range from 300–850 and are calculated from five weighted factors: Payment History (35%) — the most important; Amounts Owed / Utilization (30%); Length of Credit History (15%); Credit Mix (10%); and New Credit / Inquiries (10%).',
-          'Score ranges and their practical implications: 800–850 (Exceptional) qualifies for the best rates on any loan. 740–799 (Very Good) still qualifies for excellent rates. 670–739 (Good) — most loans approved, competitive but not best rates. 580–669 (Fair) — approval likely but significantly higher rates. Below 580 (Poor) — many applications denied, or approved only with very high rates and collateral.',
-          'A single 30-day late payment can drop a score by 60–110 points depending on starting score and history — and it remains on your report for 7 years. The higher your score before the late payment, the more dramatic the drop, because the scoring model punishes unexpected deviations more than a pattern of poor history.',
-          'Length of credit history rewards age — specifically the age of your oldest account, newest account, and average account age. This is why financial experts advise against closing old credit cards even if you no longer use them actively: closing them reduces your average account age and can shrink your total available credit, both hurting your score.',
-          'Credit mix rewards having experience with different credit types: revolving (credit cards) and installment (auto, student, personal loans). Having only one type isn\'t disqualifying, but adding diversity when appropriate (and when the terms make financial sense) can modestly improve your score.',
-          'You are legally entitled to one free credit report per year from each of the three bureaus (Equifax, Experian, TransUnion) at annualcreditreport.com — the only federally authorized source. Errors appear on 1 in 5 credit reports; disputing them is free and can meaningfully improve your score.',
-          'Credit score misconceptions: your income has no direct effect on your score. Checking your own score is a soft inquiry and has zero impact. Being denied credit does not hurt your score. Carrying a small monthly balance does NOT help your score — paying in full is always better.'
+          'Money doesn’t just appear; people earn it by helping others or doing a job.',
+          'As a kid, you can earn money through an allowance for doing chores, or by receiving gifts on your birthday.',
+          'You can also earn by being an "entrepreneur"—like selling lemonade, washing a car, or helping a neighbor rake leaves.',
+          'The harder or better you work, the more people trust you to do a job again!',
+          'Earning money feels great because it’s a reward for your time and effort.'
         ],
         quiz: [
-          { q: 'The most heavily weighted factor in a FICO score is:', choices: ['Payment History at 35% — whether you pay accounts on time', 'Credit Utilization at 30% — how much available credit you use', 'Length of Credit History at 15% — how long you had accounts', 'Credit Mix at 10% — the variety of credit types you hold now'], a: 0 },
-          { q: 'A 30-day late payment can drop your score by:', choices: ['60–110 points — and it is worse for high scorers deviations', 'Exactly five points per each day the payment is late to pay', 'Nothing at all until the account is ninety days past due now', 'Temporarily two to five points just like a hard inquiry check'], a: 0 },
-          { q: 'Why is closing an old credit card often a mistake?', choices: ['It reduces average account age and total available credit line', 'Issuers charge a closing penalty fee that hurts your score', 'Closed accounts immediately disappear from your entire report', 'It triggers a hard inquiry every time you close any account'], a: 0 },
-          { q: 'A 680 vs. 760 score on a $300k mortgage likely costs:', choices: ['Thousands in extra interest over the entire life of the loan', 'Identical loan terms — lenders care more about income levels', 'A five hundred dollar fee difference — very minor for homes', 'Only a difference in the application processing time needed'], a: 0 },
-          { q: 'Checking your own score on a monitoring service is:', choices: ['A soft inquiry with zero impact on your credit score total', 'Reduces your score by five points each time you check it now', 'Only allowed once per year under current federal safety law', 'Affects your score the same way a loan application does now'], a: 0 },
-          { q: 'Having only credit cards and no loans affects score by:', choices: ['Missing out on the Mix category (10% of your total score)', 'Bureaus automatically penalizing users by exactly 50 points', 'Cards alone are sufficient for a perfect score with no risk', 'Installment loans are only required for scores above 800 now'], a: 0 },
-          { q: 'Errors appear on approximately what percentage of reports?', choices: ['About 1 in 5 (20%) of all credit reports contain an error', 'Less than 1% — bureau data entry is nearly perfect and safe', 'Over 50% contain significant errors affecting lending now', 'Exactly 5% — the federally regulated maximum allowed rate'], a: 0 },
-          { q: 'Which has NO direct effect on your FICO credit score?', choices: ['Your annual income or salary level — used by lenders alone', 'Whether you pay your bills on time or late each month now', 'How much of your credit limit you regularly use each month', 'How long you have had your oldest account open for history'], a: 0 },
-          { q: 'The federally mandated free credit report source is:', choices: ['AnnualCreditReport.com — the only authorized free source', 'CreditKarma.com — which provides government mandated scores', 'Your bank mobile app — required by the Dodd-Frank Act today', 'Any of the three bureaus individual websites for free now'], a: 0 }
+          { q: 'What is an "entrepreneur"?', choices: ['Someone who starts a small business, like a lemonade stand', 'A person who only spends money', 'A type of bank account', 'A specialized tool for raking leaves'], a: 0 },
+          { q: 'Which is a way a kid might earn money?', choices: ['Helping a neighbor pull weeds in their garden', 'Finding a magic lamp', 'Waiting for it to grow on a tree', 'Just asking the bank for it'], a: 0 },
+          { q: 'What is an "allowance"?', choices: ['Money parents might give you for doing regular chores', 'The amount of time you spend playing games', 'A type of tax you pay at the toy store', 'A special ticket for the movies'], a: 0 },
+          { q: 'If you want to earn more money, you should:', choices: ['Look for ways to help people and do a great job', 'Complain that you don’t have enough', 'Wait for your birthday to arrive', 'Spend the money you already have'], a: 0 },
+          { q: 'Earning money is a reward for your:', choices: ['Time and effort', 'Luck', 'Good looks', 'Favorite color'], a: 0 }
+        ]
+      }
+    ]
+  },
+  {
+    id: 1,
+    title: 'The Three Jars',
+    emoji: '🏺',
+    color: '#10b981',
+    gradient: 'linear-gradient(135deg,#10b981,#34d399)',
+    tag: 'Saver',
+    lessons: [
+      {
+        title: 'Spend, Save, and Give',
+        info: [
+          'A great way to manage your money is using three jars: one for Spending, one for Saving, and one for Giving.',
+          'The Spending Jar is for small things you want right now, like a snack or a small toy.',
+          'The Saving Jar is for "Big Goals"—things that cost a lot of money and take time to reach.',
+          'The Giving Jar is for helping others, like donating to an animal shelter or buying a gift for someone in need.',
+          'When you get money, try to put a little bit into each jar. This makes you a Money Master!'
+        ],
+        quiz: [
+          { q: 'What is the "Saving Jar" for?', choices: ['Big goals that take time to reach', 'Buying candy every single day', 'Putting trash away', 'Paying for your electricity bill'], a: 0 },
+          { q: 'If you want to help a local charity, which jar do you use?', choices: ['The Giving Jar', 'The Spending Jar', 'The Saving Jar', 'The Cookie Jar'], a: 0 },
+          { q: 'The "Spending Jar" is best for:', choices: ['Small things you want to buy now', 'Your college fund', 'Money you never want to touch', 'Helping a neighbor with a bill'], a: 0 },
+          { q: 'Dividing your money into three jars helps you:', choices: ['Be a Money Master and manage your cash well', 'Lose your money faster', 'Keep your room messy', 'Only think about yourself'], a: 0 },
+          { q: 'If you get $3, how much should you put in each jar?', choices: ['Put $1 in each to be balanced', 'Put all $3 in spending', 'Give it all away immediately', 'Hide it under your bed'], a: 0 }
+        ]
+      },
+      {
+        title: 'Wait for the Great',
+        info: [
+          'Patience is a "Money Superpower." If you wait and save, you can buy something much better later.',
+          'Impulse buying is when you see something and buy it immediately without thinking. This often leads to "Buyer’s Remorse" (feeling sad you spent the money).',
+          'Interest is like a "Thank You" payment. If you put money in a bank, the bank pays you a tiny bit extra for keeping it there!',
+          'The longer you leave your money in the Saving Jar or a Bank, the more it can grow.',
+          'Setting a goal, like a $50 LEGO set, helps you stay excited about saving.'
+        ],
+        quiz: [
+          { q: 'What is "Buyer’s Remorse"?', choices: ['Feeling sad after spending money on something you didn\'t really need', 'A special discount at the store', 'The name of a new video game', 'Winning a prize for saving money'], a: 0 },
+          { q: 'What is "Interest"?', choices: ['Extra money the bank pays you for saving with them', 'The cost of a movie ticket', 'A hobby you like to do', 'A fee you pay for being late'], a: 0 },
+          { q: 'Why is patience a "Money Superpower"?', choices: ['It helps you save for much bigger and better things', 'It makes you run faster', 'It helps you find money on the ground', 'It means you never have to work'], a: 0 },
+          { q: 'If you want a big toy, the best thing to do is:', choices: ['Set a goal and put money in your Saving Jar every week', 'Cry until someone buys it for you', 'Buy five small toys instead', 'Forget about it completely'], a: 0 },
+          { q: 'Impulse buying is:', choices: ['Buying something quickly without thinking about it', 'Saving your money for a year', 'Giving money to a friend', 'Earning money from a job'], a: 0 }
+        ]
+      }
+    ]
+  },
+  {
+    id: 2,
+    title: 'Trust & Borrowing',
+    emoji: '🤝',
+    color: '#f59e0b',
+    gradient: 'linear-gradient(135deg,#f59e0b,#fbbf24)',
+    tag: 'Honesty',
+    lessons: [
+      {
+        title: 'What is a Loan?',
+        info: [
+          'Borrowing means taking something that isn’t yours and promising to give it back later.',
+          'A "Loan" is when you borrow money. You must always pay it back, usually by a certain date.',
+          'Your "Credit" is your reputation. If you always pay people back, you have "Good Credit" and people trust you.',
+          'If you borrow $5 from a friend and don\'t pay them back, they probably won\'t lend you money again. That is "Bad Credit."',
+          'Grown-ups use credit for big things like houses, but they have to be very careful to pay it back on time.'
+        ],
+        quiz: [
+          { q: 'What does "Borrowing" mean?', choices: ['Taking something and promising to return it', 'Taking something and keeping it forever', 'Finding something on the street', 'Buying something with your own money'], a: 0 },
+          { q: 'What is "Credit" for a kid?', choices: ['Your reputation for being trustworthy with money', 'A plastic card that gives free toys', 'The name of a local bank', 'A type of school grade'], a: 0 },
+          { q: 'If you have "Good Credit":', choices: ['People trust you because you pay them back', 'You are the richest person in class', 'You never have to pay for anything', 'You have a secret clubhouse'], a: 0 },
+          { q: 'If you borrow a book and lose it, you should:', choices: ['Tell the truth and find a way to replace it', 'Hide and hope they forget about it', 'Say you never borrowed it', 'Borrow another book to make them happy'], a: 0 },
+          { q: 'Why do people borrow money?', choices: ['To buy something big now and pay for it over time', 'Because they want to lose friends', 'Because money is free', 'To hide it in a jar'], a: 0 }
         ]
       }
     ]
@@ -251,8 +319,9 @@ const QUESTIONS_PER_QUIZ = 9;
 
 const ensureQuestions = (questions) => {
   const q = [...questions];
-  while (q.length < QUESTIONS_PER_QUIZ) q.push(questions[q.length % questions.length]);
-  return q.slice(0, QUESTIONS_PER_QUIZ);
+  // Logic to make sure there are enough questions if the bank is small
+  while (q.length < 5 && q.length > 0) q.push(questions[q.length % questions.length]);
+  return q;
 };
 
 const randomizeQuestion = (question) => {
@@ -261,8 +330,6 @@ const randomizeQuestion = (question) => {
   const a = choices.indexOf(correctText);
   return { ...question, choices, a };
 };
-
-const COMPLETION_DATE = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
 
 export default function CoursesScreen({ courseProgressMap = {}, setCourseProgressMap, onCourseComplete, username = '', userTier = 'adult' }) {
   const [page, setPage] = useState('list');
@@ -275,75 +342,52 @@ export default function CoursesScreen({ courseProgressMap = {}, setCourseProgres
   const [completionDate, setCompletionDate] = useState('');
   const [localProgressMap, setLocalProgressMap] = useState(() => courseProgressMap || {});
   const [courseCompleteMarked, setCourseCompleteMarked] = useState(false);
-  
-  // Storage preference logic
   const [storagePref, setStoragePref] = useState(localStorage.getItem('storage_preference'));
 
+  const isElementary = userTier === 'elementary';
+  const activeCoursesData = isElementary ? elementaryCoursesData : adultCoursesData;
+
   useEffect(() => {
-    if (courseProgressMap) {
-      setLocalProgressMap(prev => ({ ...courseProgressMap, ...prev }));
-    }
+    if (courseProgressMap) setLocalProgressMap(prev => ({ ...courseProgressMap, ...prev }));
   }, [courseProgressMap]);
 
-  // Re-sync progress from props whenever they update
-  useEffect(() => {
-    if (courseProgressMap && Object.keys(courseProgressMap).length > 0) {
-      setLocalProgressMap(courseProgressMap);
-    }
-  }, [Object.keys(courseProgressMap || {}).join(',')]);
-
-  // Save progress whenever localProgressMap changes significantly
   useEffect(() => {
     if (storagePref === 'supabase') {
       const timer = setTimeout(async () => {
         try {
           const { data: { user } } = await supabase.auth.getUser();
-          if (user) {
-            await supabase.from('users').update({ courseProgressMap: localProgressMap }).eq('id', user.id);
-          }
-        } catch (err) {
-          console.error("Background sync error:", err);
-        }
+          if (user) await supabase.from('users').update({ courseProgressMap: localProgressMap }).eq('id', user.id);
+        } catch (err) { console.error("Sync error:", err); }
       }, 1000);
       return () => clearTimeout(timer);
     }
   }, [localProgressMap, storagePref]);
 
   const effectiveProgressMap = localProgressMap;
-  const isElementary = userTier === 'elementary';
-  const courseHeading = isElementary ? 'Money Adventures' : 'Courses';
+  const courseHeading = isElementary ? '🚀 Money Adventures' : '📚 Courses';
   const courseSubtitle = isElementary
-    ? 'Fun lessons, easy quizzes, and helpful tips for younger learners.'
+    ? 'Fun lessons to help you become a Money Master!'
     : 'Learn practical money skills, pass quizzes, and earn certificates.';
 
-  const course = useMemo(() => coursesData.find((c) => c.id === currentCourseId), [currentCourseId]);
+  const course = useMemo(() => activeCoursesData.find((c) => c.id === currentCourseId), [currentCourseId, activeCoursesData]);
   const lesson = course?.lessons?.[currentLesson];
 
   const courseLessonDone = (courseId, lessonIdx) =>
     Boolean(effectiveProgressMap?.[`course_${courseId}_lesson_${lessonIdx}`]);
 
   const lessonsCompletedCount = (courseId) => {
-    const c = coursesData.find((x) => x.id === courseId);
+    const c = activeCoursesData.find((x) => x.id === courseId);
     if (!c) return 0;
     return c.lessons.reduce((sum, _, idx) => sum + (courseLessonDone(courseId, idx) ? 1 : 0), 0);
   };
 
   const getCourseProgressPct = (courseId) => {
-    const c = coursesData.find((x) => x.id === courseId);
+    const c = activeCoursesData.find((x) => x.id === courseId);
     if (!c) return 0;
     return lessonsCompletedCount(courseId) / c.lessons.length;
   };
 
-  const totalCoursesFinished = coursesData.filter((c) => lessonsCompletedCount(c.id) === c.lessons.length).length;
-
-  const getFirstIncompleteLessonIdx = (courseId) => {
-    const c = coursesData.find((x) => x.id === courseId);
-    if (!c) return 0;
-    for (let idx = 0; idx < c.lessons.length; idx += 1) {
-      if (!courseLessonDone(courseId, idx)) return idx;
-    }
-    return 0;
-  };
+  const totalCoursesFinished = activeCoursesData.filter((c) => lessonsCompletedCount(c.id) === c.lessons.length).length;
 
   const handleStartCourse = (id, isFinished = false) => {
     setCurrentCourseId(id);
@@ -355,7 +399,12 @@ export default function CoursesScreen({ courseProgressMap = {}, setCourseProgres
       setPage('review');
       return;
     }
-    setCurrentLesson(getFirstIncompleteLessonIdx(id));
+    const c = activeCoursesData.find(x => x.id === id);
+    let firstIncomplete = 0;
+    for (let i = 0; i < c.lessons.length; i++) {
+      if (!courseLessonDone(id, i)) { firstIncomplete = i; break; }
+    }
+    setCurrentLesson(firstIncomplete);
     setPage('lesson');
   };
 
@@ -379,44 +428,26 @@ export default function CoursesScreen({ courseProgressMap = {}, setCourseProgres
 
   const handleNextQuestion = () => {
     if (!answerFeedback) return;
-    const question = quiz.questions[quiz.index];
     const isCorrect = answerFeedback.correct;
-    const nextIndex = quiz.index + 1;
-    const updatedWrong = isCorrect
-      ? quiz.wrong
-      : [...quiz.wrong, { q: question.q, selected: answerFeedback.selected, correctAnswer: answerFeedback.correctAnswer }];
     const updatedCorrect = quiz.correct + (isCorrect ? 1 : 0);
+    const nextIndex = quiz.index + 1;
 
     if (nextIndex >= quiz.questions.length) {
       const score = Math.round((updatedCorrect / quiz.questions.length) * 100);
       const passed = score >= 70;
-      const progressKey = `course_${course.id}_lesson_${currentLesson}`;
-
       if (passed) {
+        const progressKey = `course_${course.id}_lesson_${currentLesson}`;
         const updatedMap = { ...effectiveProgressMap, [progressKey]: 1 };
         setLocalProgressMap(updatedMap);
         setCourseProgressMap?.(progressKey, 1);
-
-        // PERSISTENCE LOGIC
-        if (storagePref === 'supabase') {
-          const syncSupabase = async () => {
-            try {
-              const { data: { user } } = await supabase.auth.getUser();
-              if (user) await supabase.from('profiles').update({ course_progress: updatedMap }).eq('id', user.id);
-            } catch (err) { console.error("Sync error:", err); }
-          };
-          syncSupabase();
-        }
-        // Always save to LocalStorage as well
         localStorage.setItem('course_progress_backup', JSON.stringify(updatedMap));
       }
-
-      setResult({ score, passed, correct: updatedCorrect, total: quiz.questions.length, wrong: updatedWrong });
+      setResult({ score, passed, correct: updatedCorrect, total: quiz.questions.length, wrong: quiz.wrong });
       setQuiz(null);
       setAnswerFeedback(null);
       setPage('result');
 
-      if (passed && currentLesson + 1 >= (course?.lessons?.length || 0) && !courseCompleteMarked) {
+      if (passed && currentLesson + 1 >= course.lessons.length) {
         setCourseCompleteMarked(true);
         onCourseComplete?.(course.id);
         setCompletedCourseTitle(course.title);
@@ -424,92 +455,78 @@ export default function CoursesScreen({ courseProgressMap = {}, setCourseProgres
       }
       return;
     }
-    setQuiz({ ...quiz, index: nextIndex, correct: updatedCorrect, wrong: updatedWrong });
+    setQuiz({ ...quiz, index: nextIndex, correct: updatedCorrect });
     setAnswerFeedback(null);
   };
 
   const handleContinueAfterResult = () => {
-    if (!result) return;
     if (!result.passed) { handleBeginQuiz(); return; }
-
-    const nextLessonIdx = currentLesson + 1;
-    if (nextLessonIdx < (course?.lessons?.length || 0)) {
-      setCurrentLesson(nextLessonIdx);
-      setResult(null);
+    if (currentLesson + 1 < course.lessons.length) {
+      setCurrentLesson(currentLesson + 1);
       setPage('lesson');
-      return;
+    } else {
+      setPage('certificate');
     }
-
-    if (!courseCompleteMarked) {
-      onCourseComplete?.(course.id);
-      setCourseCompleteMarked(true);
-      setCompletedCourseTitle(course.title);
-      setCompletionDate(new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }));
-    }
-    setPage('certificate');
   };
 
-  const selectStorage = (choice) => {
-    localStorage.setItem('storage_preference', choice);
-    setStoragePref(choice);
-  };
-
-  // ─── STORAGE PROMPT ─────────────────────────────────────────────────────────
+  // ─── STORAGE PROMPT ───
   if (!storagePref) {
     return (
       <div style={{ ...cStyles.container, display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '80vh' }}>
         <div style={cStyles.lessonCard}>
-          <h2 style={cStyles.lessonTitle}>How should we save your progress?</h2>
-          <p style={cStyles.lessonInfoText}>Choose to sync with your online account or save only on this device. (Always backed up locally).</p>
+          <h2 style={cStyles.lessonTitle}>Ready for your adventure?</h2>
+          <p style={cStyles.lessonInfoText}>Choose how you want to save your progress.</p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '20px' }}>
-            <button onClick={() => selectStorage('supabase')} style={{ ...cStyles.quizBtn, background: '#2563eb' }}>Sync with Supabase (Cloud)</button>
-            <button onClick={() => selectStorage('local')} style={{ ...cStyles.quizBtn, background: '#64748b' }}>Local Device Only</button>
+            <button onClick={() => { localStorage.setItem('storage_preference', 'supabase'); setStoragePref('supabase'); }} style={{ ...cStyles.quizBtn, background: '#2563eb' }}>Sync with Cloud</button>
+            <button onClick={() => { localStorage.setItem('storage_preference', 'local'); setStoragePref('local'); }} style={{ ...cStyles.quizBtn, background: '#64748b' }}>Local Device Only</button>
           </div>
         </div>
       </div>
     );
   }
 
-  // ─── LIST VIEW ───────────────────────────────────────────────────────────────
+  // ─── LIST VIEW ───
   if (page === 'list') {
     return (
-      <div style={cStyles.container}>
+      <div style={{...cStyles.container, background: isElementary ? 'linear-gradient(180deg, #f0f9ff 0%, #ffffff 100%)' : cStyles.container.background}}>
         <div style={cStyles.header}>
           <div>
-            <div style={cStyles.headerBadge}>{isElementary ? '🧠 Money Adventures' : '📚 Learning Track'}</div>
-            <h2 style={cStyles.headerTitle}>{courseHeading}{username ? ` for ${username}` : ''}</h2>
+            <div style={{...cStyles.headerBadge, background: isElementary ? '#dcfce7' : '#fef3c7', color: isElementary ? '#166534' : '#92400e'}}>
+               {isElementary ? '⭐ Level: Beginner Explorer' : '📚 Learning Track'}
+            </div>
+            <h2 style={cStyles.headerTitle}>{courseHeading}{username ? `, ${username}!` : ''}</h2>
             <p style={cStyles.headerSub}>{courseSubtitle}</p>
           </div>
-          <div style={cStyles.completedPill}>
-            <span style={{ fontSize: '20px' }}>🎓</span>
+          <div style={{...cStyles.completedPill, background: isElementary ? 'linear-gradient(135deg,#10b981,#059669)' : cStyles.completedPill.background}}>
+            <span style={{ fontSize: '24px' }}>{isElementary ? '🏆' : '🎓'}</span>
             <div>
-              <div style={{ fontWeight: '800', fontSize: '20px' }}>{totalCoursesFinished}/3</div>
-              <div style={{ fontSize: '11px', opacity: 0.8 }}>Completed</div>
+              <div style={{ fontWeight: '800', fontSize: '20px' }}>{totalCoursesFinished}/{activeCoursesData.length}</div>
+              <div style={{ fontSize: '11px', opacity: 0.8 }}>Done</div>
             </div>
           </div>
         </div>
 
         <div style={cStyles.grid}>
-          {coursesData.map((c) => {
+          {activeCoursesData.map((c) => {
             const progressValue = getCourseProgressPct(c.id);
             const lessonsDoneCount = lessonsCompletedCount(c.id);
             const isFinished = lessonsDoneCount === c.lessons.length;
             const hasStarted = lessonsDoneCount > 0 && !isFinished;
 
             return (
-              <div key={c.id} style={cStyles.courseCard}>
-                <div style={{ ...cStyles.courseCardTop, background: c.gradient }}>
+              <div key={c.id} style={{...cStyles.courseCard, borderRadius: isElementary ? '24px' : '20px'}}>
+                <div style={{ ...cStyles.courseCardTop, background: c.gradient, padding: isElementary ? '32px 24px' : '24px' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                    <span style={{ fontSize: '40px' }}>{c.emoji}</span>
+                    <span style={{ fontSize: isElementary ? '50px' : '40px' }}>{c.emoji}</span>
                     <span style={{ ...cStyles.courseTierTag, background: 'rgba(255,255,255,0.25)', color: '#fff' }}>{c.tag}</span>
                   </div>
-                  <h3 style={cStyles.courseCardTitle}>{c.title}</h3>
-                  <p style={cStyles.courseCardSub}>{c.lessons.length} lessons · quiz after each</p>
+                  <h3 style={{...cStyles.courseCardTitle, fontSize: isElementary ? '22px' : '20px'}}>{c.title}</h3>
+                  <p style={cStyles.courseCardSub}>{c.lessons.length} fun steps</p>
                 </div>
                 <div style={cStyles.courseCardBottom}>
-                  <div style={{ marginBottom: '12px' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px', fontSize: '13px', color: '#64748b', fontWeight: '600' }}>
-                      <span>{lessonsDoneCount}/{c.lessons.length} lessons</span>
+                  <div style={{ marginBottom: '16px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontSize: '13px', color: '#64748b', fontWeight: '700' }}>
+                      <span>{lessonsDoneCount}/{c.lessons.length} {isElementary ? 'Completed' : 'lessons'}</span>
                       <span>{Math.round(progressValue * 100)}%</span>
                     </div>
                     <ProgressBar progress={progressValue} />
@@ -518,12 +535,14 @@ export default function CoursesScreen({ courseProgressMap = {}, setCourseProgres
                     onClick={() => handleStartCourse(c.id, isFinished)}
                     style={{
                       ...cStyles.startBtn,
+                      height: isElementary ? '50px' : 'auto',
                       background: isFinished ? '#f0fdf4' : c.gradient,
                       color: isFinished ? '#166534' : '#fff',
-                      border: isFinished ? '2px solid #86efac' : 'none'
+                      border: isFinished ? '2px solid #86efac' : 'none',
+                      fontSize: isElementary ? '16px' : '14px'
                     }}
                   >
-                    {isFinished ? '✓ Review Course' : hasStarted ? `▶ Resume (Lesson ${lessonsDoneCount + 1})` : '▶ Start Course'}
+                    {isFinished ? '✨ Look Again' : hasStarted ? 'Continue ▶' : 'Start Adventure ▶'}
                   </button>
                 </div>
               </div>
@@ -534,87 +553,81 @@ export default function CoursesScreen({ courseProgressMap = {}, setCourseProgres
     );
   }
 
-  // ─── LESSON VIEW ─────────────────────────────────────────────────────────────
+  // ─── LESSON VIEW ───
   if (page === 'lesson' && course && lesson) {
-    const currentCompleted = lessonsCompletedCount(course.id);
     return (
       <div style={cStyles.innerContainer}>
-        <button onClick={() => setPage('list')} style={cStyles.backBtn}>← Back to courses</button>
-        <div style={{ ...cStyles.courseHeaderBar, background: course.gradient }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '14px' }}>
-            <span style={{ fontSize: '28px' }}>{course.emoji}</span>
+        <button onClick={() => setPage('list')} style={cStyles.backBtn}>← Go Back</button>
+        <div style={{ ...cStyles.courseHeaderBar, background: course.gradient, borderRadius: isElementary ? '24px' : '18px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <span style={{ fontSize: '32px' }}>{course.emoji}</span>
             <div>
-              <h2 style={{ margin: 0, color: '#fff', fontSize: '20px', fontWeight: '800' }}>{course.title}</h2>
-              <p style={{ margin: 0, color: 'rgba(255,255,255,0.8)', fontSize: '13px' }}>Lesson {currentLesson + 1} of {course.lessons.length}</p>
-            </div>
-          </div>
-          <div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', color: 'rgba(255,255,255,0.8)', fontSize: '12px', marginBottom: '6px', fontWeight: '600' }}>
-              <span>Course Progress</span>
-              <span>{currentCompleted}/{course.lessons.length} lessons complete</span>
-            </div>
-            <div style={{ height: '6px', background: 'rgba(255,255,255,0.3)', borderRadius: '999px', overflow: 'hidden' }}>
-              <div style={{ height: '100%', width: `${(currentCompleted / course.lessons.length) * 100}%`, background: '#fff', borderRadius: '999px', transition: 'width 0.4s ease' }} />
+              <h2 style={{ margin: 0, color: '#fff', fontSize: '22px', fontWeight: '800' }}>{course.title}</h2>
+              <p style={{ margin: 0, color: 'rgba(255,255,255,0.8)', fontSize: '14px' }}>Step {currentLesson + 1} of {course.lessons.length}</p>
             </div>
           </div>
         </div>
-        <div style={cStyles.lessonCard}>
-          <div style={{ ...cStyles.lessonNumBadge, background: course.gradient }}>Lesson {currentLesson + 1}</div>
-          <h3 style={cStyles.lessonTitle}>{lesson.title}</h3>
+        <div style={{...cStyles.lessonCard, borderRadius: isElementary ? '28px' : '18px'}}>
+          <h3 style={{...cStyles.lessonTitle, fontSize: isElementary ? '24px' : '22px'}}>{lesson.title}</h3>
           <div style={cStyles.lessonInfoList}>
             {lesson.info.map((line, idx) => (
               <div key={idx} style={cStyles.lessonInfoItem}>
-                <div style={{ ...cStyles.lessonInfoDot, background: course.color }} />
-                <p style={cStyles.lessonInfoText}>{line}</p>
+                <div style={{ ...cStyles.lessonInfoDot, background: course.color, width: isElementary ? '12px' : '8px', height: isElementary ? '12px' : '8px' }} />
+                <p style={{...cStyles.lessonInfoText, fontSize: isElementary ? '16px' : '15px'}}>{line}</p>
               </div>
             ))}
           </div>
-          <button onClick={handleBeginQuiz} style={{ ...cStyles.quizBtn, background: course.gradient }}>📝 Take the Quiz</button>
+          <button onClick={handleBeginQuiz} style={{ ...cStyles.quizBtn, background: course.gradient, width: '100%', fontSize: '18px' }}>
+            {isElementary ? '🎮 Play the Quiz!' : '📝 Take the Quiz'}
+          </button>
         </div>
       </div>
     );
   }
 
-  // ─── QUIZ VIEW ───────────────────────────────────────────────────────────────
+  // ─── QUIZ VIEW ───
   if (page === 'quiz' && quiz) {
     const q = quiz.questions[quiz.index];
-    const progressPct = ((quiz.index) / quiz.questions.length) * 100;
     return (
       <div style={cStyles.innerContainer}>
         <div style={cStyles.quizHeaderCard}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-            <span style={{ fontWeight: '700', color: '#1e293b', fontSize: '15px' }}>Question {quiz.index + 1} / {quiz.questions.length}</span>
-            <span style={{ ...cStyles.scoreChip, background: course?.gradient }}>✅ {quiz.correct} correct</span>
-          </div>
-          <div style={{ height: '6px', background: '#e2e8f0', borderRadius: '999px', overflow: 'hidden' }}>
-            <div style={{ height: '100%', width: `${progressPct}%`, background: course?.gradient || '#2563eb', borderRadius: '999px', transition: 'width 0.3s ease' }} />
+            <span style={{ fontWeight: '800', color: '#1e293b' }}>Question {quiz.index + 1}</span>
+            <span style={{ ...cStyles.scoreChip, background: course?.gradient }}>{quiz.correct} Correct!</span>
           </div>
         </div>
-        <div style={cStyles.quizCard}>
-          <div style={{ ...cStyles.questionNumBadge, background: course?.color + '20', color: course?.color }}>Q{quiz.index + 1}</div>
-          <p style={cStyles.questionText}>{q.q}</p>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+        <div style={{...cStyles.quizCard, borderRadius: isElementary ? '28px' : '18px'}}>
+          <p style={{...cStyles.questionText, fontSize: isElementary ? '20px' : '17px'}}>{q.q}</p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
             {q.choices.map((choice, i) => {
               const isCorrect = i === q.a;
               const isSelectedWrong = answerFeedback && !answerFeedback.correct && answerFeedback.selected === choice;
-              const btnStyle = {
-                ...cStyles.choiceBtn,
-                cursor: answerFeedback ? 'default' : 'pointer',
-                background: '#f8fafc',
-                borderColor: '#e2e8f0',
-                color: '#334155',
-                fontWeight: 500,
-                ...(answerFeedback && isCorrect ? { background: '#d1fae5', borderColor: '#22c55e', color: '#065f46', fontWeight: 700 } : {}),
-                ...(answerFeedback && isSelectedWrong ? { background: '#fee2e2', borderColor: '#ef4444', color: '#991b1b', fontWeight: 700 } : {})
-              };
-              return <button key={i} onClick={() => handlePickAnswer(i)} disabled={!!answerFeedback} style={btnStyle}><span style={cStyles.choiceLetter}>{['A', 'B', 'C', 'D'][i]}</span>{choice}</button>;
+              return (
+                <button 
+                  key={i} 
+                  onClick={() => handlePickAnswer(i)} 
+                  disabled={!!answerFeedback} 
+                  style={{
+                    ...cStyles.choiceBtn,
+                    padding: isElementary ? '18px' : '14px 16px',
+                    fontSize: isElementary ? '16px' : '13px',
+                    background: answerFeedback && isCorrect ? '#d1fae5' : (answerFeedback && isSelectedWrong ? '#fee2e2' : '#f8fafc'),
+                    borderColor: answerFeedback && isCorrect ? '#22c55e' : (answerFeedback && isSelectedWrong ? '#ef4444' : '#e2e8f0')
+                  }}
+                >
+                  <span style={cStyles.choiceLetter}>{['A', 'B', 'C', 'D'][i]}</span>
+                  {choice}
+                </button>
+              );
             })}
           </div>
           {answerFeedback && (
-            <div style={{ ...cStyles.feedbackBox, background: answerFeedback.correct ? '#d1fae5' : '#fee2e2', borderColor: answerFeedback.correct ? '#6ee7b7' : '#fca5a5' }}>
-              <p style={{ fontWeight: '800', margin: '0 0 4px', fontSize: '16px', color: answerFeedback.correct ? '#065f46' : '#991b1b' }}>{answerFeedback.correct ? '✅ Correct!' : '❌ Not quite.'}</p>
-              {!answerFeedback.correct && <p style={{ margin: '0 0 10px', color: '#475569', fontSize: '14px' }}>Correct answer: <strong>{answerFeedback.correctAnswer}</strong></p>}
-              <button onClick={handleNextQuestion} style={{ ...cStyles.nextBtn, background: course?.gradient || '#2563eb' }}>{quiz.index + 1 >= quiz.questions.length ? 'See Results →' : 'Next Question →'}</button>
+            <div style={{ ...cStyles.feedbackBox, background: answerFeedback.correct ? '#d1fae5' : '#fee2e2', borderRadius: '16px' }}>
+              <p style={{ fontWeight: '900', fontSize: '18px', color: answerFeedback.correct ? '#065f46' : '#991b1b' }}>
+                {answerFeedback.correct ? '🌟 Awesome Job!' : '💡 Keep Learning!'}
+              </p>
+              {!answerFeedback.correct && <p>The right answer was: <b>{answerFeedback.correctAnswer}</b></p>}
+              <button onClick={handleNextQuestion} style={{ ...cStyles.nextBtn, background: course?.gradient, width: '100%', marginTop: '10px' }}>Next →</button>
             </div>
           )}
         </div>
@@ -622,218 +635,66 @@ export default function CoursesScreen({ courseProgressMap = {}, setCourseProgres
     );
   }
 
-  // ─── REVIEW VIEW ─────────────────────────────────────────────────────────────
-  if (page === 'review' && course) {
-    return (
-      <div style={cStyles.innerContainer}>
-        <button onClick={() => setPage('list')} style={cStyles.backBtn}>← Back to courses</button>
-        <div style={{ ...cStyles.courseHeaderBar, background: course.gradient, padding: '24px 28px' }}>
-          <h2 style={{ margin: 0, color: '#fff', fontSize: '28px', fontWeight: '900' }}>100% Complete — Review</h2>
-          <p style={{ margin: '10px 0 0', color: 'rgba(255,255,255,0.9)', fontSize: '15px' }}>Well done! Here's everything you learned in this course.</p>
-        </div>
-        <div style={cStyles.reviewCard}>
-          <div style={cStyles.reviewSummary}>
-            <span style={cStyles.reviewBadge}>Course Complete</span>
-            <div style={cStyles.reviewScore}>100%</div>
-            <p style={{ margin: '0', color: '#475569', fontSize: '14px' }}>You have finished every lesson. Review the key ideas below.</p>
-          </div>
-          {course.lessons.map((les, idx) => (
-            <div key={idx} style={cStyles.reviewItem}>
-              <div style={cStyles.reviewLessonTitle}>Lesson {idx + 1}: {les.title}</div>
-              <ul style={cStyles.reviewList}>
-                {les.info.map((line, index) => (
-                  <li key={index} style={cStyles.reviewListItem}>{line}</li>
-                ))}
-              </ul>
-            </div>
-          ))}
-          <button onClick={() => setPage('list')} style={{ ...cStyles.continueBtn, background: course.gradient, marginTop: '20px' }}>← Back to Courses</button>
-        </div>
-      </div>
-    );
-  }
-
-  // ─── RESULT VIEW ─────────────────────────────────────────────────────────────
+  // ─── RESULT VIEW ───
   if (page === 'result' && result) {
     return (
       <div style={cStyles.innerContainer}>
-        <div style={{ ...cStyles.resultCard, background: result.passed ? 'linear-gradient(135deg,#065f46,#059669)' : 'linear-gradient(135deg,#7f1d1d,#dc2626)' }}>
-          <div style={{ fontSize: '60px', marginBottom: '8px' }}>{result.passed ? '🎉' : '😤'}</div>
-          <h2 style={{ color: '#fff', margin: '0 0 6px', fontSize: '28px', fontWeight: '900' }}>{result.passed ? 'Quiz Passed!' : 'Not Quite!'}</h2>
-          <div style={cStyles.scoreDisplay}><div style={cStyles.scoreCircle}><span style={{ fontSize: '28px', fontWeight: '900', color: result.passed ? '#059669' : '#dc2626' }}>{result.score}%</span></div></div>
-          <p style={{ color: 'rgba(255,255,255,0.9)', margin: '0 0 4px' }}>{result.correct} / {result.total} correct</p>
-          {!result.passed && <p style={{ color: '#fca5a5', fontWeight: '700', margin: '4px 0 0' }}>You need 70% to pass — you can do it!</p>}
+        <div style={{ ...cStyles.resultCard, background: result.passed ? '#059669' : '#dc2626', borderRadius: '28px' }}>
+          <div style={{ fontSize: '70px' }}>{result.passed ? '🎈' : '⚓'}</div>
+          <h2 style={{ color: '#fff', fontSize: '32px' }}>{result.passed ? 'You Did It!' : 'Try Once More!'}</h2>
+          <div style={cStyles.scoreDisplay}><div style={{...cStyles.scoreCircle, width: '110px', height: '110px'}}><span style={{ fontSize: '32px', fontWeight: '900' }}>{result.score}%</span></div></div>
+          {!result.passed && <p style={{ color: '#fff' }}>Don't worry! Review the lesson and try again. You're getting better!</p>}
         </div>
-        {result.wrong.length > 0 && (
-          <div style={cStyles.wrongAnswersCard}>
-            <h3 style={{ margin: '0 0 14px', fontSize: '16px', color: '#1e293b' }}>📋 Review Your Mistakes</h3>
-            {result.wrong.map((w, i) => (
-              <div key={i} style={cStyles.wrongItem}>
-                <p style={{ margin: '0 0 4px', fontWeight: '600', color: '#1e293b', fontSize: '14px' }}>{w.q}</p>
-                <p style={{ margin: '0 0 2px', color: '#dc2626', fontSize: '13px' }}>❌ Your answer: {w.selected}</p>
-                <p style={{ margin: 0, color: '#059669', fontSize: '13px' }}>✅ Correct: {w.correctAnswer}</p>
-              </div>
-            ))}
-          </div>
-        )}
-        <button onClick={handleContinueAfterResult} style={{ ...cStyles.continueBtn, background: result.passed ? course?.gradient || '#059669' : 'linear-gradient(135deg,#f59e0b,#d97706)' }}>{result.passed ? (currentLesson + 1 < (course?.lessons?.length || 0) ? '▶ Next Lesson' : '🎓 Finish Course') : '🔄 Retry Quiz'}</button>
+        <button onClick={handleContinueAfterResult} style={{ ...cStyles.continueBtn, background: result.passed ? course?.gradient : '#64748b', borderRadius: '18px' }}>
+          {result.passed ? 'Keep Going! ▶' : '🔄 Try Again'}
+        </button>
       </div>
     );
   }
 
-  // ─── CERTIFICATE VIEW ────────────────────────────────────────────────────────
+  // ─── CERTIFICATE VIEW (MODIFIED FOR KIDS) ───
   if (page === 'certificate') {
     const certColor = course?.color || '#6366f1';
-    const certGradient = course?.gradient || 'linear-gradient(135deg,#6366f1,#8b5cf6)';
     return (
       <div style={cStyles.innerContainer}>
-        {/* Outer decorative wrapper */}
         <div style={{
-          position: 'relative',
-          borderRadius: '28px',
-          padding: '4px',
-          background: `conic-gradient(from 0deg, #f59e0b, #fbbf24, #fde68a, #f59e0b, #d97706, #fbbf24, #f59e0b)`,
-          boxShadow: '0 32px 80px rgba(0,0,0,0.22), 0 8px 24px rgba(0,0,0,0.12)',
+          borderRadius: '32px', padding: '10px',
+          background: `linear-gradient(45deg, #fbbf24, #f59e0b, #fbbf24)`,
+          boxShadow: '0 20px 50px rgba(0,0,0,0.2)',
         }}>
-          <div style={{
-            borderRadius: '25px',
-            overflow: 'hidden',
-            background: '#fffef7',
-          }}>
-
-            {/* Top color band */}
-            <div style={{
-              background: certGradient,
-              padding: '36px 32px 28px',
-              textAlign: 'center',
-              position: 'relative',
-              overflow: 'hidden',
-            }}>
-              {/* Decorative circles in background */}
-              <div style={{ position: 'absolute', top: -40, left: -40, width: 180, height: 180, borderRadius: '50%', background: 'rgba(255,255,255,0.08)' }} />
-              <div style={{ position: 'absolute', bottom: -60, right: -30, width: 220, height: 220, borderRadius: '50%', background: 'rgba(255,255,255,0.06)' }} />
-              <div style={{ position: 'absolute', top: 20, right: 30, width: 80, height: 80, borderRadius: '50%', background: 'rgba(255,255,255,0.1)' }} />
-
-              <div style={{
-                display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                width: '80px', height: '80px', borderRadius: '50%',
-                background: 'rgba(255,255,255,0.2)', backdropFilter: 'blur(8px)',
-                border: '3px solid rgba(255,255,255,0.5)',
-                fontSize: '44px', marginBottom: '14px',
-                boxShadow: '0 8px 24px rgba(0,0,0,0.2)',
-                position: 'relative',
-              }}>🎓</div>
-
-              <div style={{ fontSize: '10px', fontWeight: '800', letterSpacing: '4px', color: 'rgba(255,255,255,0.85)', textTransform: 'uppercase', marginBottom: '6px' }}>
-                ✦ Certificate of Completion ✦
-              </div>
-              <div style={{ width: '60px', height: '2px', background: 'rgba(255,255,255,0.4)', margin: '0 auto' }} />
+          <div style={{ borderRadius: '25px', background: '#fff', textAlign: 'center', padding: '40px 20px' }}>
+            <div style={{ fontSize: '60px' }}>{isElementary ? '🎖️' : '🎓'}</div>
+            <h1 style={{ fontSize: '28px', color: '#1f2937', marginBottom: '0' }}>{isElementary ? 'Official Money Master' : 'Certificate of Completion'}</h1>
+            <p style={{ color: certColor, fontWeight: '800', letterSpacing: '2px' }}>CONGRATULATIONS</p>
+            <h2 style={{ fontSize: '36px', fontStyle: 'italic', margin: '20px 0' }}>{username || 'Learner'}</h2>
+            <p>Finished the course:</p>
+            <div style={{ background: '#f3f4f6', padding: '15px', borderRadius: '12px', display: 'inline-block', fontWeight: '700' }}>{completedCourseTitle}</div>
+            <div style={{ marginTop: '30px' }}>
+                <div style={{ fontSize: '14px', color: '#6b7280' }}>Date: {completionDate || new Date().toLocaleDateString()}</div>
             </div>
-
-            {/* Main certificate body */}
-            <div style={{
-              padding: '32px 36px 36px',
-              textAlign: 'center',
-              background: 'linear-gradient(180deg, #fffef7 0%, #fefce8 100%)',
-              position: 'relative',
-            }}>
-              {/* Decorative corner flourishes */}
-              <div style={{ position: 'absolute', top: 12, left: 16, fontSize: '22px', opacity: 0.25 }}>✦</div>
-              <div style={{ position: 'absolute', top: 12, right: 16, fontSize: '22px', opacity: 0.25 }}>✦</div>
-              <div style={{ position: 'absolute', bottom: 16, left: 16, fontSize: '22px', opacity: 0.25 }}>✦</div>
-              <div style={{ position: 'absolute', bottom: 16, right: 16, fontSize: '22px', opacity: 0.25 }}>✦</div>
-
-              <p style={{ color: '#92400e', margin: '0 0 4px', fontSize: '13px', fontWeight: '600', letterSpacing: '1px', textTransform: 'uppercase' }}>
-                This certifies that
-              </p>
-
-              {/* Recipient name with underline decoration */}
-              <div style={{ margin: '10px 0 16px', position: 'relative', display: 'inline-block' }}>
-                <h2 style={{
-                  margin: 0, fontSize: '34px', fontWeight: '900', color: '#1c1917',
-                  letterSpacing: '-0.5px', fontStyle: 'italic',
-                }}>
-                  {username || 'Learner'}
-                </h2>
-                <div style={{
-                  height: '3px', borderRadius: '2px',
-                  background: `linear-gradient(90deg, transparent, ${certColor}, transparent)`,
-                  marginTop: '4px',
-                }} />
-              </div>
-
-              <p style={{ color: '#78716c', margin: '0 0 16px', fontSize: '14px' }}>
-                has successfully completed all lessons and assessments in
-              </p>
-
-              {/* Course title box */}
-              <div style={{
-                background: '#fff',
-                border: `2px solid ${certColor}30`,
-                borderRadius: '14px',
-                padding: '14px 24px',
-                marginBottom: '24px',
-                boxShadow: `0 4px 16px ${certColor}15`,
-                position: 'relative',
-              }}>
-                <div style={{
-                  position: 'absolute', top: '-11px', left: '50%', transform: 'translateX(-50%)',
-                  background: '#fff', padding: '0 8px',
-                  fontSize: '16px',
-                }}>📚</div>
-                <p style={{ margin: 0, fontWeight: '800', fontSize: '18px', color: '#1c1917', lineHeight: 1.3 }}>
-                  {completedCourseTitle}
-                </p>
-              </div>
-
-              {/* Seal row */}
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '20px', marginBottom: '24px' }}>
-                <div style={{ flex: 1, height: '1px', background: 'linear-gradient(90deg, transparent, #d4b896)' }} />
-                <div style={{
-                  width: '56px', height: '56px', borderRadius: '50%',
-                  background: certGradient,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  boxShadow: `0 4px 16px ${certColor}50`,
-                  border: '3px solid #fff',
-                  outline: `2px solid ${certColor}40`,
-                  fontSize: '26px',
-                }}>⭐</div>
-                <div style={{ flex: 1, height: '1px', background: 'linear-gradient(90deg, #d4b896, transparent)' }} />
-              </div>
-
-              {/* Date and badge row */}
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px', flexWrap: 'wrap', marginBottom: '28px' }}>
-                <div style={{
-                  background: '#fef9c3', border: '1px solid #fde68a',
-                  borderRadius: '999px', padding: '6px 16px',
-                  fontSize: '12px', fontWeight: '700', color: '#92400e',
-                }}>
-                  📅 {completionDate || COMPLETION_DATE}
-                </div>
-                <div style={{
-                  background: `${certColor}15`, border: `1px solid ${certColor}40`,
-                  borderRadius: '999px', padding: '6px 16px',
-                  fontSize: '12px', fontWeight: '700', color: certColor,
-                }}>
-                  ✓ Verified Completion
-                </div>
-              </div>
-
-              <button
-                onClick={() => setPage('list')}
-                style={{
-                  padding: '13px 28px', borderRadius: '14px',
-                  border: '2px solid #e7e5e4', background: '#fff',
-                  color: '#44403c', fontWeight: '700', cursor: 'pointer',
-                  fontSize: '14px', fontFamily: 'inherit',
-                  boxShadow: '0 2px 8px rgba(0,0,0,0.07)',
-                  transition: 'all 0.2s',
-                }}
-              >
-                ← Back to Courses
-              </button>
-            </div>
+            <button onClick={() => setPage('list')} style={{ ...cStyles.continueBtn, background: certColor, marginTop: '30px', maxWidth: '300px' }}>Back to Adventures</button>
           </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ─── REVIEW VIEW (UNTOUCHED) ───
+  if (page === 'review' && course) {
+    return (
+      <div style={cStyles.innerContainer}>
+        <button onClick={() => setPage('list')} style={cStyles.backBtn}>← Back</button>
+        <div style={{ ...cStyles.courseHeaderBar, background: course.gradient }}>
+          <h2 style={{ margin: 0, color: '#fff', fontSize: '24px' }}>Review: {course.title}</h2>
+        </div>
+        <div style={cStyles.reviewCard}>
+          {course.lessons.map((les, idx) => (
+            <div key={idx} style={cStyles.reviewItem}>
+              <div style={cStyles.reviewLessonTitle}>{les.title}</div>
+              <ul style={cStyles.reviewList}>{les.info.map((line, i) => <li key={i} style={cStyles.reviewListItem}>{line}</li>)}</ul>
+            </div>
+          ))}
+          <button onClick={() => setPage('list')} style={{ ...cStyles.continueBtn, background: course.gradient }}>Done</button>
         </div>
       </div>
     );

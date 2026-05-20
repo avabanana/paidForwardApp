@@ -52,7 +52,7 @@ const countryData = [
 
 export default function HomeScreen({ onNavigate, userTier }) {
   const isElementary = userTier === 'elementary';
-  const [view, setView] = useState('home'); // 'home' or 'map'
+  const [view, setView] = useState('home');
   const [mapLoading, setMapLoading] = useState(false);
   const [hoveredCountry, setHoveredCountry] = useState(null);
 
@@ -144,7 +144,15 @@ export default function HomeScreen({ onNavigate, userTier }) {
     );
   }
 
-  const heroStyle = isElementary ? { ...styles.hero, background: 'linear-gradient(135deg, #eff6ff 0%, #f6d6ff 45%, #fef3c7 100%)' } : styles.hero;
+  // ── Hero: deep purple for kids (great contrast), dark indigo for adults ──
+  const heroStyle = isElementary
+    ? { ...styles.hero, background: 'linear-gradient(135deg, #3730a3 0%, #6d28d9 50%, #a21caf 100%)' }
+    : styles.hero;
+
+  // ── Daily tip label color: bright amber for kids so it pops on the dark bg ──
+  const tipLabelStyle = isElementary
+    ? { ...styles.tipLabel, color: '#fde68a' }
+    : styles.tipLabel;
 
   return (
     <div style={styles.outerWrapper}>
@@ -157,7 +165,7 @@ export default function HomeScreen({ onNavigate, userTier }) {
             <h1 style={styles.heroTitle}>{heroTitleText}</h1>
             <p style={styles.heroSubtitle}>{heroSubtitleText}</p>
             <div style={styles.dailyTip}>
-              <span style={styles.tipLabel}>💡 Daily Tip</span>
+              <span style={tipLabelStyle}>💡 Daily Tip</span>
               <span style={styles.tipText}>{tip}</span>
             </div>
           </div>
@@ -166,32 +174,39 @@ export default function HomeScreen({ onNavigate, userTier }) {
 
         <div style={styles.sectionLabel}>What you can do</div>
         <div style={styles.cardsRow}>
-          <div style={{ ...styles.featureCard, borderTop: "4px solid #6366f1", background: "linear-gradient(160deg, #fff 60%, #eef2ff)" }}>
-            <div style={{ ...styles.featureIconWrap, background: "#eef2ff" }}>📚</div>
-            <h3 style={styles.featureTitle}>Learn</h3>
-            <p style={styles.featureDesc}>Master money management with bite-sized lessons across 3 courses.</p>
-            <button onClick={() => onNavigate("Courses")} style={{ ...styles.featureBtn, color: "#6366f1", background: "#eef2ff" }}>Open Courses →</button>
+          {/* Learn */}
+          <div style={isElementary ? styles.learnCardKid : { ...styles.featureCard, borderTop: "4px solid #6366f1", background: "linear-gradient(160deg, #fff 60%, #eef2ff)" }}>
+            <div style={{ ...styles.featureIconWrap, background: isElementary ? '#c7d2fe' : '#eef2ff' }}>📚</div>
+            <h3 style={{ ...styles.featureTitle, color: isElementary ? '#1e1b4b' : undefined }}>Learn</h3>
+            <p style={{ ...styles.featureDesc, color: isElementary ? '#3730a3' : undefined }}>Master money management with bite-sized lessons across 3 courses.</p>
+            <button onClick={() => onNavigate("Courses")} style={isElementary ? styles.learnBtnKid : { ...styles.featureBtn, color: "#6366f1", background: "#eef2ff" }}>Open Courses →</button>
           </div>
 
-          <div style={{ ...styles.featureCard, borderTop: "4px solid #10b981", background: "linear-gradient(160deg, #fff 60%, #ecfdf5)" }}>
-            <div style={{ ...styles.featureIconWrap, background: "#ecfdf5" }}>🎮</div>
-            <h3 style={styles.featureTitle}>Play</h3>
-            <p style={styles.featureDesc}>Test your financial instincts in budgeting and investing games.</p>
-            <button onClick={() => onNavigate("Games")} style={{ ...styles.featureBtn, color: "#059669", background: "#ecfdf5" }}>Play Games →</button>
+          {/* Play */}
+          <div style={isElementary ? styles.playCardKid : { ...styles.featureCard, borderTop: "4px solid #10b981", background: "linear-gradient(160deg, #fff 60%, #ecfdf5)" }}>
+            <div style={{ ...styles.featureIconWrap, background: isElementary ? '#a7f3d0' : '#ecfdf5' }}>🎮</div>
+            <h3 style={{ ...styles.featureTitle, color: isElementary ? '#064e3b' : undefined }}>Play</h3>
+            <p style={{ ...styles.featureDesc, color: isElementary ? '#065f46' : undefined }}>Test your financial instincts in budgeting and investing games.</p>
+            <button onClick={() => onNavigate("Games")} style={isElementary ? styles.playBtnKid : { ...styles.featureBtn, color: "#059669", background: "#ecfdf5" }}>Play Games →</button>
           </div>
 
-          <div style={{ ...styles.featureCard, borderTop: "4px solid #f59e0b", background: "linear-gradient(160deg, #fff 60%, #fffbeb)" }}>
-            <div style={{ ...styles.featureIconWrap, background: "#fffbeb" }}>🌍</div>
-            <h3 style={styles.featureTitle}>Impact</h3>
-            <p style={styles.featureDesc}>Explore financial literacy variations in communities globally.</p>
-            <button onClick={openMap} style={{ ...styles.featureBtn, color: "#d97706", background: "#fffbeb" }}>View Map →</button>
+          {/* Impact */}
+          <div style={isElementary ? styles.impactCardKid : { ...styles.featureCard, borderTop: "4px solid #f59e0b", background: "linear-gradient(160deg, #fff 60%, #fffbeb)" }}>
+            <div style={{ ...styles.featureIconWrap, background: isElementary ? '#fde68a' : '#fffbeb' }}>🌍</div>
+            <h3 style={{ ...styles.featureTitle, color: isElementary ? '#451a03' : undefined }}>Impact</h3>
+            <p style={{ ...styles.featureDesc, color: isElementary ? '#7c2d12' : undefined }}>Explore financial literacy variations in communities globally.</p>
+            <button onClick={openMap} style={isElementary ? styles.impactBtnKid : { ...styles.featureBtn, color: "#d97706", background: "#fffbeb" }}>View Map →</button>
           </div>
 
-          <div style={{ ...styles.featureCard, borderTop: "4px solid #ef4444", background: "linear-gradient(160deg, #fff 60%, #fef2f2)" }}>
-            <div style={{ ...styles.featureIconWrap, background: "#fef2f2" }}>🏆</div>
-            <h3 style={styles.featureTitle}>Compete</h3>
-            <p style={styles.featureDesc}>Join a League and compete with friends on literacy challenges.</p>
-            <button onClick={() => { onNavigate("Games"); setTimeout(() => { window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' }); }, 300); }} style={{ ...styles.featureBtn, color: "#ef4444", background: "#fef2f2" }}>Join a League →</button>
+          {/* Compete */}
+          <div style={isElementary ? styles.competeCardKid : { ...styles.featureCard, borderTop: "4px solid #ef4444", background: "linear-gradient(160deg, #fff 60%, #fef2f2)" }}>
+            <div style={{ ...styles.featureIconWrap, background: isElementary ? '#fecdd3' : '#fef2f2' }}>🏆</div>
+            <h3 style={{ ...styles.featureTitle, color: isElementary ? '#4c0519' : undefined }}>Compete</h3>
+            <p style={{ ...styles.featureDesc, color: isElementary ? '#881337' : undefined }}>Join a League and compete with friends on literacy challenges.</p>
+            <button
+              onClick={() => { onNavigate("Games"); setTimeout(() => { window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' }); }, 300); }}
+              style={isElementary ? styles.competeBtnKid : { ...styles.featureBtn, color: "#ef4444", background: "#fef2f2" }}
+            >Join a League →</button>
           </div>
         </div>
 
@@ -199,6 +214,7 @@ export default function HomeScreen({ onNavigate, userTier }) {
           <button onClick={() => onNavigate("Progress")} style={styles.mainBtn}>🔥 View Your Progress & Achievements</button>
           <button onClick={() => onNavigate("Goals")} style={styles.secondaryBtn}>🎯 Set Financial Goals</button>
         </div>
+
         {isElementary && (
           <div style={styles.kidTipBox}>
             <strong>Kid-friendly challenge:</strong> Try one course this week and tell a friend one new money fact you learned.
@@ -213,26 +229,45 @@ const styles = {
   outerWrapper: { position: 'relative', minHeight: '100vh', margin: '-24px', padding: '24px', background: 'linear-gradient(160deg, #f0f0ff 0%, #e8f5f0 30%, #fff8e8 60%, #fff0f0 100%)', fontFamily: "'Inter', system-ui, sans-serif" },
   bgLayer: { position: 'absolute', inset: 0, background: 'radial-gradient(ellipse at 10% 10%, rgba(99,102,241,0.12) 0%, transparent 50%), radial-gradient(ellipse at 90% 80%, rgba(16,185,129,0.1) 0%, transparent 50%)', pointerEvents: 'none', zIndex: 0 },
   container: { maxWidth: '1100px', margin: '0 auto', position: 'relative', zIndex: 1 },
+
+  // Hero — default (adult/older) style; kids override background in JSX above
   hero: { background: 'linear-gradient(135deg, #1e1b4b 0%, #4338ca 45%, #7c3aed 100%)', padding: '44px 40px', borderRadius: '24px', color: '#fff', marginBottom: '32px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' },
   heroContent: { flex: 1, maxWidth: '680px' },
-  heroBadge: { display: 'inline-block', background: 'rgba(255,255,255,0.18)', borderRadius: '999px', padding: '5px 14px', fontSize: '13px', fontWeight: '600', marginBottom: '14px' },
-  heroTitle: { fontSize: '32px', fontWeight: '900', margin: '0 0 12px' },
-  heroSubtitle: { fontSize: '15px', opacity: 0.88, margin: '0 0 20px', lineHeight: 1.6 },
-  dailyTip: { background: 'rgba(255,255,255,0.12)', border: '1px solid rgba(255,255,255,0.22)', borderRadius: '14px', padding: '13px 16px', display: 'flex', gap: '10px' },
-  tipLabel: { fontWeight: '800', fontSize: '13px' },
-  tipText: { fontSize: '14px' },
-  heroDecor: { fontSize: '80px', opacity: 0.18 },
+  heroBadge: { display: 'inline-block', background: 'rgba(255,255,255,0.22)', border: '1.5px solid rgba(255,255,255,0.4)', borderRadius: '999px', padding: '5px 14px', fontSize: '13px', fontWeight: '700', marginBottom: '14px', color: '#fff' },
+  heroTitle: { fontSize: '32px', fontWeight: '900', margin: '0 0 12px', color: '#fff' },
+  heroSubtitle: { fontSize: '15px', color: 'rgba(255,255,255,0.92)', margin: '0 0 20px', lineHeight: 1.6 },
+  dailyTip: { background: 'rgba(255,255,255,0.18)', border: '1.5px solid rgba(255,255,255,0.35)', borderRadius: '14px', padding: '13px 16px', display: 'flex', gap: '10px', alignItems: 'flex-start' },
+  tipLabel: { fontWeight: '800', fontSize: '13px', color: '#fff', whiteSpace: 'nowrap' },
+  tipText: { fontSize: '14px', color: '#fff' },
+  heroDecor: { fontSize: '80px', opacity: 0.22 },
+
   sectionLabel: { fontSize: '12px', fontWeight: '800', textTransform: 'uppercase', color: '#94a3b8', marginBottom: '14px' },
   cardsRow: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '18px', marginBottom: '40px' },
+
+  // ── Base feature card (adult style) ──
   featureCard: { padding: '24px 20px', borderRadius: '20px', boxShadow: '0 4px 16px rgba(0,0,0,0.07)', border: '1px solid rgba(0,0,0,0.06)' },
   featureIconWrap: { width: '48px', height: '48px', borderRadius: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px', marginBottom: '14px' },
-  featureTitle: { margin: '0 0 8px', fontSize: '18px', fontWeight: '800' },
+  featureTitle: { margin: '0 0 8px', fontSize: '18px', fontWeight: '800', color: '#0f172a' },
   featureDesc: { color: '#64748b', fontSize: '14px', lineHeight: '1.6', margin: '0 0 16px' },
   featureBtn: { border: 'none', fontWeight: '700', cursor: 'pointer', padding: '8px 14px', fontSize: '13px', borderRadius: '10px' },
+
+  // ── Kid-specific card overrides (strong, readable colors) ──
+  learnCardKid:   { padding: '24px 20px', borderRadius: '20px', boxShadow: '0 4px 16px rgba(0,0,0,0.07)', border: '1px solid rgba(0,0,0,0.06)', borderTop: '4px solid #4338ca', background: '#eef2ff' },
+  playCardKid:    { padding: '24px 20px', borderRadius: '20px', boxShadow: '0 4px 16px rgba(0,0,0,0.07)', border: '1px solid rgba(0,0,0,0.06)', borderTop: '4px solid #059669', background: '#ecfdf5' },
+  impactCardKid:  { padding: '24px 20px', borderRadius: '20px', boxShadow: '0 4px 16px rgba(0,0,0,0.07)', border: '1px solid rgba(0,0,0,0.06)', borderTop: '4px solid #d97706', background: '#fffbeb' },
+  competeCardKid: { padding: '24px 20px', borderRadius: '20px', boxShadow: '0 4px 16px rgba(0,0,0,0.07)', border: '1px solid rgba(0,0,0,0.06)', borderTop: '4px solid #e11d48', background: '#fff1f2' },
+
+  learnBtnKid:   { border: 'none', fontWeight: '700', cursor: 'pointer', padding: '8px 14px', fontSize: '13px', borderRadius: '10px', background: '#c7d2fe', color: '#1e1b4b' },
+  playBtnKid:    { border: 'none', fontWeight: '700', cursor: 'pointer', padding: '8px 14px', fontSize: '13px', borderRadius: '10px', background: '#a7f3d0', color: '#064e3b' },
+  impactBtnKid:  { border: 'none', fontWeight: '700', cursor: 'pointer', padding: '8px 14px', fontSize: '13px', borderRadius: '10px', background: '#fde68a', color: '#451a03' },
+  competeBtnKid: { border: 'none', fontWeight: '700', cursor: 'pointer', padding: '8px 14px', fontSize: '13px', borderRadius: '10px', background: '#fecdd3', color: '#4c0519' },
+
   ctaSection: { display: 'flex', gap: '14px', justifyContent: 'center', flexWrap: 'wrap' },
-  mainBtn: { padding: '16px 32px', background: 'linear-gradient(135deg, #4338ca, #6366f1)', color: '#fff', border: 'none', borderRadius: '14px', fontWeight: '800', cursor: 'pointer' },
-  secondaryBtn: { padding: '16px 32px', background: '#fff', color: '#6366f1', border: '2px solid #6366f1', borderRadius: '14px', fontWeight: '800', cursor: 'pointer' },
-  kidTipBox: { marginTop: '22px', borderRadius: '18px', background: 'rgba(255,255,255,0.9)', border: '2px dashed #f59e0b', padding: '18px 20px', color: '#334155', fontWeight: '700', textAlign: 'center' },
+  mainBtn: { padding: '16px 32px', background: 'linear-gradient(135deg, #3730a3, #6366f1)', color: '#fff', border: 'none', borderRadius: '14px', fontWeight: '800', cursor: 'pointer', fontSize: '15px' },
+  secondaryBtn: { padding: '16px 32px', background: '#fff', color: '#4338ca', border: '2.5px solid #4338ca', borderRadius: '14px', fontWeight: '800', cursor: 'pointer', fontSize: '15px' },
+
+  // Kid tip box — dark amber-brown text on yellow background
+  kidTipBox: { marginTop: '22px', borderRadius: '18px', background: '#fffbeb', border: '2.5px dashed #d97706', padding: '18px 20px', color: '#78350f', fontWeight: '700', textAlign: 'center', fontSize: '14px' },
 
   // MAP PAGE SPECIFIC
   mapHeader: { display: 'flex', alignItems: 'center', gap: '20px', marginBottom: '24px' },
