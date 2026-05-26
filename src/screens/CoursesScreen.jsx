@@ -8,9 +8,10 @@ const adultCoursesData = [
     id: 0,
     title: 'Earning & Growing Your Money',
     emoji: '🚀',
-    color: '#8b5cf6',
-    gradient: 'linear-gradient(135deg,#8b5cf6,#6366f1)',
-    tag: 'Starter',
+    color: '#0056D2', // Professional Blue
+    gradient: 'linear-gradient(135deg,#0056D2,#00419e)',
+    tag: 'Course',
+    description: 'Master the fundamentals of cash flow, budgeting, and long-term wealth building with industry-standard practices.',
     lessons: [
       {
         title: 'Make Your First Budget',
@@ -41,7 +42,7 @@ const adultCoursesData = [
           'SMART goals (Specific, Measurable, Achievable, Relevant, Time-bound) are the standard framework because vague intentions produce vague results. Every financial goal should pass all five criteria.',
           'Short-term goals (under 1 year) include emergency funds, vacation savings, and tech purchases. Medium-term (1–5 years) cover a car down payment or moving expenses. Long-term (5+ years) involve home ownership, higher education, or retirement.',
           'Goal prioritization matters: financial experts generally recommend building a starter emergency fund first, then tackling high-interest debt, then saving for other goals simultaneously. Doing everything at once often means accomplishing nothing.',
-          'Automated contributions remove willpower from the equation. Direct deposit splits, automatic transfers, and round-up savings apps make goal-funding nearly effortless and remove the temptation to spend first.',
+          'Automated contributions remove willpower from the equation. Direct deposit splits, automatic transfers, and round-up savings apps make goal-funding nearly effortlessly and remove the temptation to spend first.',
           'Progress checkpoints — weekly spending reviews or monthly savings tallies — dramatically increase follow-through. Behavioral research shows that simply measuring a goal increases the likelihood of achieving it by over 40%.',
           'When you hit a goal, celebrate intentionally but don\'t abandon the system. Immediately redirect the freed-up cash flow to the next priority goal rather than letting it dissolve into lifestyle spending.'
         ],
@@ -88,7 +89,8 @@ const adultCoursesData = [
     emoji: '💰',
     color: '#059669',
     gradient: 'linear-gradient(135deg,#059669,#10b981)',
-    tag: 'Planner',
+    tag: 'Professional',
+    description: 'Learn to build safety nets and leverage the exponential power of financial planning and compound interest.',
     lessons: [
       {
         title: 'Emergency Fund',
@@ -167,7 +169,8 @@ const adultCoursesData = [
     emoji: '💳',
     color: '#ef4444',
     gradient: 'linear-gradient(135deg,#ef4444,#f97316)',
-    tag: 'Credit Pro',
+    tag: 'Financial Reputation',
+    description: 'Understand how credit scores work and how to use borrowing as a tool rather than a trap.',
     lessons: [
       {
         title: 'Understanding Credit',
@@ -204,7 +207,8 @@ const elementaryCoursesData = [
     emoji: '🌟',
     color: '#3b82f6',
     gradient: 'linear-gradient(135deg,#3b82f6,#60a5fa)',
-    tag: 'Explorer',
+    tag: 'Level 1',
+    description: 'Learn where money comes from and how to use it to buy things you need!',
     lessons: [
       {
         title: 'Needs vs. Wants',
@@ -248,7 +252,8 @@ const elementaryCoursesData = [
     emoji: '🏺',
     color: '#10b981',
     gradient: 'linear-gradient(135deg,#10b981,#34d399)',
-    tag: 'Saver',
+    tag: 'Level 2',
+    description: 'Learn the "Three Jar System" to manage your money like a master.',
     lessons: [
       {
         title: 'Spend, Save, and Give',
@@ -292,7 +297,8 @@ const elementaryCoursesData = [
     emoji: '🤝',
     color: '#f59e0b',
     gradient: 'linear-gradient(135deg,#f59e0b,#fbbf24)',
-    tag: 'Honesty',
+    tag: 'Level 3',
+    description: 'Understand trust, borrowing, and why keeping your word is important.',
     lessons: [
       {
         title: 'What is a Loan?',
@@ -319,7 +325,6 @@ const QUESTIONS_PER_QUIZ = 9;
 
 const ensureQuestions = (questions) => {
   const q = [...questions];
-  // Logic to make sure there are enough questions if the bank is small
   while (q.length < 5 && q.length > 0) q.push(questions[q.length % questions.length]);
   return q;
 };
@@ -364,10 +369,10 @@ export default function CoursesScreen({ courseProgressMap = {}, setCourseProgres
   }, [localProgressMap, storagePref]);
 
   const effectiveProgressMap = localProgressMap;
-  const courseHeading = isElementary ? '🚀 Money Adventures' : '📚 Courses';
+  const courseHeading = isElementary ? '🚀 Money Adventures' : 'My Learning';
   const courseSubtitle = isElementary
     ? 'Fun lessons to help you become a Money Master!'
-    : 'Learn practical money skills, pass quizzes, and earn certificates.';
+    : 'Gain in-demand financial skills and earn certificates of completion.';
 
   const course = useMemo(() => activeCoursesData.find((c) => c.id === currentCourseId), [currentCourseId, activeCoursesData]);
   const lesson = course?.lessons?.[currentLesson];
@@ -405,7 +410,7 @@ export default function CoursesScreen({ courseProgressMap = {}, setCourseProgres
       if (!courseLessonDone(id, i)) { firstIncomplete = i; break; }
     }
     setCurrentLesson(firstIncomplete);
-    setPage('lesson');
+    setPage('course_home'); // Coursera usually starts with a "Course Home"
   };
 
   const handleBeginQuiz = () => {
@@ -474,11 +479,11 @@ export default function CoursesScreen({ courseProgressMap = {}, setCourseProgres
     return (
       <div style={{ ...cStyles.container, display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '80vh' }}>
         <div style={cStyles.lessonCard}>
-          <h2 style={cStyles.lessonTitle}>Ready for your adventure?</h2>
-          <p style={cStyles.lessonInfoText}>Choose how you want to save your progress.</p>
+          <h2 style={cStyles.lessonTitle}>Welcome to your Learning Portal</h2>
+          <p style={cStyles.lessonInfoText}>Choose how you want to manage your progress data.</p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '20px' }}>
-            <button onClick={() => { localStorage.setItem('storage_preference', 'supabase'); setStoragePref('supabase'); }} style={{ ...cStyles.quizBtn, background: '#2563eb' }}>Sync with Cloud</button>
-            <button onClick={() => { localStorage.setItem('storage_preference', 'local'); setStoragePref('local'); }} style={{ ...cStyles.quizBtn, background: '#64748b' }}>Local Device Only</button>
+            <button onClick={() => { localStorage.setItem('storage_preference', 'supabase'); setStoragePref('supabase'); }} style={{ ...cStyles.quizBtn, background: '#0056D2' }}>Synchronize with Account</button>
+            <button onClick={() => { localStorage.setItem('storage_preference', 'local'); setStoragePref('local'); }} style={{ ...cStyles.quizBtn, background: '#64748b' }}>Store Locally Only</button>
           </div>
         </div>
       </div>
@@ -488,20 +493,17 @@ export default function CoursesScreen({ courseProgressMap = {}, setCourseProgres
   // ─── LIST VIEW ───
   if (page === 'list') {
     return (
-      <div style={{...cStyles.container, background: isElementary ? 'linear-gradient(180deg, #f0f9ff 0%, #ffffff 100%)' : cStyles.container.background}}>
+      <div style={{...cStyles.container, background: isElementary ? 'linear-gradient(180deg, #f0f9ff 0%, #ffffff 100%)' : '#fff'}}>
         <div style={cStyles.header}>
           <div>
-            <div style={{...cStyles.headerBadge, background: isElementary ? '#dcfce7' : '#fef3c7', color: isElementary ? '#166534' : '#92400e'}}>
-               {isElementary ? '⭐ Level: Beginner Explorer' : '📚 Learning Track'}
-            </div>
-            <h2 style={cStyles.headerTitle}>{courseHeading}{username ? `, ${username}!` : ''}</h2>
+            <h2 style={cStyles.headerTitle}>{courseHeading}</h2>
             <p style={cStyles.headerSub}>{courseSubtitle}</p>
           </div>
-          <div style={{...cStyles.completedPill, background: isElementary ? 'linear-gradient(135deg,#10b981,#059669)' : cStyles.completedPill.background}}>
+          <div style={{...cStyles.completedPill, background: isElementary ? 'linear-gradient(135deg,#10b981,#059669)' : '#f8fafc', color: isElementary ? '#fff' : '#1e293b', border: isElementary ? 'none' : '1px solid #e2e8f0'}}>
             <span style={{ fontSize: '24px' }}>{isElementary ? '🏆' : '🎓'}</span>
             <div>
               <div style={{ fontWeight: '800', fontSize: '20px' }}>{totalCoursesFinished}/{activeCoursesData.length}</div>
-              <div style={{ fontSize: '11px', opacity: 0.8 }}>Done</div>
+              <div style={{ fontSize: '11px', opacity: 0.8 }}>Courses Completed</div>
             </div>
           </div>
         </div>
@@ -514,19 +516,19 @@ export default function CoursesScreen({ courseProgressMap = {}, setCourseProgres
             const hasStarted = lessonsDoneCount > 0 && !isFinished;
 
             return (
-              <div key={c.id} style={{...cStyles.courseCard, borderRadius: isElementary ? '24px' : '20px'}}>
-                <div style={{ ...cStyles.courseCardTop, background: c.gradient, padding: isElementary ? '32px 24px' : '24px' }}>
+              <div key={c.id} style={{...cStyles.courseCard, borderRadius: isElementary ? '24px' : '8px'}}>
+                <div style={{ ...cStyles.courseCardTop, background: isElementary ? c.gradient : '#fff', padding: '20px', borderBottom: isElementary ? 'none' : '1px solid #e2e8f0' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                    <span style={{ fontSize: isElementary ? '50px' : '40px' }}>{c.emoji}</span>
-                    <span style={{ ...cStyles.courseTierTag, background: 'rgba(255,255,255,0.25)', color: '#fff' }}>{c.tag}</span>
+                    <span style={{ fontSize: '32px' }}>{c.emoji}</span>
+                    <span style={{ ...cStyles.courseTierTag, background: isElementary ? 'rgba(255,255,255,0.25)' : '#eef2ff', color: isElementary ? '#fff' : '#0056D2' }}>{c.tag}</span>
                   </div>
-                  <h3 style={{...cStyles.courseCardTitle, fontSize: isElementary ? '22px' : '20px'}}>{c.title}</h3>
-                  <p style={cStyles.courseCardSub}>{c.lessons.length} fun steps</p>
+                  <h3 style={{...cStyles.courseCardTitle, color: isElementary ? '#fff' : '#1e293b'}}>{c.title}</h3>
+                  {!isElementary && <p style={{ color: '#64748b', fontSize: '13px', margin: '8px 0' }}>{c.description}</p>}
                 </div>
                 <div style={cStyles.courseCardBottom}>
                   <div style={{ marginBottom: '16px' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontSize: '13px', color: '#64748b', fontWeight: '700' }}>
-                      <span>{lessonsDoneCount}/{c.lessons.length} {isElementary ? 'Completed' : 'lessons'}</span>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontSize: '12px', color: '#64748b', fontWeight: '600' }}>
+                      <span>{lessonsDoneCount}/{c.lessons.length} Modules</span>
                       <span>{Math.round(progressValue * 100)}%</span>
                     </div>
                     <ProgressBar progress={progressValue} />
@@ -535,14 +537,11 @@ export default function CoursesScreen({ courseProgressMap = {}, setCourseProgres
                     onClick={() => handleStartCourse(c.id, isFinished)}
                     style={{
                       ...cStyles.startBtn,
-                      height: isElementary ? '50px' : 'auto',
-                      background: isFinished ? '#f0fdf4' : c.gradient,
+                      background: isFinished ? '#f0fdf4' : (isElementary ? c.gradient : '#0056D2'),
                       color: isFinished ? '#166534' : '#fff',
-                      border: isFinished ? '2px solid #86efac' : 'none',
-                      fontSize: isElementary ? '16px' : '14px'
                     }}
                   >
-                    {isFinished ? '✨ Look Again' : hasStarted ? 'Continue ▶' : 'Start Adventure ▶'}
+                    {isFinished ? 'Review Materials' : hasStarted ? 'Resume Learning' : 'Start Course'}
                   </button>
                 </div>
               </div>
@@ -553,33 +552,98 @@ export default function CoursesScreen({ courseProgressMap = {}, setCourseProgres
     );
   }
 
-  // ─── LESSON VIEW ───
-  if (page === 'lesson' && course && lesson) {
+  // ─── COURSE HOME (SYLLABUS) ───
+  if (page === 'course_home' && course) {
     return (
       <div style={cStyles.innerContainer}>
-        <button onClick={() => setPage('list')} style={cStyles.backBtn}>← Go Back</button>
-        <div style={{ ...cStyles.courseHeaderBar, background: course.gradient, borderRadius: isElementary ? '24px' : '18px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <span style={{ fontSize: '32px' }}>{course.emoji}</span>
-            <div>
-              <h2 style={{ margin: 0, color: '#fff', fontSize: '22px', fontWeight: '800' }}>{course.title}</h2>
-              <p style={{ margin: 0, color: 'rgba(255,255,255,0.8)', fontSize: '14px' }}>Step {currentLesson + 1} of {course.lessons.length}</p>
-            </div>
-          </div>
+        <button onClick={() => setPage('list')} style={cStyles.backBtn}>← Back to dashboard</button>
+        <div style={{ ...cStyles.syllabusHeader, background: isElementary ? course.gradient : '#fff' }}>
+           <span style={{fontSize: '48px'}}>{course.emoji}</span>
+           <h1 style={{color: isElementary ? '#fff' : '#1e293b'}}>{course.title}</h1>
+           <p style={{color: isElementary ? 'rgba(255,255,255,0.9)' : '#64748b'}}>{course.description}</p>
         </div>
-        <div style={{...cStyles.lessonCard, borderRadius: isElementary ? '28px' : '18px'}}>
-          <h3 style={{...cStyles.lessonTitle, fontSize: isElementary ? '24px' : '22px'}}>{lesson.title}</h3>
-          <div style={cStyles.lessonInfoList}>
-            {lesson.info.map((line, idx) => (
-              <div key={idx} style={cStyles.lessonInfoItem}>
-                <div style={{ ...cStyles.lessonInfoDot, background: course.color, width: isElementary ? '12px' : '8px', height: isElementary ? '12px' : '8px' }} />
-                <p style={{...cStyles.lessonInfoText, fontSize: isElementary ? '16px' : '15px'}}>{line}</p>
+        
+        <div style={cStyles.syllabusContainer}>
+          <h3 style={{fontSize: '18px', fontWeight: '700', marginBottom: '20px'}}>Course Content</h3>
+          {course.lessons.map((les, idx) => {
+            const isDone = courseLessonDone(course.id, idx);
+            return (
+              <div key={idx} style={{...cStyles.syllabusItem, borderLeft: isDone ? '4px solid #22c55e' : '4px solid #e2e8f0'}}>
+                <div style={{flex: 1}}>
+                  <div style={{fontSize: '12px', color: '#64748b', textTransform: 'uppercase', fontWeight: '700'}}>Module {idx + 1}</div>
+                  <div style={{fontWeight: '700', fontSize: '16px'}}>{les.title}</div>
+                </div>
+                <button 
+                  onClick={() => { setCurrentLesson(idx); setPage('lesson'); }}
+                  style={{...cStyles.syllabusBtn, background: isDone ? '#f0fdf4' : '#0056D2', color: isDone ? '#166534' : '#fff'}}
+                >
+                  {isDone ? 'Review' : 'Go to Lesson'}
+                </button>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    );
+  }
+
+  // ─── LESSON VIEW (LEARNING ENVIRONMENT) ───
+  if (page === 'lesson' && course && lesson) {
+    return (
+      <div style={cStyles.learningEnv}>
+        {/* Sidebar Nav */}
+        {!isElementary && (
+          <div style={cStyles.sidebar}>
+            <div style={{padding: '20px', borderBottom: '1px solid #e2e8f0', fontWeight: '700'}}>Course Modules</div>
+            {course.lessons.map((les, idx) => (
+              <div 
+                key={idx} 
+                onClick={() => setCurrentLesson(idx)}
+                style={{
+                  padding: '15px 20px', 
+                  fontSize: '13px', 
+                  cursor: 'pointer',
+                  borderLeft: currentLesson === idx ? '4px solid #0056D2' : '4px solid transparent',
+                  background: currentLesson === idx ? '#f0f7ff' : 'transparent',
+                  color: currentLesson === idx ? '#0056D2' : '#475569',
+                  fontWeight: currentLesson === idx ? '700' : '500'
+                }}
+              >
+                {courseLessonDone(course.id, idx) ? '✅ ' : ''}{les.title}
               </div>
             ))}
+            <div style={{marginTop: 'auto', padding: '20px'}}>
+              <button onClick={() => setPage('course_home')} style={{width: '100%', padding: '10px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '4px', fontSize: '12px', fontWeight: '600'}}>Close Lesson</button>
+            </div>
           </div>
-          <button onClick={handleBeginQuiz} style={{ ...cStyles.quizBtn, background: course.gradient, width: '100%', fontSize: '18px' }}>
-            {isElementary ? '🎮 Play the Quiz!' : '📝 Take the Quiz'}
-          </button>
+        )}
+
+        <div style={{...cStyles.lessonMainContent, padding: isElementary ? '20px' : '40px 60px'}}>
+          {isElementary && <button onClick={() => setPage('course_home')} style={cStyles.backBtn}>← Back to Adventure</button>}
+          <div style={{maxWidth: '800px', margin: '0 auto'}}>
+            <div style={{display: 'flex', alignItems: 'center', gap: '8px', color: '#64748b', fontSize: '14px', marginBottom: '8px', fontWeight: '600'}}>
+               <span>Module {currentLesson + 1}</span>
+               <span>•</span>
+               <span>Reading Content</span>
+            </div>
+            <h1 style={{fontSize: '32px', fontWeight: '800', marginBottom: '30px', color: '#1e293b'}}>{lesson.title}</h1>
+            
+            <div style={cStyles.courseraArticle}>
+              {lesson.info.map((line, idx) => (
+                <p key={idx} style={{marginBottom: '20px', lineHeight: '1.8', fontSize: '16px', color: '#1f2937'}}>
+                  {line}
+                </p>
+              ))}
+            </div>
+
+            <div style={{marginTop: '40px', padding: '30px', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0'}}>
+              <h4 style={{margin: '0 0 10px 0'}}>Ready for the module quiz?</h4>
+              <p style={{fontSize: '14px', color: '#64748b', marginBottom: '20px'}}>Pass with 70% or higher to complete this module.</p>
+              <button onClick={handleBeginQuiz} style={{ ...cStyles.quizBtn, background: isElementary ? course.gradient : '#0056D2', width: isElementary ? '100%' : 'auto' }}>
+                Start Module Quiz
+              </button>
+            </div>
+          </div>
         </div>
       </div>
     );
@@ -591,13 +655,13 @@ export default function CoursesScreen({ courseProgressMap = {}, setCourseProgres
     return (
       <div style={cStyles.innerContainer}>
         <div style={cStyles.quizHeaderCard}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-            <span style={{ fontWeight: '800', color: '#1e293b' }}>Question {quiz.index + 1}</span>
-            <span style={{ ...cStyles.scoreChip, background: course?.gradient }}>{quiz.correct} Correct!</span>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span style={{ fontWeight: '700', color: '#64748b' }}>QUESTION {quiz.index + 1} OF {quiz.questions.length}</span>
+            <div style={{width: '150px'}}><ProgressBar progress={(quiz.index) / quiz.questions.length} /></div>
           </div>
         </div>
-        <div style={{...cStyles.quizCard, borderRadius: isElementary ? '28px' : '18px'}}>
-          <p style={{...cStyles.questionText, fontSize: isElementary ? '20px' : '17px'}}>{q.q}</p>
+        <div style={{...cStyles.quizCard, border: '1px solid #e2e8f0', boxShadow: 'none'}}>
+          <p style={{fontSize: '20px', fontWeight: '600', color: '#1e293b', marginBottom: '24px'}}>{q.q}</p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
             {q.choices.map((choice, i) => {
               const isCorrect = i === q.a;
@@ -609,25 +673,23 @@ export default function CoursesScreen({ courseProgressMap = {}, setCourseProgres
                   disabled={!!answerFeedback} 
                   style={{
                     ...cStyles.choiceBtn,
-                    padding: isElementary ? '18px' : '14px 16px',
-                    fontSize: isElementary ? '16px' : '13px',
-                    background: answerFeedback && isCorrect ? '#d1fae5' : (answerFeedback && isSelectedWrong ? '#fee2e2' : '#f8fafc'),
+                    background: answerFeedback && isCorrect ? '#d1fae5' : (answerFeedback && isSelectedWrong ? '#fee2e2' : '#fff'),
                     borderColor: answerFeedback && isCorrect ? '#22c55e' : (answerFeedback && isSelectedWrong ? '#ef4444' : '#e2e8f0')
                   }}
                 >
-                  <span style={cStyles.choiceLetter}>{['A', 'B', 'C', 'D'][i]}</span>
+                  <span style={{...cStyles.choiceLetter, background: answerFeedback && isCorrect ? '#22c55e' : '#fff', color: answerFeedback && isCorrect ? '#fff' : '#1e293b'}}>{String.fromCharCode(65 + i)}</span>
                   {choice}
                 </button>
               );
             })}
           </div>
           {answerFeedback && (
-            <div style={{ ...cStyles.feedbackBox, background: answerFeedback.correct ? '#d1fae5' : '#fee2e2', borderRadius: '16px' }}>
-              <p style={{ fontWeight: '900', fontSize: '18px', color: answerFeedback.correct ? '#065f46' : '#991b1b' }}>
-                {answerFeedback.correct ? '🌟 Awesome Job!' : '💡 Keep Learning!'}
+            <div style={{ ...cStyles.feedbackBox, background: answerFeedback.correct ? '#f0fdf4' : '#fff1f2', borderColor: answerFeedback.correct ? '#22c55e' : '#f43f5e', borderRadius: '8px' }}>
+              <p style={{ fontWeight: '700', margin: '0 0 5px 0', color: answerFeedback.correct ? '#166534' : '#991b1b' }}>
+                {answerFeedback.correct ? 'Correct' : 'Incorrect'}
               </p>
-              {!answerFeedback.correct && <p>The right answer was: <b>{answerFeedback.correctAnswer}</b></p>}
-              <button onClick={handleNextQuestion} style={{ ...cStyles.nextBtn, background: course?.gradient, width: '100%', marginTop: '10px' }}>Next →</button>
+              {!answerFeedback.correct && <p style={{fontSize: '14px', margin: 0}}>The correct answer is: <b>{answerFeedback.correctAnswer}</b></p>}
+              <button onClick={handleNextQuestion} style={{ ...cStyles.nextBtn, background: '#1e293b', marginTop: '15px' }}>Continue</button>
             </div>
           )}
         </div>
@@ -639,40 +701,46 @@ export default function CoursesScreen({ courseProgressMap = {}, setCourseProgres
   if (page === 'result' && result) {
     return (
       <div style={cStyles.innerContainer}>
-        <div style={{ ...cStyles.resultCard, background: result.passed ? '#059669' : '#dc2626', borderRadius: '28px' }}>
-          <div style={{ fontSize: '70px' }}>{result.passed ? '🎈' : '⚓'}</div>
-          <h2 style={{ color: '#fff', fontSize: '32px' }}>{result.passed ? 'You Did It!' : 'Try Once More!'}</h2>
-          <div style={cStyles.scoreDisplay}><div style={{...cStyles.scoreCircle, width: '110px', height: '110px'}}><span style={{ fontSize: '32px', fontWeight: '900' }}>{result.score}%</span></div></div>
-          {!result.passed && <p style={{ color: '#fff' }}>Don't worry! Review the lesson and try again. You're getting better!</p>}
+        <div style={{ ...cStyles.resultCard, background: '#fff', border: '1px solid #e2e8f0', boxShadow: 'none' }}>
+          <div style={{ fontSize: '48px' }}>{result.passed ? '✅' : '❌'}</div>
+          <h2 style={{ color: '#1e293b', fontSize: '24px' }}>{result.passed ? 'You passed!' : 'Keep practicing'}</h2>
+          <div style={cStyles.scoreDisplay}>
+             <div style={{fontSize: '48px', fontWeight: '800'}}>{result.score}%</div>
+             <div style={{color: '#64748b'}}>Grade Received</div>
+          </div>
+          <p style={{ color: '#64748b', fontSize: '14px', maxWidth: '400px', margin: '0 auto 20px' }}>
+             {result.passed ? 'Great work! You have successfully completed this module.' : 'You need at least 70% to pass. Review the course material and try again.'}
+          </p>
         </div>
-        <button onClick={handleContinueAfterResult} style={{ ...cStyles.continueBtn, background: result.passed ? course?.gradient : '#64748b', borderRadius: '18px' }}>
-          {result.passed ? 'Keep Going! ▶' : '🔄 Try Again'}
+        <button onClick={handleContinueAfterResult} style={{ ...cStyles.continueBtn, background: result.passed ? '#0056D2' : '#1e293b', borderRadius: '4px' }}>
+          {result.passed ? 'Next Module' : 'Retake Quiz'}
         </button>
       </div>
     );
   }
 
-  // ─── CERTIFICATE VIEW (MODIFIED FOR KIDS) ───
+  // ─── CERTIFICATE VIEW ───
   if (page === 'certificate') {
-    const certColor = course?.color || '#6366f1';
+    const certColor = course?.color || '#0056D2';
     return (
       <div style={cStyles.innerContainer}>
         <div style={{
-          borderRadius: '32px', padding: '10px',
-          background: `linear-gradient(45deg, #fbbf24, #f59e0b, #fbbf24)`,
-          boxShadow: '0 20px 50px rgba(0,0,0,0.2)',
+          borderRadius: '8px', padding: '2px',
+          background: `linear-gradient(45deg, #d4af37, #f1c40f, #d4af37)`,
+          boxShadow: '0 20px 40px rgba(0,0,0,0.1)',
         }}>
-          <div style={{ borderRadius: '25px', background: '#fff', textAlign: 'center', padding: '40px 20px' }}>
-            <div style={{ fontSize: '60px' }}>{isElementary ? '🎖️' : '🎓'}</div>
-            <h1 style={{ fontSize: '28px', color: '#1f2937', marginBottom: '0' }}>{isElementary ? 'Official Money Master' : 'Certificate of Completion'}</h1>
-            <p style={{ color: certColor, fontWeight: '800', letterSpacing: '2px' }}>CONGRATULATIONS</p>
-            <h2 style={{ fontSize: '36px', fontStyle: 'italic', margin: '20px 0' }}>{username || 'Learner'}</h2>
-            <p>Finished the course:</p>
-            <div style={{ background: '#f3f4f6', padding: '15px', borderRadius: '12px', display: 'inline-block', fontWeight: '700' }}>{completedCourseTitle}</div>
-            <div style={{ marginTop: '30px' }}>
-                <div style={{ fontSize: '14px', color: '#6b7280' }}>Date: {completionDate || new Date().toLocaleDateString()}</div>
+          <div style={{ background: '#fff', textAlign: 'center', padding: '60px 40px', border: '1px solid #e2e8f0' }}>
+            <div style={{ fontSize: '40px', marginBottom: '20px' }}>📜</div>
+            <h1 style={{ fontSize: '24px', color: '#1f2937', margin: 0, textTransform: 'uppercase', letterSpacing: '2px' }}>Course Certificate</h1>
+            <p style={{ color: '#64748b', fontSize: '14px' }}>This is to certify that</p>
+            <h2 style={{ fontSize: '32px', fontStyle: 'serif', margin: '20px 0', borderBottom: '2px solid #e2e8f0', display: 'inline-block', padding: '0 40px' }}>{username || 'Learner'}</h2>
+            <p style={{ color: '#64748b', fontSize: '14px' }}>has successfully completed</p>
+            <div style={{ fontWeight: '700', fontSize: '20px', color: certColor, margin: '10px 0' }}>{completedCourseTitle}</div>
+            <div style={{ marginTop: '40px', display: 'flex', justifyContent: 'center', gap: '40px' }}>
+                <div style={{ fontSize: '12px', color: '#94a3b8' }}>DATE: {completionDate || new Date().toLocaleDateString()}</div>
+                <div style={{ fontSize: '12px', color: '#94a3b8' }}>ID: {Math.random().toString(36).substr(2, 9).toUpperCase()}</div>
             </div>
-            <button onClick={() => setPage('list')} style={{ ...cStyles.continueBtn, background: certColor, marginTop: '30px', maxWidth: '300px' }}>Back to Adventures</button>
+            <button onClick={() => setPage('list')} style={{ ...cStyles.continueBtn, background: '#1e293b', marginTop: '40px', maxWidth: '300px' }}>Return to Dashboard</button>
           </div>
         </div>
       </div>
@@ -704,52 +772,44 @@ export default function CoursesScreen({ courseProgressMap = {}, setCourseProgres
 }
 
 const cStyles = {
-  container: { padding: '28px 18px 48px', maxWidth: '1100px', margin: '0 auto', fontFamily: "'Inter', system-ui, sans-serif", background: 'linear-gradient(180deg, #eef2ff 0%, #ffffff 60%)', borderRadius: '32px', boxShadow: '0 24px 80px rgba(15,23,42,0.08)' },
-  header: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px', marginBottom: '28px' },
-  headerBadge: { display: 'inline-flex', alignItems: 'center', background: '#fef3c7', color: '#92400e', borderRadius: '999px', padding: '7px 14px', fontSize: '12px', fontWeight: '700', marginBottom: '8px' },
-  headerTitle: { margin: '0 0 6px', fontSize: '32px', fontWeight: '900', color: '#111827' },
-  headerSub: { margin: 0, color: '#64748b', fontSize: '15px' },
-  completedPill: { display: 'flex', alignItems: 'center', gap: '12px', background: 'linear-gradient(135deg,#6366f1,#2563eb)', color: '#fff', borderRadius: '16px', padding: '14px 20px', boxShadow: '0 8px 24px rgba(99,102,241,0.3)' },
-  grid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(290px, 1fr))', gap: '20px' },
-  courseCard: { borderRadius: '20px', overflow: 'hidden', boxShadow: '0 12px 32px rgba(15,23,42,0.1)', border: '1px solid rgba(0,0,0,0.06)', display: 'flex', flexDirection: 'column' },
-  courseCardTop: { padding: '24px', color: '#fff' },
-  courseCardTitle: { margin: '14px 0 6px', fontSize: '20px', fontWeight: '800', color: '#fff', lineHeight: 1.2 },
-  courseCardSub: { margin: 0, fontSize: '13px', color: 'rgba(255,255,255,0.8)' },
-  courseTierTag: { borderRadius: '999px', padding: '4px 12px', fontSize: '11px', fontWeight: '800', letterSpacing: '0.5px', textTransform: 'uppercase' },
-  courseCardBottom: { background: '#fff', padding: '18px', flex: 1 },
-  startBtn: { width: '100%', padding: '12px', border: 'none', borderRadius: '12px', fontWeight: '800', fontSize: '14px', cursor: 'pointer', transition: 'opacity 0.2s', fontFamily: 'inherit' },
-  innerContainer: { maxWidth: '780px', margin: '0 auto', padding: '0 16px 40px', fontFamily: "'Inter', system-ui, sans-serif" },
-  backBtn: { border: 'none', background: 'none', color: '#2563eb', cursor: 'pointer', marginBottom: '16px', fontSize: '14px', fontWeight: '600', padding: 0 },
-  courseHeaderBar: { padding: '20px 24px', borderRadius: '18px', marginBottom: '16px', color: '#fff' },
-  lessonCard: { background: '#fff', borderRadius: '18px', padding: '28px', boxShadow: '0 8px 24px rgba(0,0,0,0.07)', border: '1px solid #f1f5f9' },
-  lessonNumBadge: { display: 'inline-block', color: '#fff', borderRadius: '999px', padding: '4px 14px', fontSize: '12px', fontWeight: '700', marginBottom: '12px', letterSpacing: '0.5px' },
-  lessonTitle: { margin: '0 0 18px', fontSize: '22px', fontWeight: '800', color: '#111827' },
-  lessonInfoList: { display: 'flex', flexDirection: 'column', gap: '14px', marginBottom: '24px' },
-  lessonInfoItem: { display: 'flex', gap: '12px', alignItems: 'flex-start' },
-  lessonInfoDot: { width: '8px', height: '8px', borderRadius: '50%', marginTop: '6px', flexShrink: 0 },
-  lessonInfoText: { margin: 0, color: '#334155', fontSize: '15px', lineHeight: '1.7' },
-  quizBtn: { padding: '13px 28px', border: 'none', borderRadius: '12px', color: '#fff', fontWeight: '800', fontSize: '15px', cursor: 'pointer', fontFamily: 'inherit' },
-  quizHeaderCard: { background: '#fff', borderRadius: '14px', padding: '16px 20px', marginBottom: '16px', boxShadow: '0 4px 12px rgba(0,0,0,0.05)' },
-  scoreChip: { borderRadius: '999px', padding: '4px 12px', color: '#fff', fontSize: '12px', fontWeight: '700' },
-  quizCard: { background: '#fff', borderRadius: '18px', padding: '28px', boxShadow: '0 8px 24px rgba(0,0,0,0.07)' },
-  questionNumBadge: { display: 'inline-block', borderRadius: '8px', padding: '4px 10px', fontSize: '12px', fontWeight: '800', marginBottom: '12px' },
-  questionText: { fontSize: '17px', fontWeight: '700', color: '#1e293b', marginBottom: '20px', lineHeight: '1.55' },
-  choiceBtn: { padding: '14px 16px', textAlign: 'left', border: '2px solid #e2e8f0', borderRadius: '12px', background: '#f8fafc', fontSize: '13px', fontWeight: '500', color: '#334155', display: 'flex', alignItems: 'flex-start', gap: '12px', fontFamily: 'inherit', transition: 'border-color 0.2s', lineHeight: '1.45' },
-  choiceLetter: { width: '28px', height: '28px', minWidth: '28px', borderRadius: '8px', background: '#e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: '800', color: '#475569', flexShrink: 0 },
-  feedbackBox: { marginTop: '18px', padding: '16px 18px', borderRadius: '14px', border: '2px solid' },
-  nextBtn: { padding: '11px 24px', border: 'none', borderRadius: '10px', color: '#fff', fontWeight: '700', cursor: 'pointer', fontSize: '14px', fontFamily: 'inherit' },
-  resultCard: { borderRadius: '20px', padding: '32px 24px', textAlign: 'center', marginBottom: '18px', boxShadow: '0 12px 32px rgba(0,0,0,0.15)' },
-  scoreDisplay: { margin: '16px 0' },
-  scoreCircle: { display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '90px', height: '90px', borderRadius: '50%', background: '#fff', boxShadow: '0 4px 16px rgba(0,0,0,0.15)' },
-  wrongAnswersCard: { background: '#fff', borderRadius: '18px', padding: '20px', marginBottom: '16px', boxShadow: '0 4px 12px rgba(0,0,0,0.05)' },
-  wrongItem: { padding: '12px', background: '#fef9f9', borderRadius: '10px', marginBottom: '10px', border: '1px solid #fecaca' },
-  continueBtn: { width: '100%', padding: '15px', border: 'none', borderRadius: '14px', color: '#fff', fontWeight: '800', fontSize: '16px', cursor: 'pointer', fontFamily: 'inherit' },
-  reviewCard: { background: '#fff', borderRadius: '18px', padding: '24px', boxShadow: '0 8px 24px rgba(0,0,0,0.07)' },
-  reviewSummary: { textAlign: 'center', marginBottom: '24px', padding: '20px', background: '#f8fafc', borderRadius: '14px' },
-  reviewBadge: { display: 'inline-block', background: '#d1fae5', color: '#065f46', borderRadius: '999px', padding: '4px 14px', fontSize: '12px', fontWeight: '700', marginBottom: '8px' },
-  reviewScore: { fontSize: '40px', fontWeight: '900', color: '#059669', margin: '4px 0 8px' },
-  reviewItem: { marginBottom: '20px', paddingBottom: '20px', borderBottom: '1px solid #f1f5f9' },
-  reviewLessonTitle: { fontWeight: '800', color: '#1e293b', fontSize: '15px', marginBottom: '10px' },
-  reviewList: { margin: 0, paddingLeft: '20px' },
-  reviewListItem: { color: '#475569', fontSize: '14px', lineHeight: '1.7', marginBottom: '6px' },
+  container: { padding: '40px 20px 80px', maxWidth: '1200px', margin: '0 auto', fontFamily: "'Inter', sans-serif" },
+  header: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '40px', flexWrap: 'wrap', gap: '20px' },
+  headerTitle: { margin: 0, fontSize: '28px', fontWeight: '800', color: '#1e293b' },
+  headerSub: { margin: '4px 0 0', color: '#64748b', fontSize: '16px' },
+  completedPill: { display: 'flex', alignItems: 'center', gap: '15px', borderRadius: '8px', padding: '12px 20px' },
+  grid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '24px' },
+  courseCard: { display: 'flex', flexDirection: 'column', overflow: 'hidden', border: '1px solid #e2e8f0', transition: 'transform 0.2s' },
+  courseCardTop: { position: 'relative' },
+  courseCardTitle: { margin: '12px 0 0', fontSize: '18px', fontWeight: '700', lineHeight: '1.4' },
+  courseTierTag: { fontSize: '10px', fontWeight: '800', textTransform: 'uppercase', padding: '4px 8px', borderRadius: '4px' },
+  courseCardBottom: { background: '#fff', padding: '20px', flex: 1 },
+  startBtn: { width: '100%', padding: '12px', border: 'none', borderRadius: '4px', fontWeight: '700', fontSize: '14px', cursor: 'pointer' },
+  innerContainer: { maxWidth: '900px', margin: '0 auto', padding: '40px 20px' },
+  backBtn: { border: 'none', background: 'none', color: '#0056D2', cursor: 'pointer', marginBottom: '20px', fontSize: '14px', fontWeight: '600', padding: 0 },
+  syllabusHeader: { padding: '40px', borderRadius: '8px', marginBottom: '30px', textAlign: 'center' },
+  syllabusContainer: { background: '#fff', padding: '20px' },
+  syllabusItem: { display: 'flex', alignItems: 'center', padding: '20px', background: '#fff', border: '1px solid #e2e8f0', marginBottom: '10px', borderRadius: '4px' },
+  syllabusBtn: { padding: '8px 16px', border: 'none', borderRadius: '4px', fontWeight: '700', fontSize: '13px', cursor: 'pointer' },
+  learningEnv: { display: 'flex', minHeight: '100vh', background: '#fff' },
+  sidebar: { width: '300px', borderRight: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', position: 'sticky', top: 0, height: '100vh' },
+  lessonMainContent: { flex: 1, overflowY: 'auto' },
+  courseraArticle: { fontFamily: 'Georgia, serif' },
+  quizHeaderCard: { padding: '10px 0', marginBottom: '20px' },
+  quizCard: { background: '#fff', padding: '40px', borderRadius: '8px' },
+  choiceBtn: { width: '100%', padding: '16px', textAlign: 'left', border: '1px solid #e2e8f0', borderRadius: '8px', marginBottom: '10px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '15px', fontSize: '15px', fontFamily: 'inherit' },
+  choiceLetter: { width: '30px', height: '30px', borderRadius: '50%', border: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: '700' },
+  feedbackBox: { marginTop: '20px', padding: '20px', border: '1px solid' },
+  nextBtn: { padding: '12px 24px', border: 'none', borderRadius: '4px', color: '#fff', fontWeight: '700', cursor: 'pointer' },
+  resultCard: { padding: '60px', textAlign: 'center', marginBottom: '20px', borderRadius: '8px' },
+  scoreDisplay: { margin: '30px 0' },
+  continueBtn: { width: '100%', padding: '16px', border: 'none', borderRadius: '4px', color: '#fff', fontWeight: '700', fontSize: '16px', cursor: 'pointer' },
+  reviewCard: { background: '#fff', padding: '30px', border: '1px solid #e2e8f0' },
+  reviewItem: { marginBottom: '30px' },
+  reviewLessonTitle: { fontWeight: '800', fontSize: '18px', marginBottom: '15px' },
+  reviewList: { paddingLeft: '20px' },
+  reviewListItem: { marginBottom: '10px', color: '#475569' },
+  lessonCard: { background: '#fff', padding: '40px', borderRadius: '8px', textAlign: 'center', border: '1px solid #e2e8f0' },
+  lessonTitle: { fontSize: '24px', fontWeight: '800', marginBottom: '10px' },
+  lessonInfoText: { color: '#64748b' },
+  quizBtn: { padding: '12px 24px', border: 'none', borderRadius: '4px', color: '#fff', fontWeight: '700', cursor: 'pointer' }
 };
