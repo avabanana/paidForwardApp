@@ -12,7 +12,7 @@ import SalaryScreen from './screens/SalaryScreen.jsx';
 import LeagueScreen from './screens/LeagueScreen.jsx';
 import MapScreen from './screens/MapScreen.jsx';
 import SettingsScreen from './screens/SettingsScreen.jsx';
-import OnboardingScreen from './screens/OnboardingScreen.jsx';
+import OnboardingFlow from './screens/OnboardingFlow.jsx';
 import WelcomeScreen from './screens/WelcomeScreen.jsx';
 import TourOverlay from './components/TourOverlay.jsx';
 
@@ -178,7 +178,7 @@ function App() {
   };
 
   if (!user) {
-    return <OnboardingScreen onAuth={signIn} />;
+    return <OnboardingFlow onAuth={signIn} />;
   }
 
   return (

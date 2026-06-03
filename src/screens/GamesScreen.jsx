@@ -1288,6 +1288,7 @@ export default function GamesScreen({ userTier, onGameEnd, onNavigate, userName 
         .game-card:hover { transform: translateY(-8px) scale(1.01); box-shadow: 0 24px 48px rgba(0,0,0,0.15) !important; }
         .promo-card { transition: transform 0.2s ease, box-shadow 0.2s ease; }
         .promo-card:hover { transform: translateY(-4px); box-shadow: 0 16px 32px rgba(0,0,0,0.1) !important; }
+        .hero-card { animation: fadeIn 0.5s ease-out both; }
       `}</style>
 
       {vocabPopup.visible && (
@@ -1314,22 +1315,59 @@ export default function GamesScreen({ userTier, onGameEnd, onNavigate, userName 
           <p style={gS.menuSub}>
             Learn real money skills through simulation · Playing as <strong>{currentUser}</strong>
           </p>
-          <div style={{ display:"flex", justifyContent:"center", gap:8, flexWrap:"wrap", marginTop:12 }}>
-            {[
-              ["💵", `Starting: ${config.currencySymbol}${config.startingCash.toLocaleString()}`],
-              ["📚", userTier === "elementary" ? "Junior Mode" : "Advanced Mode"],
-              ["🎯", "10 scenarios per game"],
-            ].map(([icon, text]) => (
-              <span key={text} style={{
-                background:"#fff", border:"1px solid #e2e8f0", borderRadius:100,
-                padding:"4px 14px", fontSize:12, fontWeight:600, color:"#475569",
-                boxShadow:"0 1px 4px rgba(0,0,0,0.05)",
-              }}>{icon} {text}</span>
-            ))}
+        </div>
+
+        {/* ─── HIGHLIGHTED / FEATURED SECTION ─── */}
+        <div style={{ marginBottom:40 }}>
+          {/* PRIMARY: Classroom Leagues */}
+          <div className="promo-card hero-card" style={{ 
+            ...gS.cardPromo, 
+            background: "linear-gradient(135deg, #1e1b4b, #312e81)", 
+            color: "#fff",
+            padding: "40px",
+            border: "4px solid #6366f1",
+            boxShadow: "0 20px 40px rgba(99,102,241,0.25)",
+            display: "flex",
+            alignItems: "center",
+            gap: "32px",
+            marginBottom: "20px"
+          }} onClick={() => setView("leagues")}>
+            <div style={{ fontSize:80, animation:"float 4s ease-in-out infinite" }}>🏆</div>
+            <div style={{ flex: 1 }}>
+              <div style={{ display:"inline-block", background:"#6366f1", padding:"4px 12px", borderRadius:100, fontSize:12, fontWeight:900, marginBottom:12 }}>MULTIPLAYER ARENA</div>
+              <div style={{ ...gS.promoTitle, color:"#fff", fontSize:32, letterSpacing:"-0.5px" }}>Classroom Leagues</div>
+              <p style={{ ...gS.promoText, color:"#e0e7ff", fontSize:16, maxWidth:600 }}>
+                The ultimate test. Create or join a private room and compete live in 10-minute high-speed trading tournaments against your classmates.
+              </p>
+              <button style={{ ...gS.promoBtn, background:"#fff", color:"#312e81", padding:"14px 32px", fontSize:16, marginTop:8 }}>Join Tournament Hub →</button>
+            </div>
+          </div>
+
+          {/* SECONDARY: Salary Simulator */}
+          <div className="promo-card" style={{ 
+            ...gS.cardPromo, 
+            display:"flex", 
+            alignItems:"center", 
+            gap:20, 
+            background:"#fff", 
+            border:"1px solid #e2e8f0" 
+          }} onClick={() => onNavigate?.("Salary")}>
+            <div style={{ fontSize:40 }}>💼</div>
+            <div style={{ flex:1 }}>
+              <div style={{ ...gS.promoTitle, margin:0 }}>Salary Simulator</div>
+              <p style={{ ...gS.promoText, margin:0 }}>Map out a full career path. See how your savings and investments grow across 40 years of decisions.</p>
+            </div>
+            <button style={{ ...gS.promoBtn, background:"linear-gradient(135deg, #10b981, #059669)", whiteSpace:"nowrap" }}>Open Simulator →</button>
           </div>
         </div>
 
-        {/* Game cards */}
+        {/* ─── REMAINING GAMES SECTION ─── */}
+        <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 24 }}>
+          <div style={{ height: 1, flex: 1, background: "#e2e8f0" }}></div>
+          <h3 style={{ margin: 0, fontSize: 14, fontWeight: 800, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.1em" }}>Single Player Modes</h3>
+          <div style={{ height: 1, flex: 1, background: "#e2e8f0" }}></div>
+        </div>
+
         <div style={gS.gamesGrid}>
           {games.map((g, idx) => (
             <div key={g.id} className="game-card" style={{ ...gS.gameCard, animationDelay:`${idx * 0.07}s` }}>
@@ -1356,24 +1394,6 @@ export default function GamesScreen({ userTier, onGameEnd, onNavigate, userName 
               </div>
             </div>
           ))}
-        </div>
-
-        {/* Bottom promo row */}
-        <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:20, marginTop:40 }}>
-          <div className="promo-card" style={gS.cardPromo} onClick={() => setView("leagues")}>
-            <div style={{ fontSize:32, marginBottom:10 }}>🏆</div>
-            <div style={gS.promoTitle}>Classroom Leagues</div>
-            <p style={gS.promoText}>Create or join a private league and compete live in 10-minute Blitz tournaments against your class.</p>
-            <button style={{ ...gS.promoBtn, background:"linear-gradient(135deg, #6366f1, #4f46e5)" }}>Enter Leagues →</button>
-          </div>
-          <div className="promo-card" style={gS.cardPromo}>
-            <div style={{ fontSize:32, marginBottom:10 }}>💼</div>
-            <div style={gS.promoTitle}>Salary Simulator</div>
-            <p style={gS.promoText}>Map out a full career path. See how your salary, savings, and investments grow across 40 years of decisions.</p>
-            <button style={{ ...gS.promoBtn, background:"linear-gradient(135deg, #10b981, #059669)" }} onClick={() => onNavigate?.("Salary")}>
-              Open Simulator →
-            </button>
-          </div>
         </div>
       </div>
     </div>

@@ -176,143 +176,189 @@ const styles = {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    padding: '24px',
-    background: 'linear-gradient(180deg, #eef2ff 0%, #ffffff 100%)',
-    fontFamily: "'Inter', system-ui, sans-serif"
+    padding: '20px',
+    background: 'linear-gradient(135deg, #0f172a 0%, #1e3a8a 30%, #3b82f6 60%, #8b5cf6 100%)',
+    fontFamily: "'Inter', system-ui, sans-serif",
+    position: 'relative',
+    overflow: 'hidden'
   },
   card: {
     width: '100%',
-    maxWidth: '680px',
-    background: '#ffffff',
-    borderRadius: '28px',
-    boxShadow: '0 30px 60px rgba(15,23,42,0.08)',
-    padding: '32px',
-    border: '1px solid #e2e8f0'
+    maxWidth: '720px',
+    background: 'rgba(255, 255, 255, 0.98)',
+    borderRadius: '32px',
+    boxShadow: '0 40px 80px rgba(15, 23, 42, 0.25)',
+    padding: '48px 44px',
+    border: '1px solid rgba(255, 255, 255, 0.2)',
+    position: 'relative',
+    zIndex: 10
   },
   header: {
     display: 'flex',
-    gap: '16px',
+    gap: '24px',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    flexWrap: 'wrap'
+    flexWrap: 'wrap',
+    marginBottom: '8px'
   },
   kicker: {
-    color: '#4338ca',
-    fontWeight: '700',
-    marginBottom: '10px'
+    color: '#6366f1',
+    fontWeight: '800',
+    marginBottom: '12px',
+    fontSize: '13px',
+    textTransform: 'uppercase',
+    letterSpacing: '0.08em'
   },
   title: {
-    fontSize: '32px',
-    lineHeight: '1.1',
+    fontSize: '36px',
+    lineHeight: '1.15',
     margin: 0,
-    color: '#0f172a'
+    color: '#0f172a',
+    fontWeight: '900',
+    background: 'linear-gradient(135deg, #0f172a, #4338ca)',
+    webkitBackgroundClip: 'text',
+    webkitTextFillColor: 'transparent',
+    backgroundClip: 'text'
   },
   subtitle: {
-    color: '#475569',
-    marginTop: '12px',
-    maxWidth: '560px'
+    color: '#64748b',
+    marginTop: '14px',
+    maxWidth: '500px',
+    fontSize: '15px',
+    lineHeight: '1.6',
+    fontWeight: '500'
   },
   loginButton: {
-    border: '1px solid #c7d2fe',
+    border: '2px solid #e0e7ff',
     background: 'transparent',
-    color: '#4338ca',
-    borderRadius: '14px',
-    padding: '12px 18px',
+    color: '#6366f1',
+    borderRadius: '16px',
+    padding: '14px 22px',
     cursor: 'pointer',
-    fontWeight: '700'
+    fontWeight: '700',
+    fontSize: '14px',
+    transition: 'all 0.3s ease',
+    textTransform: 'uppercase',
+    letterSpacing: '0.05em'
   },
   stepIndicator: {
-    marginTop: '28px',
-    color: '#64748b',
-    fontSize: '14px',
-    fontWeight: '700'
+    marginTop: '32px',
+    marginBottom: '4px',
+    color: '#a78bfa',
+    fontSize: '12px',
+    fontWeight: '800',
+    textTransform: 'uppercase',
+    letterSpacing: '0.1em'
   },
   question: {
-    marginTop: '12px',
-    fontSize: '22px',
-    fontWeight: '700',
-    color: '#0f172a'
+    marginTop: '8px',
+    marginBottom: '28px',
+    fontSize: '24px',
+    fontWeight: '800',
+    color: '#0f172a',
+    lineHeight: '1.3'
   },
   inputGroup: {
-    marginTop: '24px',
+    marginTop: '32px',
+    marginBottom: '28px',
     display: 'flex',
     flexDirection: 'column',
-    gap: '10px'
+    gap: '12px'
   },
   label: {
     fontWeight: '700',
-    color: '#0f172a'
+    color: '#1e293b',
+    fontSize: '14px',
+    textTransform: 'uppercase',
+    letterSpacing: '0.05em'
   },
   input: {
-    borderRadius: '16px',
-    border: '1px solid #cbd5e1',
-    padding: '16px',
+    borderRadius: '18px',
+    border: '2px solid #e2e8f0',
+    padding: '16px 20px',
     fontSize: '16px',
     outline: 'none',
-    width: '220px'
+    width: '100%',
+    maxWidth: '260px',
+    transition: 'all 0.3s ease',
+    background: '#f8fafc'
   },
   helperText: {
-    color: '#64748b',
-    fontSize: '14px'
+    color: '#94a3b8',
+    fontSize: '13px',
+    marginTop: '4px',
+    fontWeight: '500'
   },
   optionsGrid: {
-    marginTop: '24px',
+    marginTop: '28px',
+    marginBottom: '28px',
     display: 'grid',
-    gap: '14px',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))'
+    gap: '12px',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))'
   },
   optionCard: {
-    borderRadius: '18px',
-    border: '1px solid #cbd5e1',
-    padding: '20px',
+    borderRadius: '20px',
+    border: '2px solid #e2e8f0',
+    padding: '22px 18px',
     textAlign: 'left',
     fontSize: '15px',
     color: '#0f172a',
     cursor: 'pointer',
-    transition: 'transform 0.2s ease, border-color 0.2s ease',
-    background: '#ffffff'
+    transition: 'all 0.3s ease',
+    background: '#ffffff',
+    fontWeight: '600',
+    lineHeight: '1.5'
   },
   footer: {
-    marginTop: '32px',
+    marginTop: '40px',
     display: 'grid',
     gridTemplateColumns: '1fr auto',
-    gap: '18px',
+    gap: '24px',
     alignItems: 'center'
   },
   summaryBox: {
-    padding: '22px',
-    borderRadius: '22px',
-    border: '1px solid #e2e8f0',
-    background: '#f8fafc'
+    padding: '24px 28px',
+    borderRadius: '24px',
+    border: '2px solid #e0e7ff',
+    background: 'linear-gradient(135deg, #f8fafc 0%, #f0f4ff 100%)',
+    boxShadow: '0 4px 16px rgba(99, 102, 241, 0.08)'
   },
   summaryLabel: {
-    fontSize: '13px',
+    fontSize: '11px',
     textTransform: 'uppercase',
-    letterSpacing: '0.1em',
-    color: '#64748b',
-    fontWeight: '700'
+    letterSpacing: '0.15em',
+    color: '#6b7280',
+    fontWeight: '800'
   },
   summaryValue: {
     marginTop: '10px',
-    fontSize: '20px',
-    fontWeight: '800',
-    color: '#0f172a'
+    fontSize: '22px',
+    fontWeight: '900',
+    color: '#6366f1',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px'
   },
   summarySubtext: {
-    marginTop: '8px',
-    color: '#475569',
-    fontSize: '14px',
-    lineHeight: '1.6'
+    marginTop: '10px',
+    color: '#64748b',
+    fontSize: '13px',
+    lineHeight: '1.6',
+    fontWeight: '500'
   },
   nextButton: {
     border: 'none',
-    borderRadius: '18px',
-    padding: '18px 28px',
-    background: 'linear-gradient(135deg,#6366f1,#8b5cf6)',
+    borderRadius: '20px',
+    padding: '16px 32px',
+    background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
     color: '#ffffff',
     fontSize: '16px',
-    fontWeight: '700',
+    fontWeight: '800',
     cursor: 'pointer',
-    minWidth: '190px'
+    minWidth: '180px',
+    boxShadow: '0 8px 24px rgba(99, 102, 241, 0.4)',
+    transition: 'all 0.3s ease',
+    textTransform: 'uppercase',
+    letterSpacing: '0.05em'
   }
 };
