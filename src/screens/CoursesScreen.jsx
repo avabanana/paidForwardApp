@@ -80,6 +80,200 @@ const adultCoursesData = [
           { q: 'A person impulsively buys a $400 item on a credit card they cannot pay off:', choices: ['They pay $400 plus interest charges that accrue until it is fully paid', 'They pay exactly $400 regardless of the payment method they used to buy it', 'They pay $400 minus any rewards points earned on that specific purchase', 'They pay $400 but offset by any enjoyment derived from having the item'], a: 0 },
           { q: 'The most dangerous aspect of lifestyle inflation is:', choices: ['It silently consumes income increases and prevents your savings growth', 'It only affects high-income earners who have very large annual salaries', 'It causes an immediate financial crisis and is very easily noticed by all', 'It primarily impacts retirement accounts rather than your daily savings'], a: 0 }
         ]
+      },
+      {
+        title: 'Side Income & Career Growth',
+        info: [
+          'Active income is traded directly for time — your salary or hourly rate. Passive income generates money with minimal ongoing effort after the initial setup: rental income, dividend portfolios, royalties, or digital products. True financial freedom typically requires moving from pure active income toward a mix.',
+          'The most reliable way to increase income is to increase your skills\' market value. Certifications, specialized expertise, and demonstrable results (a portfolio, metrics from past work) compound over a career the same way investments compound over time.',
+          'Side hustles that leverage existing skills command the highest rates. A software developer charging $100/hr for freelance work earns 3× more per hour than driving for a rideshare app. Monetizing what you already know is almost always more efficient than building new skills from scratch.',
+          'The tax implications of side income are significant: every dollar of self-employment income above $400 requires filing Schedule SE and paying 15.3% self-employment tax on top of regular income tax. Understanding this is critical to pricing side work correctly — $50/hr self-employed nets roughly $35/hr after taxes.',
+          'Negotiating your salary is the single highest-leverage financial action most employees never take. Studies consistently show that professionals who negotiate their starting salary earn $1M+ more over a 40-year career than those who accept the first offer. The expected value of negotiating is almost always positive.',
+          'The "barbell" income strategy balances a stable primary income (low risk, steady cash flow) with a high-upside side project (higher risk, but capped downside since you still have your job). This lets you experiment without catastrophic financial risk.',
+          'Burnout math: doubling income means nothing if it costs your health or relationships. The sustainable path to wealth is optimizing income-to-hours ratio, not raw hours. A $90,000 job requiring 40 hours/week is more financially efficient than a $120,000 job requiring 70 hours/week.'
+        ],
+        quiz: [
+          { q: 'The key difference between active and passive income is:', choices: ['Active trades time for money; passive generates money with minimal ongoing effort', 'Passive income is illegal without a registered business entity', 'Active income is taxed more favorably than any passive source', 'Passive income only refers to dividends from stock market investments'], a: 0 },
+          { q: 'Why does negotiating your starting salary matter so much?', choices: ['Salary gains compound over a career — the difference can exceed $1M', 'Most companies automatically lower offers if you don\'t negotiate them', 'Negotiation skills are required for management promotions later', 'Starting salary determines your maximum possible future earnings'], a: 0 },
+          { q: 'Self-employment income above $400 triggers:', choices: ['Schedule SE filing and a 15.3% self-employment tax on net profit', 'A flat 30% federal withholding sent quarterly to the IRS', 'Automatic quarterly estimated tax payments via direct debit', 'An audit trigger requiring documentation of all business expenses'], a: 0 },
+          { q: 'The most efficient side hustle typically:', choices: ['Leverages existing skills you already have at a high hourly rate', 'Requires building entirely new skills to access new markets', 'Involves physical labor that can be scaled with minimal capital', 'Starts with the lowest barrier to entry regardless of hourly rate'], a: 0 },
+          { q: 'The "barbell" income strategy balances:', choices: ['A stable primary income with a high-upside side project', 'Aggressive investing with aggressive debt repayment simultaneously', 'Active and passive income at exactly 50/50 split from year one', 'High-risk freelancing with low-risk bond investments equally'], a: 0 },
+          { q: 'True financial freedom typically requires:', choices: ['Shifting from pure active income toward a mix including passive sources', 'Earning over $200,000 per year in salaried employment', 'Owning real estate in at least two separate geographic markets', 'Working in finance or technology for maximum income potential'], a: 0 },
+          { q: 'Evaluating income should consider hours required because:', choices: ['Income-to-hours ratio determines real financial efficiency', 'All jobs pay the same effective hourly rate after taxes', 'More hours always leads to faster wealth accumulation', 'Hourly rate is the primary factor lenders use for mortgages'], a: 0 },
+          { q: 'A software developer freelancing at $100/hr is more efficient than rideshare because:', choices: ['It monetizes existing skills at a much higher rate per hour', 'Rideshare income is taxed at a higher rate than consulting', 'Software development has no self-employment tax requirements', 'Rideshare platforms take a 50% commission from all earnings'], a: 0 },
+          { q: 'Career skill investment is similar to compound interest because:', choices: ['Specialized expertise increases market value exponentially over time', 'Certifications earn literal interest payments from employers', 'Both require government-approved accounts to generate returns', 'Skills and money both depreciate at roughly the same annual rate'], a: 0 }
+        ]
+      }
+    ]
+  },
+  {
+    id: 3,
+    title: 'Investing Fundamentals',
+    emoji: '📈',
+    color: '#7c3aed',
+    gradient: 'linear-gradient(135deg,#7c3aed,#a78bfa)',
+    tag: 'Wealth Building',
+    description: 'Learn how to put your money to work through stocks, index funds, and retirement accounts.',
+    lessons: [
+      {
+        title: 'Stock Market Basics',
+        info: [
+          'A stock represents fractional ownership in a company. When you buy one share of Apple, you own a tiny piece of Apple Inc. — its profits, assets, and future growth. Stocks are bought and sold on exchanges like the NYSE and NASDAQ.',
+          'Stock prices are driven by supply and demand, which is shaped by company earnings, economic data, investor sentiment, and future expectations. A company\'s stock can rise even when it\'s losing money if investors believe growth is coming.',
+          'The difference between investing and speculating: investing is buying an asset with the expectation of long-term returns based on fundamentals. Speculating is betting on short-term price movement. Most individual investors lose money trying to speculate.',
+          'Market capitalization (market cap) = share price × total shares outstanding. It\'s the most common measure of a company\'s size. Large-cap companies (>$10B) are generally more stable; small-cap companies (<$2B) carry more risk and more potential upside.',
+          'Dividends are cash payments some companies make to shareholders from their profits, typically quarterly. Dividend-paying stocks (utilities, REITs, consumer staples) are favored by income investors. Growth stocks typically reinvest profits instead of paying dividends.',
+          'Bear markets are defined as a 20%+ decline from recent highs. Bull markets are sustained upward trends. Historically, bear markets last an average of 9–16 months while bull markets last years — which is why staying invested long-term outperforms trying to exit during downturns.',
+          'Individual stock picking underperforms index funds for the vast majority of investors. Studies consistently show that over 80% of actively managed funds fail to beat their benchmark index over a 10-year period. This is why passive index investing dominates modern financial advice.'
+        ],
+        quiz: [
+          { q: 'What does owning a stock represent?', choices: ['Fractional ownership in the issuing company', 'A loan you make to the company', 'A guaranteed annual dividend payment', 'A government-backed savings certificate'], a: 0 },
+          { q: 'A "bear market" is defined as:', choices: ['A market decline of 20% or more from recent highs', 'Any month where the market closes lower than it opened', 'A period with no new companies listing on exchanges', 'A market rising more than 20% in under 6 months'], a: 0 },
+          { q: 'Why do most actively managed funds underperform index funds?', choices: ['Higher fees and the difficulty of consistently predicting markets', 'They invest in bonds rather than stocks by default', 'Fund managers intentionally reduce returns to limit tax liability', 'They are legally required to hold some cash at all times'], a: 0 },
+          { q: 'Market capitalization is calculated as:', choices: ['Share price multiplied by total shares outstanding', 'Total company revenue divided by number of employees', 'Annual profit divided by the current stock price', 'Total assets minus total liabilities on the balance sheet'], a: 0 },
+          { q: 'The key difference between investing and speculating is:', choices: ['Investing relies on fundamentals; speculation bets on short-term movement', 'Investing is illegal without a financial advisor license', 'Speculation always produces higher returns than investing', 'Investing only applies to real estate, not stock markets'], a: 0 },
+          { q: 'A dividend is:', choices: ['A cash payment companies make to shareholders from profits', 'A fee charged by brokers for executing stock trades', 'The difference between a stock\'s high and low price', 'A penalty for selling a stock before one year passes'], a: 0 },
+          { q: 'Small-cap stocks (under $2B market cap) generally carry:', choices: ['More risk and more potential upside than large-cap stocks', 'Less risk because smaller companies are easier to manage', 'Guaranteed dividend payments unlike larger companies', 'Government insurance similar to FDIC for bank accounts'], a: 0 },
+          { q: 'What primarily drives stock prices up or down?', choices: ['Supply and demand shaped by earnings, data, and expectations', 'The Federal Reserve setting a price ceiling each quarter', 'Company founders buying and selling their own personal shares', 'The number of employees a company hires or fires monthly'], a: 0 },
+          { q: 'Historically, which approach outperforms for most long-term investors?', choices: ['Passive index investing over stock picking and market timing', 'Actively trading stocks daily to capture short-term gains', 'Holding cash during uncertain periods and reinvesting later', 'Concentrating in a single high-conviction sector like tech'], a: 0 }
+        ]
+      },
+      {
+        title: 'Index Funds & ETFs',
+        info: [
+          'An index fund is a type of mutual fund or ETF designed to replicate the performance of a market index, like the S&P 500. Instead of picking individual stocks, you buy a tiny piece of every company in the index simultaneously.',
+          'An ETF (Exchange-Traded Fund) trades on an exchange just like a stock — you can buy or sell it at any point during market hours. Most index funds are available as ETFs. The most popular ETFs include VTI (total US market), VOO (S&P 500), and VXUS (international stocks).',
+          'The expense ratio is the annual fee charged by a fund, expressed as a percentage. Vanguard\'s VOO charges 0.03%/year — on a $10,000 investment, that\'s $3/year. Actively managed funds often charge 0.5–1.5%, which dramatically compounds against returns over decades.',
+          'Diversification is the mathematical principle that combining uncorrelated assets reduces overall portfolio risk without proportionally reducing returns. Owning 500 stocks in an S&P 500 fund means no single company\'s failure can destroy your portfolio.',
+          'The "three-fund portfolio" is a popular simple strategy: a US total market fund, an international fund, and a bond fund. It provides complete global diversification with just three holdings and is advocated by Vanguard\'s founder Jack Bogle.',
+          'Rebalancing is the practice of periodically adjusting your portfolio back to its target allocation. If stocks surge and your 80/20 stock-bond split drifts to 90/10, you sell some stocks and buy bonds to restore balance. Most advisors recommend rebalancing annually or when any asset drifts more than 5% from target.',
+          'Tax-loss harvesting is an advanced ETF strategy: selling a losing position to realize a tax loss (offsetting capital gains), then immediately buying a similar-but-not-identical ETF to maintain market exposure. This can add 0.5–1% to after-tax returns annually for taxable account holders.'
+        ],
+        quiz: [
+          { q: 'What does an index fund do?', choices: ['Replicates the performance of a market index by holding its components', 'Allows fund managers to pick the highest-performing stocks only', 'Guarantees returns equal to the index regardless of market conditions', 'Invests exclusively in government bonds and treasury securities'], a: 0 },
+          { q: 'An ETF differs from a standard mutual fund because:', choices: ['It trades on an exchange during market hours like a stock', 'It is only available to institutional investors and hedge funds', 'It holds a single stock rather than a basket of securities', 'It charges no expense ratio or management fees at all'], a: 0 },
+          { q: 'The expense ratio of 0.03% vs 1.0% matters because:', choices: ['The difference compounds dramatically against returns over decades', 'Higher expense ratios are required for legal compliance', 'Only expense ratios below 0.5% are available to retail investors', 'Expense ratios only apply to bond funds, not stock funds'], a: 0 },
+          { q: 'Diversification reduces risk because:', choices: ['Combining uncorrelated assets lowers volatility without killing returns', 'Owning more stocks guarantees at least one will be profitable', 'Diversified funds are insured by the government against loss', 'More holdings always means more dividends paid to investors'], a: 0 },
+          { q: 'The three-fund portfolio consists of:', choices: ['US total market, international, and a bond fund', 'Large-cap, mid-cap, and small-cap US stocks only', 'Stocks, real estate, and cryptocurrency equally weighted', 'Three different S&P 500 ETFs from competing fund families'], a: 0 },
+          { q: 'Portfolio rebalancing means:', choices: ['Restoring your target asset allocation when it drifts', 'Selling all holdings once a year and starting completely fresh', 'Adding new money only to your best-performing assets', 'Moving to 100% cash during periods of high volatility'], a: 0 },
+          { q: 'Tax-loss harvesting involves:', choices: ['Selling a loser to realize a tax loss while buying a similar asset', 'Avoiding all capital gains by never selling any holdings', 'Moving investments into a Roth IRA to eliminate taxes', 'Donating losing stocks to charity for a full deduction'], a: 0 },
+          { q: 'Which ETF ticker represents the total US stock market?', choices: ['VTI — Vanguard Total Stock Market ETF', 'VOO — Vanguard S&P 500 ETF specifically', 'VXUS — Vanguard Total International Stock ETF', 'BND — Vanguard Total Bond Market ETF'], a: 0 },
+          { q: 'Jack Bogle\'s core investing philosophy was:', choices: ['Buy low-cost index funds and hold them for the long term', 'Actively trade to beat the market using technical analysis', 'Concentrate in a few high-conviction individual stocks', 'Time the market by moving to cash during corrections'], a: 0 }
+        ]
+      }
+    ]
+  },
+  {
+    id: 4,
+    title: 'Taxes & Income',
+    emoji: '🧾',
+    color: '#0891b2',
+    gradient: 'linear-gradient(135deg,#0891b2,#06b6d4)',
+    tag: 'Essential',
+    description: 'Demystify how income taxes work, what you owe, and how to legally keep more of what you earn.',
+    lessons: [
+      {
+        title: 'How Income Tax Works',
+        info: [
+          'The US uses a progressive (marginal) tax system — you don\'t pay your top rate on all income. The first $11,600 (2024, single filer) is taxed at 10%, the next chunk at 12%, then 22%, and so on. Your "marginal rate" is only applied to dollars within that bracket, not your entire income.',
+          'Your effective tax rate is your actual average: total taxes paid divided by total income. Someone earning $80,000 might be in the "22% bracket" but only pay an effective rate of ~14–15% because most of their income is taxed at lower rates.',
+          'The standard deduction ($14,600 for single filers in 2024) reduces your taxable income automatically without itemizing. Most people take it. Itemizing (listing mortgage interest, charitable donations, state taxes) only makes sense if your total deductions exceed the standard amount.',
+          'FICA taxes (Social Security + Medicare) are separate from income tax and fund those specific programs. Employees pay 7.65% and employers match it. Self-employed people pay the full 15.3% "self-employment tax" themselves, making self-employment costs significantly higher than they appear.',
+          'W-2 employees have taxes withheld automatically from each paycheck based on their W-4 form. The W-4 tells your employer how much to withhold. Filing your annual return (by April 15) reconciles what was withheld vs. what you actually owed — producing a refund or a bill.',
+          '1099 income (freelance, contract, side gigs) has no withholding — it\'s your responsibility to pay quarterly estimated taxes to the IRS. Failing to do so results in underpayment penalties. Self-employed individuals should set aside 25–30% of gross income for taxes.',
+          'Tax deductions reduce taxable income (saving you your marginal rate × the deduction amount). Tax credits reduce your tax bill dollar-for-dollar and are more powerful. A $1,000 deduction saves $220 for someone in the 22% bracket; a $1,000 credit saves $1,000 flat.'
+        ],
+        quiz: [
+          { q: 'In a marginal tax system, your top rate applies to:', choices: ['Only the dollars that fall within that specific tax bracket', 'Your entire annual income from all sources combined', 'Gross income before any deductions are subtracted', 'The average of your three highest-earning months'], a: 0 },
+          { q: 'Your "effective tax rate" means:', choices: ['Total taxes paid divided by total gross income earned', 'The highest tax bracket your income reaches this year', 'The rate applied to your last dollar of earned income', 'Your state tax rate added to your federal bracket rate'], a: 0 },
+          { q: 'The standard deduction is valuable because:', choices: ['It reduces taxable income without requiring itemized records', 'It is a direct credit reducing your final tax bill owed', 'It eliminates FICA taxes for lower-income earners entirely', 'It is only available to homeowners with a mortgage interest'], a: 0 },
+          { q: 'Self-employed people pay more in FICA because:', choices: ['They cover both the employee and employer portions (15.3%)', 'Self-employment income is taxed at a special premium rate', 'They are not eligible for the standard deduction benefits', 'The IRS charges a self-employment surcharge above regular taxes'], a: 0 },
+          { q: 'If you receive 1099 income, you are responsible for:', choices: ['Paying quarterly estimated taxes to the IRS yourself', 'Filing only at year-end since no withholding is required', 'Paying taxes only if total 1099 income exceeds $50,000', 'Nothing extra — it is taxed identically to W-2 income'], a: 0 },
+          { q: 'A tax credit is more valuable than a deduction of the same size because:', choices: ['Credits reduce your tax bill dollar-for-dollar, not just by your rate', 'Credits apply to FICA taxes while deductions only reduce income tax', 'Credits are refundable but deductions can never generate a refund', 'The IRS automatically doubles credits for lower-income filers'], a: 0 },
+          { q: 'The purpose of a W-4 form is to:', choices: ['Tell your employer how much federal income tax to withhold', 'Report freelance income you earned outside your main job', 'Claim your annual deductions directly with the IRS online', 'Apply for a tax refund on income withheld the prior year'], a: 0 },
+          { q: 'Someone in the 22% bracket with $70,000 income pays 22% on:', choices: ['Only the slice of income that falls within the 22% bracket range', 'All $70,000 of their gross annual income from every source', 'Their gross income minus only the standard deduction amount', 'The first $70,000 after their FICA taxes have been removed'], a: 0 },
+          { q: 'An independent contractor should set aside what percentage for taxes?', choices: ['25–30% to cover federal income tax plus self-employment tax', '10–15%, matching a typical W-2 employee\'s withholding rate', 'Nothing until April — taxes are only due once per year', 'Exactly 22% if their income puts them in that bracket range'], a: 0 }
+        ]
+      },
+      {
+        title: 'Tax-Advantaged Accounts',
+        info: [
+          'A 401(k) is an employer-sponsored retirement account funded with pre-tax dollars. Contributions reduce your taxable income today, and the money grows tax-deferred — you pay income tax only when you withdraw in retirement. The 2024 contribution limit is $23,000.',
+          'Employer matching is the single best return available in personal finance: if your employer matches 50% of contributions up to 6% of salary, and you earn $60,000, contributing $3,600 earns you $1,800 free — a guaranteed 50% instant return. Never leave a match on the table.',
+          'A Traditional IRA lets you contribute up to $7,000/year (2024) with potential tax-deductibility. A Roth IRA uses after-tax dollars, but all growth and withdrawals are tax-free in retirement. The Roth is generally superior for younger, lower-income earners who expect to be in a higher bracket later.',
+          'The Roth conversion ladder is an advanced strategy for early retirees: converting Traditional IRA funds to Roth over several low-income years, paying tax at a low rate now, and accessing the funds tax-free later. It requires 5-year aging periods for each conversion.',
+          'An HSA (Health Savings Account) is the only triple-tax-advantaged account available: contributions are pre-tax, growth is tax-free, and withdrawals for qualified medical expenses are tax-free. After 65, you can withdraw for any reason (paying ordinary income tax, like a traditional IRA). It\'s often called a "stealth IRA."',
+          'The backdoor Roth IRA is a legal workaround for high earners who exceed the Roth income limit ($161,000 single in 2024): contribute to a non-deductible Traditional IRA, then convert it to Roth. The conversion is tax-free because no deduction was taken initially.',
+          '529 college savings plans grow tax-free for qualified education expenses (tuition, room, board, books). Unused funds can now be rolled into a Roth IRA (up to $35,000 lifetime) under SECURE 2.0. Contributions are not federally deductible but many states offer a state tax deduction.'
+        ],
+        quiz: [
+          { q: 'A 401(k) contribution reduces your taxes because:', choices: ['Pre-tax contributions lower your taxable income in the current year', 'The IRS refunds 50% of all contributions made to the account', 'Growth is untaxed even when you withdraw the money at retirement', 'Employer matches are classified as tax credits on your return'], a: 0 },
+          { q: 'Employer 401(k) matching should be treated as:', choices: ['Free money — always contribute enough to capture the full match', 'Optional — only worth doing if you\'re in a high tax bracket', 'Less important than paying off any debt before contributing', 'Taxable income that significantly reduces the value of matching'], a: 0 },
+          { q: 'A Roth IRA is generally better than a Traditional IRA for:', choices: ['Younger earners in lower brackets who expect higher rates later', 'High earners at peak income who want the deduction today', 'People who need to access contributions before age 59½', 'Anyone over 50 making catch-up contributions to retirement'], a: 0 },
+          { q: 'An HSA is called "triple tax-advantaged" because:', choices: ['Contributions, growth, and qualified withdrawals are all tax-free', 'It provides three separate annual contribution limit windows', 'It covers three categories: medical, dental, and vision expenses', 'Three family members can each contribute the maximum yearly'], a: 0 },
+          { q: 'The backdoor Roth IRA strategy exists because:', choices: ['High earners above the income limit can still access Roth benefits', 'Standard Roth accounts have contribution limits that are too low', 'Traditional IRA conversions generate a tax-free income event', 'It avoids the 10% early withdrawal penalty before age 59½'], a: 0 },
+          { q: 'A 529 plan is specifically designed for:', choices: ['Tax-free growth for qualified education expenses', 'Retirement savings as a supplement to a 401(k) contribution', 'Healthcare expenses as an alternative to an HSA account', 'Short-term savings goals with a state tax deduction benefit'], a: 0 },
+          { q: 'The 2024 annual Roth IRA contribution limit for under-50s is:', choices: ['$7,000 per year per individual account holder', '$23,000 matching the 401(k) contribution limit amount', '$14,000 for couples filing jointly on one shared account', '$3,500 as Roth limits are half of Traditional IRA limits'], a: 0 },
+          { q: 'After age 65, an HSA can be used for non-medical expenses by:', choices: ['Paying ordinary income tax on the withdrawal, like a Traditional IRA', 'Taking a 20% penalty plus income tax like before retirement age', 'Withdrawing completely tax-free with no conditions or penalties', 'Only converting it to a Roth IRA through a one-time transfer'], a: 0 },
+          { q: 'The Roth conversion ladder is primarily useful for:', choices: ['Early retirees converting funds during low-income years at low rates', 'High earners trying to exceed the annual contribution limits', 'People who want to access Social Security benefits early', 'Anyone who has a 401(k) and wants to eliminate it entirely'], a: 0 }
+        ]
+      }
+    ]
+  },
+  {
+    id: 5,
+    title: 'Debt & Repayment Strategy',
+    emoji: '🔓',
+    color: '#dc2626',
+    gradient: 'linear-gradient(135deg,#dc2626,#f97316)',
+    tag: 'Freedom',
+    description: 'Learn systematic strategies to eliminate debt efficiently and understand when debt is a tool vs. a trap.',
+    lessons: [
+      {
+        title: 'Good Debt vs. Bad Debt',
+        info: [
+          'Not all debt is equally harmful. "Good debt" typically has a low interest rate and funds something that grows in value or increases your earning power — a mortgage on an appreciating home, or a student loan that leads to a significantly higher salary.',
+          'Bad debt funds depreciating assets or consumption at high interest rates. Credit card debt averaging 24% APR is almost always destructive. A car loan at 8% for a vehicle losing 15% of value per year is a wealth drain. Consumer debt on lifestyle purchases rarely has a positive ROI.',
+          'The true cost of carrying debt is calculated through the Annual Percentage Rate (APR). A $5,000 credit card balance at 24% APR, making only minimum payments, takes over 15 years to pay off and costs more than $7,000 in interest — paying more interest than original principal.',
+          'Student loans occupy a gray area: federal loans at 5–7% with income-driven repayment options, deferment, and potential forgiveness are fundamentally different from private student loans at 10–14% with no protections. The degree\'s earning premium vs. total debt load is the key calculation.',
+          'Debt-to-income ratio (DTI) measures your monthly debt payments against gross monthly income. Lenders consider under 36% healthy; over 43% typically prevents mortgage qualification. Your DTI affects both loan availability and the interest rate you\'re offered.',
+          'Secured debt (backed by collateral: mortgages, auto loans) carries lower interest rates because lenders can repossess the asset. Unsecured debt (credit cards, personal loans, medical debt) has no collateral, so lenders charge higher rates to compensate for the risk.',
+          'Credit card minimum payments are mathematically designed to maximize bank profits. Minimums are typically 1–2% of balance — just enough to prevent default but not enough to make meaningful progress. Paying only the minimum on a $3,000 balance at 22% takes over 10 years to clear.'
+        ],
+        quiz: [
+          { q: '"Good debt" is generally characterized by:', choices: ['Low interest rates that fund appreciating assets or earning power', 'Any debt taken on by someone with a strong credit score', 'Debt that requires only minimum monthly payments to manage', 'Borrowing at any rate as long as the amount is under $10,000'], a: 0 },
+          { q: 'A credit card balance at 24% APR is dangerous because:', choices: ['Interest compounds rapidly, and minimum payments barely reduce principal', 'The balance is reported monthly to all three credit bureaus', 'Credit cards cannot be used for purchases over a certain limit', 'Carrying a balance automatically lowers your credit limit over time'], a: 0 },
+          { q: 'Debt-to-income ratio (DTI) is important because:', choices: ['Lenders use it to determine loan eligibility and interest rates', 'It determines your federal income tax bracket each year', 'DTI above 10% automatically disqualifies all mortgage applications', 'It is the primary factor used to calculate your credit score'], a: 0 },
+          { q: 'Secured debt carries lower interest rates than unsecured debt because:', choices: ['Lenders can repossess the collateral if you default on payments', 'Secured borrowers have better credit scores by definition', 'Government regulations cap interest on all secured loan types', 'The collateral itself earns interest that offsets the lender risk'], a: 0 },
+          { q: 'Federal student loans differ from private loans in that they offer:', choices: ['Income-driven repayment, deferment, and potential forgiveness options', 'Guaranteed lower interest rates than any private lender offers', 'No credit check requirement and fixed rates below 2% annually', 'Complete tax deductibility of all interest paid regardless of income'], a: 0 },
+          { q: 'Paying only the minimum on a credit card primarily benefits:', choices: ['The bank — minimums are designed to maximize total interest paid', 'The borrower by preserving cash flow for other investments', 'The credit score by keeping utilization at an ideal percentage', 'Both parties equally since interest rates are federally regulated'], a: 0 },
+          { q: 'A healthy debt-to-income ratio for mortgage qualification is generally:', choices: ['Below 36% of gross monthly income going to all debt payments', 'Below 60%, as anything under this is acceptable to most lenders', 'Exactly 28% going to housing costs and nothing else matters', 'Under $2,000 in total monthly debt payments regardless of income'], a: 0 },
+          { q: 'An auto loan at 8% on a car depreciating 15%/year represents:', choices: ['A net annual loss of 23% — bad debt funding a declining asset', 'A net gain since the loan rate is below the depreciation rate', 'Neutral debt since transportation is a necessary living expense', 'Good debt because the vehicle enables income-earning employment'], a: 0 },
+          { q: 'The key question when evaluating student loan debt is:', choices: ['Whether the degree\'s earning premium justifies the total loan balance', 'Whether the university is ranked in the top 50 nationally', 'Whether the loan is federal or private based on interest rates alone', 'Whether you can make minimum payments on your expected starting salary'], a: 0 }
+        ]
+      },
+      {
+        title: 'Avalanche vs. Snowball Method',
+        info: [
+          'The Debt Avalanche method targets the highest-interest-rate debt first while paying minimums on all others. Once the highest-rate debt is eliminated, you roll that payment to the next highest. Mathematically, this is the optimal strategy — it minimizes total interest paid.',
+          'The Debt Snowball method targets the smallest balance first regardless of interest rate. You pay minimums on everything else and attack the smallest debt. When it\'s gone, that freed payment rolls to the next smallest balance.',
+          'The psychological case for Snowball: eliminating entire debts produces measurable dopamine responses and momentum. Behavioral research shows that people who use Snowball actually stick to their plan longer and pay off more total debt, despite paying more interest. For many, motivation > math.',
+          'Hybrid approaches work well: use Snowball for your first 1–2 debts to build momentum, then switch to Avalanche once the habit is established. Alternatively, prioritize any debt over 20% APR immediately regardless of balance size.',
+          'Debt consolidation combines multiple debts into one loan, ideally at a lower rate. A personal loan at 10% to pay off three credit cards at 22–26% saves substantial interest and simplifies payments. The risk: it only works if you don\'t run the cards back up after consolidating.',
+          'Balance transfer cards offer 0% APR promotional periods (typically 12–21 months) with a 3–5% transfer fee. Transferring $5,000 at 0% for 18 months versus 24% APR saves ~$1,100 in interest. The strategy requires paying the balance before the promotional period ends — after which rates typically spike to 25%+.',
+          'The debt-free date calculation: take your total balance, estimate monthly payment, and use a debt payoff calculator or the formula: n = -log(1 - (r × P / M)) / log(1 + r), where P is balance, r is monthly rate, M is monthly payment. Knowing your exact payoff date makes the goal concrete and motivating.'
+        ],
+        quiz: [
+          { q: 'The Debt Avalanche method prioritizes debts by:', choices: ['Highest interest rate first to minimize total interest paid', 'Smallest balance first regardless of interest rate', 'Newest debt first because it has the least accumulated interest', 'Largest balance first to reduce the principal outstanding quickly'], a: 0 },
+          { q: 'The Debt Snowball is psychologically effective because:', choices: ['Eliminating whole debts builds momentum and motivation to continue', 'It always results in paying less total interest than the Avalanche', 'Smaller balances have lower interest rates by definition', 'It requires no tracking — you simply pay the same amount monthly'], a: 0 },
+          { q: 'Debt consolidation is most effective when:', choices: ['The new consolidated rate is lower than your current average rate', 'You consolidate and continue using the original credit cards freely', 'Your total balance is under $1,000 and involves only one creditor', 'The consolidation company charges no origination fee at all'], a: 0 },
+          { q: 'A balance transfer card with 0% APR for 18 months means:', choices: ['No interest on transferred balances for 18 months, then rates spike', 'The card charges 0% on all new purchases made after transfer', 'You can carry any balance indefinitely without interest charges', 'The bank forgives the balance if not paid within 18 months'], a: 0 },
+          { q: 'Mathematically, which method minimizes total interest paid?', choices: ['Debt Avalanche — targeting highest interest rates first always wins', 'Debt Snowball — small balances carry disproportionate interest costs', 'Both methods produce identical total interest over time always', 'Whichever starts with the account that has the oldest open date'], a: 0 },
+          { q: 'The primary risk of balance transfer cards is:', choices: ['Paying the full balance before the 0% period ends and rates spike', 'Being charged the full 18 months of interest upfront as a fee', 'Damaging your credit score by more than 50 points immediately', 'The transfer fee always exceeds the interest savings from 0% APR'], a: 0 },
+          { q: 'Rolling a freed payment to the next debt target is called:', choices: ['The payment rollover — it\'s central to both Snowball and Avalanche', 'Debt stacking — a legally restricted practice in some states', 'Double dipping — frowned upon by most financial advisors', 'Minimum shifting — only applicable to credit card debt types'], a: 0 },
+          { q: 'A hybrid approach to debt repayment might involve:', choices: ['Starting with Snowball for momentum, then switching to Avalanche', 'Using only Avalanche on weekdays and Snowball on weekends', 'Paying random debts each month based on how you\'re feeling', 'Combining Snowball and ignoring any debt above 15% APR'], a: 0 },
+          { q: 'Debt consolidation via personal loan only works long-term if:', choices: ['You don\'t reaccumulate debt on the cards you paid off', 'The loan term is under 12 months regardless of balance size', 'Your credit score exceeds 750 to qualify for the lowest rates', 'You take the maximum loan amount available to build a buffer'], a: 0 }
+        ]
       }
     ]
   },
@@ -482,8 +676,8 @@ export default function CoursesScreen({ courseProgressMap = {}, setCourseProgres
           <h2 style={cStyles.lessonTitle}>Welcome to your Learning Portal</h2>
           <p style={cStyles.lessonInfoText}>Choose how you want to manage your progress data.</p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '20px' }}>
-            <button onClick={() => { localStorage.setItem('storage_preference', 'supabase'); setStoragePref('supabase'); }} style={{ ...cStyles.quizBtn, background: '#0056D2' }}>Synchronize with Account</button>
-            <button onClick={() => { localStorage.setItem('storage_preference', 'local'); setStoragePref('local'); }} style={{ ...cStyles.quizBtn, background: '#64748b' }}>Store Locally Only</button>
+            <button onClick={() => { localStorage.setItem('storage_preference', 'supabase'); setStoragePref('supabase'); }} style={{ ...cStyles.quizBtn, background: 'linear-gradient(135deg,#6366f1,#4f46e5)' }}>Synchronize with Account</button>
+            <button onClick={() => { localStorage.setItem('storage_preference', 'local'); setStoragePref('local'); }} style={{ ...cStyles.quizBtn, background: '#9ca3af' }}>Store Locally Only</button>
           </div>
         </div>
       </div>
@@ -517,12 +711,12 @@ export default function CoursesScreen({ courseProgressMap = {}, setCourseProgres
 
             return (
               <div key={c.id} style={{...cStyles.courseCard, borderRadius: isElementary ? '24px' : '8px'}}>
-                <div style={{ ...cStyles.courseCardTop, background: isElementary ? c.gradient : '#fff', padding: '20px', borderBottom: isElementary ? 'none' : '1px solid #e2e8f0' }}>
+                <div style={{ ...cStyles.courseCardTop, borderTop: `4px solid ${c.color}`, background: '#fff' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                     <span style={{ fontSize: '32px' }}>{c.emoji}</span>
-                    <span style={{ ...cStyles.courseTierTag, background: isElementary ? 'rgba(255,255,255,0.25)' : '#eef2ff', color: isElementary ? '#fff' : '#0056D2' }}>{c.tag}</span>
+                    <span style={{ ...cStyles.courseTierTag, background: c.color + '18', color: c.color }}>{c.tag}</span>
                   </div>
-                  <h3 style={{...cStyles.courseCardTitle, color: isElementary ? '#fff' : '#1e293b'}}>{c.title}</h3>
+                  <h3 style={cStyles.courseCardTitle}>{c.title}</h3>
                   {!isElementary && <p style={{ color: '#64748b', fontSize: '13px', margin: '8px 0' }}>{c.description}</p>}
                 </div>
                 <div style={cStyles.courseCardBottom}>
@@ -536,10 +730,10 @@ export default function CoursesScreen({ courseProgressMap = {}, setCourseProgres
                   <button
                     onClick={() => handleStartCourse(c.id, isFinished)}
                     style={{
-                      ...cStyles.startBtn,
-                      background: isFinished ? '#f0fdf4' : (isElementary ? c.gradient : '#0056D2'),
-                      color: isFinished ? '#166534' : '#fff',
-                    }}
+  ...cStyles.startBtn,
+  background: isFinished ? '#f0fdf4' : (isElementary ? c.gradient : '#0056D2'),
+  color: isFinished ? '#166534' : '#fff',
+}}
                   >
                     {isFinished ? 'Review Materials' : hasStarted ? 'Resume Learning' : 'Start Course'}
                   </button>
@@ -568,14 +762,14 @@ export default function CoursesScreen({ courseProgressMap = {}, setCourseProgres
           {course.lessons.map((les, idx) => {
             const isDone = courseLessonDone(course.id, idx);
             return (
-              <div key={idx} style={{...cStyles.syllabusItem, borderLeft: isDone ? '4px solid #22c55e' : '4px solid #e2e8f0'}}>
+              <div key={idx} style={{...cStyles.syllabusItem, borderLeft: `4px solid ${isDone ? '#22c55e' : course.color}`}}>
                 <div style={{flex: 1}}>
                   <div style={{fontSize: '12px', color: '#64748b', textTransform: 'uppercase', fontWeight: '700'}}>Module {idx + 1}</div>
                   <div style={{fontWeight: '700', fontSize: '16px'}}>{les.title}</div>
                 </div>
                 <button 
                   onClick={() => { setCurrentLesson(idx); setPage('lesson'); }}
-                  style={{...cStyles.syllabusBtn, background: isDone ? '#f0fdf4' : '#0056D2', color: isDone ? '#166534' : '#fff'}}
+                  style={{...cStyles.syllabusBtn, background: isDone ? '#f0fdf4' : `linear-gradient(135deg,${course.color},${course.color}cc)`, color: isDone ? '#166534' : '#fff'}}
                 >
                   {isDone ? 'Review' : 'Go to Lesson'}
                 </button>
@@ -636,10 +830,10 @@ export default function CoursesScreen({ courseProgressMap = {}, setCourseProgres
               ))}
             </div>
 
-            <div style={{marginTop: '40px', padding: '30px', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0'}}>
+            <div style={{marginTop: '40px', padding: '28px', background: `linear-gradient(135deg, ${course.color}12, ${course.color}06)`, borderRadius: '16px', border: `1px solid ${course.color}25`}}>
               <h4 style={{margin: '0 0 10px 0'}}>Ready for the module quiz?</h4>
               <p style={{fontSize: '14px', color: '#64748b', marginBottom: '20px'}}>Pass with 70% or higher to complete this module.</p>
-              <button onClick={handleBeginQuiz} style={{ ...cStyles.quizBtn, background: isElementary ? course.gradient : '#0056D2', width: isElementary ? '100%' : 'auto' }}>
+              <button onClick={handleBeginQuiz} style={{ ...cStyles.quizBtn, background: `linear-gradient(135deg,${course.color},${course.color}cc)` }}>
                 Start Module Quiz
               </button>
             </div>
@@ -712,7 +906,7 @@ export default function CoursesScreen({ courseProgressMap = {}, setCourseProgres
              {result.passed ? 'Great work! You have successfully completed this module.' : 'You need at least 70% to pass. Review the course material and try again.'}
           </p>
         </div>
-        <button onClick={handleContinueAfterResult} style={{ ...cStyles.continueBtn, background: result.passed ? '#0056D2' : '#1e293b', borderRadius: '4px' }}>
+        <button onClick={handleContinueAfterResult} style={{ ...cStyles.continueBtn, background: result.passed ? 'linear-gradient(135deg,#6366f1,#4f46e5)' : '#374151' }}>
           {result.passed ? 'Next Module' : 'Retake Quiz'}
         </button>
       </div>
@@ -726,7 +920,7 @@ export default function CoursesScreen({ courseProgressMap = {}, setCourseProgres
       <div style={cStyles.innerContainer}>
         <div style={{
           borderRadius: '8px', padding: '2px',
-          background: `linear-gradient(45deg, #d4af37, #f1c40f, #d4af37)`,
+          background: `linear-gradient(135deg, #6366f1, #818cf8, #6366f1)`,
           boxShadow: '0 20px 40px rgba(0,0,0,0.1)',
         }}>
           <div style={{ background: '#fff', textAlign: 'center', padding: '60px 40px', border: '1px solid #e2e8f0' }}>
@@ -752,17 +946,17 @@ export default function CoursesScreen({ courseProgressMap = {}, setCourseProgres
     return (
       <div style={cStyles.innerContainer}>
         <button onClick={() => setPage('list')} style={cStyles.backBtn}>← Back</button>
-        <div style={{ ...cStyles.courseHeaderBar, background: course.gradient }}>
-          <h2 style={{ margin: 0, color: '#fff', fontSize: '24px' }}>Review: {course.title}</h2>
-        </div>
+        <div style={{ ...cStyles.courseHeaderBar, background: `linear-gradient(135deg, ${course.color}22, ${course.color}08)`, border: `1px solid ${course.color}30` }}>
+  <h2 style={{ margin: 0, color: '#1e1b4b', fontSize: '24px' }}>Review: {course.title}</h2>
+</div>
         <div style={cStyles.reviewCard}>
           {course.lessons.map((les, idx) => (
             <div key={idx} style={cStyles.reviewItem}>
               <div style={cStyles.reviewLessonTitle}>{les.title}</div>
               <ul style={cStyles.reviewList}>{les.info.map((line, i) => <li key={i} style={cStyles.reviewListItem}>{line}</li>)}</ul>
             </div>
-          ))}
-          <button onClick={() => setPage('list')} style={{ ...cStyles.continueBtn, background: course.gradient }}>Done</button>
+          ))},
+          <button onClick={() => setPage('list')} style={{ ...cStyles.continueBtn, marginTop: '40px', maxWidth: '300px' }}>
         </div>
       </div>
     );
@@ -772,44 +966,292 @@ export default function CoursesScreen({ courseProgressMap = {}, setCourseProgres
 }
 
 const cStyles = {
-  container: { padding: '40px 20px 80px', maxWidth: '1200px', margin: '0 auto', fontFamily: "'Inter', sans-serif" },
-  header: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '40px', flexWrap: 'wrap', gap: '20px' },
-  headerTitle: { margin: 0, fontSize: '28px', fontWeight: '800', color: '#1e293b' },
-  headerSub: { margin: '4px 0 0', color: '#64748b', fontSize: '16px' },
-  completedPill: { display: 'flex', alignItems: 'center', gap: '15px', borderRadius: '8px', padding: '12px 20px' },
-  grid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '24px' },
-  courseCard: { display: 'flex', flexDirection: 'column', overflow: 'hidden', border: '1px solid #e2e8f0', transition: 'transform 0.2s' },
-  courseCardTop: { position: 'relative' },
-  courseCardTitle: { margin: '12px 0 0', fontSize: '18px', fontWeight: '700', lineHeight: '1.4' },
-  courseTierTag: { fontSize: '10px', fontWeight: '800', textTransform: 'uppercase', padding: '4px 8px', borderRadius: '4px' },
-  courseCardBottom: { background: '#fff', padding: '20px', flex: 1 },
-  startBtn: { width: '100%', padding: '12px', border: 'none', borderRadius: '4px', fontWeight: '700', fontSize: '14px', cursor: 'pointer' },
-  innerContainer: { maxWidth: '900px', margin: '0 auto', padding: '40px 20px' },
-  backBtn: { border: 'none', background: 'none', color: '#0056D2', cursor: 'pointer', marginBottom: '20px', fontSize: '14px', fontWeight: '600', padding: 0 },
-  syllabusHeader: { padding: '40px', borderRadius: '8px', marginBottom: '30px', textAlign: 'center' },
-  syllabusContainer: { background: '#fff', padding: '20px' },
-  syllabusItem: { display: 'flex', alignItems: 'center', padding: '20px', background: '#fff', border: '1px solid #e2e8f0', marginBottom: '10px', borderRadius: '4px' },
-  syllabusBtn: { padding: '8px 16px', border: 'none', borderRadius: '4px', fontWeight: '700', fontSize: '13px', cursor: 'pointer' },
-  learningEnv: { display: 'flex', minHeight: '100vh', background: '#fff' },
-  sidebar: { width: '300px', borderRight: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', position: 'sticky', top: 0, height: '100vh' },
-  lessonMainContent: { flex: 1, overflowY: 'auto' },
-  courseraArticle: { fontFamily: 'Georgia, serif' },
-  quizHeaderCard: { padding: '10px 0', marginBottom: '20px' },
-  quizCard: { background: '#fff', padding: '40px', borderRadius: '8px' },
-  choiceBtn: { width: '100%', padding: '16px', textAlign: 'left', border: '1px solid #e2e8f0', borderRadius: '8px', marginBottom: '10px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '15px', fontSize: '15px', fontFamily: 'inherit' },
-  choiceLetter: { width: '30px', height: '30px', borderRadius: '50%', border: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: '700' },
-  feedbackBox: { marginTop: '20px', padding: '20px', border: '1px solid' },
-  nextBtn: { padding: '12px 24px', border: 'none', borderRadius: '4px', color: '#fff', fontWeight: '700', cursor: 'pointer' },
-  resultCard: { padding: '60px', textAlign: 'center', marginBottom: '20px', borderRadius: '8px' },
-  scoreDisplay: { margin: '30px 0' },
-  continueBtn: { width: '100%', padding: '16px', border: 'none', borderRadius: '4px', color: '#fff', fontWeight: '700', fontSize: '16px', cursor: 'pointer' },
-  reviewCard: { background: '#fff', padding: '30px', border: '1px solid #e2e8f0' },
+  // ── Layout ──────────────────────────────────────────────
+  container: {
+    padding: '32px 24px 80px',
+    maxWidth: '1100px',
+    margin: '0 auto',
+    fontFamily: "'Inter', -apple-system, sans-serif",
+    background: 'transparent',
+  },
+  innerContainer: {
+    maxWidth: '860px',
+    margin: '0 auto',
+    padding: '32px 20px',
+  },
+
+  // ── Header ───────────────────────────────────────────────
+  header: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: '28px',
+    flexWrap: 'wrap',
+    gap: '16px',
+  },
+  headerTitle: {
+    margin: 0,
+    fontSize: '26px',
+    fontWeight: '800',
+    color: '#1e1b4b',
+  },
+  headerSub: {
+    margin: '4px 0 0',
+    color: '#6b7280',
+    fontSize: '14px',
+  },
+  completedPill: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '12px',
+    borderRadius: '16px',
+    padding: '12px 20px',
+    background: '#fff',
+    border: '1px solid #e5e7eb',
+    boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
+  },
+
+  // ── Course Grid ──────────────────────────────────────────
+  grid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
+    gap: '20px',
+  },
+  courseCard: {
+    display: 'flex',
+    flexDirection: 'column',
+    overflow: 'hidden',
+    borderRadius: '20px',
+    background: '#fff',
+    border: '1px solid #e5e7eb',
+    boxShadow: '0 2px 8px rgba(99,102,241,0.07)',
+    transition: 'transform 0.18s, box-shadow 0.18s',
+  },
+  courseCardTop: {
+    padding: '22px 22px 18px',
+    borderBottom: '1px solid #f3f4f6',
+  },
+  courseCardTitle: {
+    margin: '12px 0 4px',
+    fontSize: '16px',
+    fontWeight: '700',
+    color: '#1e1b4b',
+    lineHeight: '1.4',
+  },
+  courseTierTag: {
+    fontSize: '10px',
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: '0.05em',
+    padding: '3px 10px',
+    borderRadius: '20px',
+  },
+  courseCardBottom: {
+    background: '#fff',
+    padding: '18px 22px 22px',
+    flex: 1,
+  },
+  startBtn: {
+    width: '100%',
+    padding: '11px',
+    border: 'none',
+    borderRadius: '12px',
+    fontWeight: '700',
+    fontSize: '14px',
+    cursor: 'pointer',
+    transition: 'opacity 0.15s',
+  },
+
+  // ── Back Button ──────────────────────────────────────────
+  backBtn: {
+    border: 'none',
+    background: 'none',
+    color: '#6366f1',
+    cursor: 'pointer',
+    marginBottom: '20px',
+    fontSize: '14px',
+    fontWeight: '600',
+    padding: '0',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '4px',
+  },
+
+  // ── Syllabus ─────────────────────────────────────────────
+  syllabusHeader: {
+    padding: '36px',
+    borderRadius: '20px',
+    marginBottom: '24px',
+    textAlign: 'center',
+  },
+  syllabusContainer: {
+    background: '#fff',
+    padding: '24px',
+    borderRadius: '16px',
+    border: '1px solid #e5e7eb',
+  },
+  syllabusItem: {
+    display: 'flex',
+    alignItems: 'center',
+    padding: '16px 18px',
+    background: '#fafafa',
+    border: '1px solid #f0f0f0',
+    marginBottom: '10px',
+    borderRadius: '12px',
+    gap: '12px',
+  },
+  syllabusBtn: {
+    padding: '8px 18px',
+    border: 'none',
+    borderRadius: '10px',
+    fontWeight: '700',
+    fontSize: '13px',
+    cursor: 'pointer',
+    whiteSpace: 'nowrap',
+  },
+
+  // ── Learning Environment ─────────────────────────────────
+  learningEnv: {
+    display: 'flex',
+    minHeight: '100vh',
+    background: '#f9f9fb',
+  },
+  sidebar: {
+    width: '260px',
+    borderRight: '1px solid #e5e7eb',
+    background: '#fff',
+    display: 'flex',
+    flexDirection: 'column',
+    position: 'sticky',
+    top: 0,
+    height: '100vh',
+    overflowY: 'auto',
+  },
+  lessonMainContent: {
+    flex: 1,
+    overflowY: 'auto',
+  },
+  courseraArticle: {
+    fontFamily: "'Georgia', serif",
+  },
+
+  // ── Quiz ─────────────────────────────────────────────────
+  quizHeaderCard: {
+    padding: '8px 0 16px',
+  },
+  quizCard: {
+    background: '#fff',
+    padding: '36px',
+    borderRadius: '20px',
+    border: '1px solid #e5e7eb',
+    boxShadow: '0 2px 8px rgba(99,102,241,0.06)',
+  },
+  choiceBtn: {
+    width: '100%',
+    padding: '14px 18px',
+    textAlign: 'left',
+    border: '1.5px solid #e5e7eb',
+    borderRadius: '12px',
+    marginBottom: '10px',
+    cursor: 'pointer',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '14px',
+    fontSize: '15px',
+    fontFamily: 'inherit',
+    background: '#fff',
+    transition: 'border-color 0.15s, background 0.15s',
+  },
+  choiceLetter: {
+    minWidth: '30px',
+    height: '30px',
+    borderRadius: '50%',
+    border: '1.5px solid #d1d5db',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    fontSize: '12px',
+    fontWeight: '700',
+    background: '#f9fafb',
+    color: '#374151',
+  },
+  feedbackBox: {
+    marginTop: '20px',
+    padding: '20px',
+    borderRadius: '14px',
+    border: '1.5px solid',
+  },
+  nextBtn: {
+    padding: '11px 26px',
+    border: 'none',
+    borderRadius: '10px',
+    color: '#fff',
+    fontWeight: '700',
+    cursor: 'pointer',
+    fontSize: '14px',
+  },
+
+  // ── Result ───────────────────────────────────────────────
+  resultCard: {
+    padding: '52px 40px',
+    textAlign: 'center',
+    marginBottom: '20px',
+    borderRadius: '20px',
+    background: '#fff',
+    border: '1px solid #e5e7eb',
+    boxShadow: '0 2px 12px rgba(99,102,241,0.08)',
+  },
+  scoreDisplay: {
+    margin: '24px 0',
+    padding: '20px',
+    background: 'linear-gradient(135deg, #f0f0ff, #ede9fe)',
+    borderRadius: '14px',
+    display: 'inline-block',
+    minWidth: '160px',
+  },
+  continueBtn: {
+    width: '100%',
+    padding: '15px',
+    border: 'none',
+    borderRadius: '14px',
+    color: '#fff',
+    fontWeight: '700',
+    fontSize: '15px',
+    cursor: 'pointer',
+    background: 'linear-gradient(135deg, #6366f1, #4f46e5)',
+  },
+
+  // ── Review ───────────────────────────────────────────────
+  reviewCard: {
+    background: '#fff',
+    padding: '30px',
+    borderRadius: '16px',
+    border: '1px solid #e5e7eb',
+  },
   reviewItem: { marginBottom: '30px' },
-  reviewLessonTitle: { fontWeight: '800', fontSize: '18px', marginBottom: '15px' },
+  reviewLessonTitle: { fontWeight: '800', fontSize: '18px', marginBottom: '15px', color: '#1e1b4b' },
   reviewList: { paddingLeft: '20px' },
-  reviewListItem: { marginBottom: '10px', color: '#475569' },
-  lessonCard: { background: '#fff', padding: '40px', borderRadius: '8px', textAlign: 'center', border: '1px solid #e2e8f0' },
-  lessonTitle: { fontSize: '24px', fontWeight: '800', marginBottom: '10px' },
-  lessonInfoText: { color: '#64748b' },
-  quizBtn: { padding: '12px 24px', border: 'none', borderRadius: '4px', color: '#fff', fontWeight: '700', cursor: 'pointer' }
+  reviewListItem: { marginBottom: '10px', color: '#4b5563', lineHeight: '1.7' },
+  courseHeaderBar: { padding: '24px', borderRadius: '16px', marginBottom: '24px' },
+
+  // ── Misc ─────────────────────────────────────────────────
+  lessonCard: {
+    background: '#fff',
+    padding: '40px',
+    borderRadius: '20px',
+    textAlign: 'center',
+    border: '1px solid #e5e7eb',
+    boxShadow: '0 2px 8px rgba(99,102,241,0.07)',
+  },
+  lessonTitle: { fontSize: '22px', fontWeight: '800', marginBottom: '10px', color: '#1e1b4b' },
+  lessonInfoText: { color: '#6b7280', lineHeight: '1.6' },
+  quizBtn: {
+    padding: '12px 28px',
+    border: 'none',
+    borderRadius: '12px',
+    color: '#fff',
+    fontWeight: '700',
+    cursor: 'pointer',
+    fontSize: '14px',
+  },
 };
