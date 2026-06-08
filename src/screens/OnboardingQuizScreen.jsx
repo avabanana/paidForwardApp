@@ -1,364 +1,471 @@
 import React, { useMemo, useState } from 'react';
 
 const moneyOptions = [
-  { id: 'starting', label: 'Just getting started' },
-  { id: 'saving', label: 'Saving and budgeting' },
-  { id: 'investing', label: 'Curious about investing' },
-  { id: 'credit', label: 'Want to build credit' }
+  { id: 'starting', emoji: '🌱', label: 'Just getting started' },
+  { id: 'saving',   emoji: '🐷', label: 'Saving & budgeting' },
+  { id: 'investing',emoji: '📈', label: 'Curious about investing' },
+  { id: 'credit',   emoji: '💳', label: 'Building credit' }
 ];
 
 const goalOptions = [
-  { id: 'save', label: 'Build my savings' },
-  { id: 'invest', label: 'Start investing' },
-  { id: 'budget', label: 'Manage money better' },
-  { id: 'learn', label: 'Learn money basics' }
+  { id: 'save',   emoji: '🏦', label: 'Build my savings' },
+  { id: 'invest', emoji: '🚀', label: 'Start investing' },
+  { id: 'budget', emoji: '📊', label: 'Manage money better' },
+  { id: 'learn',  emoji: '📚', label: 'Learn the basics' }
 ];
 
 const recommendationMap = {
-  starting: {
-    save: 'Budget Tracker',
-    invest: 'Courses',
-    budget: 'Budget Tracker',
-    learn: 'Courses'
-  },
-  saving: {
-    save: 'Budget Tracker',
-    invest: 'Courses',
-    budget: 'Budget Tracker',
-    learn: 'Courses'
-  },
-  investing: {
-    save: 'Courses',
-    invest: 'Games',
-    budget: 'Courses',
-    learn: 'Courses'
-  },
-  credit: {
-    save: 'Courses',
-    invest: 'Courses',
-    budget: 'Courses',
-    learn: 'Courses'
-  }
+  starting: { save: 'Budget Tracker', invest: 'Courses',      budget: 'Budget Tracker', learn: 'Courses' },
+  saving:   { save: 'Budget Tracker', invest: 'Courses',      budget: 'Budget Tracker', learn: 'Courses' },
+  investing:{ save: 'Courses',        invest: 'Money Games',  budget: 'Courses',        learn: 'Courses' },
+  credit:   { save: 'Courses',        invest: 'Courses',      budget: 'Courses',        learn: 'Courses' }
 };
 
-export default function OnboardingQuizScreen({ onLoginRequested = () => {}, onSignupRequested = () => {} }) {
+const recDescriptions = {
+  'Budget Tracker': 'Track spending, set goals, and build lasting money habits.',
+  'Courses':        'Short, fun lessons that teach real financial skills step by step.',
+  'Money Games':    'Simulate investing with virtual money before using the real thing.'
+};
+
+const steps = [
+  { label: 'Your age' },
+  { label: 'Money situation' },
+  { label: 'Your goal' }
+];
+
+export default function OnboardingQuizScreen({
+  onLoginRequested = () => {},
+  onSignupRequested = () => {}
+}) {
   const [step, setStep] = useState(0);
   const [age, setAge] = useState('');
   const [moneySituation, setMoneySituation] = useState('starting');
   const [goal, setGoal] = useState('learn');
 
-  const ageLabel = useMemo(() => {
-    if (!age) return 'Age not set';
-    const ageNumber = parseInt(age, 10);
-    if (Number.isNaN(ageNumber)) return 'Age not set';
-    if (ageNumber < 13) return 'Under 13';
-    if (ageNumber < 18) return 'Teen';
-    return 'Adult';
-  }, [age]);
-
-  const recommendation = useMemo(() => {
-    const pick = recommendationMap[moneySituation]?.[goal] || 'Courses';
-    return pick;
-  }, [moneySituation, goal]);
+  const recommendation = useMemo(
+    () => recommendationMap[moneySituation]?.[goal] || 'Courses',
+    [moneySituation, goal]
+  );
 
   const handleNext = () => {
     if (step === 0 && !age.trim()) return;
-    if (step === 1 && !moneySituation) return;
-    if (step === 2) {
-      if (onSignupRequested) {
-        onSignupRequested({ age: age.trim(), moneySituation, goal, recommendation });
-      }
-      return;
+    if (step < 3) {
+      setStep(step + 1);
+    } else {
+      onSignupRequested({ age: age.trim(), moneySituation, goal, recommendation });
     }
-    setStep(step + 1);
   };
 
-  const stepText = [
-    'How old are you?',
-    'What best describes your money situation?',
-    'What is your biggest goal right now?'
-  ];
-
   return (
-    <div style={styles.page}>
-      <div style={styles.card}>
-        <div style={styles.header}>
-          <div>
-            <div style={styles.kicker}>New user onboarding</div>
-            <h1 style={styles.title}>Tell us a little about you</h1>
-            <p style={styles.subtitle}>Answer three quick questions and we’ll recommend the best starting point.</p>
+    <div style={s.page}>
+      <div style={s.shell}>
+
+        {/* ── Left panel ── */}
+        <div style={s.left}>
+          <div style={s.brand}>
+            <div style={s.brandIcon}>💸</div>
+            <span style={s.brandName}>PaidForward</span>
           </div>
-          <button type="button" style={styles.loginButton} onClick={onLoginRequested}>
-            Already have an account
-          </button>
+
+          <div style={s.leftBody}>
+            <div style={s.tagline}>
+              Money skills<br />for <span style={s.taglineAccent}>real life.</span>
+            </div>
+            <p style={s.leftDesc}>
+              Learn, practice, and level up your financial literacy — at any age.
+            </p>
+          </div>
+
+          <div style={s.stepsTrack}>
+            {steps.map((st, i) => {
+              const isDone   = i < step;
+              const isActive = i === step;
+              return (
+                <div
+                  key={i}
+                  style={{
+                    ...s.stepRow,
+                    opacity: isDone ? 0.7 : isActive ? 1 : 0.35
+                  }}
+                >
+                  <div style={{
+                    ...s.stepDot,
+                    background: isDone ? '#f5b942' : isActive ? '#7c5cfc' : 'transparent',
+                    borderColor: isDone ? '#f5b942' : isActive ? '#7c5cfc' : 'rgba(255,255,255,0.25)',
+                    color: isDone ? '#1a1147' : '#fff'
+                  }}>
+                    {isDone ? '✓' : i + 1}
+                  </div>
+                  <span style={{
+                    ...s.stepLabel,
+                    color: isActive ? '#fff' : isDone ? 'rgba(255,255,255,0.7)' : 'rgba(255,255,255,0.4)'
+                  }}>
+                    {st.label}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
         </div>
 
-        <div style={styles.stepIndicator}>Step {step + 1} of 3</div>
-        <div style={styles.question}>{stepText[step]}</div>
-
-        {step === 0 && (
-          <div style={styles.inputGroup}>
-            <label style={styles.label} htmlFor="ageInput">Your age</label>
-            <input
-              id="ageInput"
-              type="number"
-              min="5"
-              max="120"
-              value={age}
-              onChange={(e) => setAge(e.target.value)}
-              placeholder="Enter your age"
-              style={styles.input}
-            />
-            <div style={styles.helperText}>This helps us tailor the experience to your age.</div>
+        {/* ── Right panel ── */}
+        <div style={s.right}>
+          <div style={s.rightTop}>
+            <button style={s.loginLink} type="button" onClick={onLoginRequested}>
+              Already have an account?{' '}
+              <span style={{ color: '#7c5cfc' }}>Log in</span>
+            </button>
           </div>
-        )}
 
-        {step === 1 && (
-          <div style={styles.optionsGrid}>
-            {moneyOptions.map((option) => (
-              <button
-                key={option.id}
-                type="button"
-                onClick={() => setMoneySituation(option.id)}
-                style={{
-                  ...styles.optionCard,
-                  borderColor: moneySituation === option.id ? '#6366f1' : '#cbd5e1',
-                  background: moneySituation === option.id ? 'rgba(99,102,241,0.1)' : '#ffffff'
-                }}
-              >
-                {option.label}
-              </button>
-            ))}
-          </div>
-        )}
+          {/* Step 0 — age */}
+          {step === 0 && (
+            <>
+              <div style={s.stepKicker}>Step 1 of 3</div>
+              <div style={s.question}>How old are you?</div>
+              <div style={s.ageGroup}>
+                <label style={s.ageLabel} htmlFor="ageInput">Your age</label>
+                <input
+                  id="ageInput"
+                  type="number"
+                  min="5"
+                  max="120"
+                  placeholder="13"
+                  value={age}
+                  onChange={e => setAge(e.target.value)}
+                  style={s.ageInput}
+                />
+                <p style={s.ageHint}>We'll tailor the experience to you.</p>
+              </div>
+            </>
+          )}
 
-        {step === 2 && (
-          <div style={styles.optionsGrid}>
-            {goalOptions.map((option) => (
-              <button
-                key={option.id}
-                type="button"
-                onClick={() => setGoal(option.id)}
-                style={{
-                  ...styles.optionCard,
-                  borderColor: goal === option.id ? '#6366f1' : '#cbd5e1',
-                  background: goal === option.id ? 'rgba(99,102,241,0.1)' : '#ffffff'
-                }}
-              >
-                {option.label}
-              </button>
-            ))}
-          </div>
-        )}
+          {/* Step 1 — money situation */}
+          {step === 1 && (
+            <>
+              <div style={s.stepKicker}>Step 2 of 3</div>
+              <div style={s.question}>Where are you with money right now?</div>
+              <div style={s.optionsGrid}>
+                {moneyOptions.map(opt => (
+                  <button
+                    key={opt.id}
+                    type="button"
+                    onClick={() => setMoneySituation(opt.id)}
+                    style={{
+                      ...s.optionCard,
+                      borderColor: moneySituation === opt.id ? '#7c5cfc' : 'rgba(0,0,0,0.1)',
+                      background:  moneySituation === opt.id ? '#f0ebff' : '#fff',
+                      color:       moneySituation === opt.id ? '#4a2fc3' : '#0f172a'
+                    }}
+                  >
+                    <span style={s.optionEmoji}>{opt.emoji}</span>
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
 
-        <div style={styles.footer}>
-          <div style={styles.summaryBox}>
-            <div style={styles.summaryLabel}>Recommended starting point</div>
-            <div style={styles.summaryValue}>{recommendation}</div>
-            <div style={styles.summarySubtext}>We’ll take you to the sign-up screen next, then help you get started there.</div>
+          {/* Step 2 — goal */}
+          {step === 2 && (
+            <>
+              <div style={s.stepKicker}>Step 3 of 3</div>
+              <div style={s.question}>What's your biggest money goal?</div>
+              <div style={s.optionsGrid}>
+                {goalOptions.map(opt => (
+                  <button
+                    key={opt.id}
+                    type="button"
+                    onClick={() => setGoal(opt.id)}
+                    style={{
+                      ...s.optionCard,
+                      borderColor: goal === opt.id ? '#7c5cfc' : 'rgba(0,0,0,0.1)',
+                      background:  goal === opt.id ? '#f0ebff' : '#fff',
+                      color:       goal === opt.id ? '#4a2fc3' : '#0f172a'
+                    }}
+                  >
+                    <span style={s.optionEmoji}>{opt.emoji}</span>
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
+
+          {/* Step 3 — result */}
+          {step === 3 && (
+            <div style={s.result}>
+              <div style={s.resultChip}>Your personalized path</div>
+              <div style={s.resultDest}>
+                Start with<br />
+                <span style={{ color: '#7c5cfc' }}>{recommendation}</span>
+              </div>
+              <p style={s.resultSub}>{recDescriptions[recommendation]}</p>
+            </div>
+          )}
+
+          <div style={s.footer}>
+            <button
+              type="button"
+              style={{
+                ...s.nextBtn,
+                opacity: step === 0 && !age.trim() ? 0.5 : 1
+              }}
+              onClick={handleNext}
+              disabled={step === 0 && !age.trim()}
+            >
+              {step === 3 ? 'Create my account' : 'Next'} →
+            </button>
           </div>
-          <button
-            type="button"
-            style={styles.nextButton}
-            onClick={handleNext}
-          >
-            {step === 2 ? 'Continue to Sign Up' : 'Next Question'}
-          </button>
         </div>
       </div>
     </div>
   );
 }
 
-const styles = {
+const s = {
   page: {
     minHeight: '100vh',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    padding: '20px',
-    background: 'linear-gradient(135deg, #0f172a 0%, #1e3a8a 30%, #3b82f6 60%, #8b5cf6 100%)',
-    fontFamily: "'Inter', system-ui, sans-serif",
-    position: 'relative',
-    overflow: 'hidden'
+    padding: '24px',
+    background: '#f4f1ff',
+    fontFamily: "'Nunito', system-ui, sans-serif"
   },
-  card: {
+  shell: {
     width: '100%',
-    maxWidth: '720px',
-    background: 'rgba(255, 255, 255, 0.98)',
-    borderRadius: '32px',
-    boxShadow: '0 40px 80px rgba(15, 23, 42, 0.25)',
-    padding: '48px 44px',
-    border: '1px solid rgba(255, 255, 255, 0.2)',
-    position: 'relative',
-    zIndex: 10
+    maxWidth: '800px',
+    display: 'grid',
+    gridTemplateColumns: '1fr 1fr',
+    minHeight: '520px',
+    borderRadius: '24px',
+    overflow: 'hidden',
+    boxShadow: '0 24px 60px rgba(15,17,42,0.18)'
   },
-  header: {
+
+  /* Left */
+  left: {
+    background: '#1a1147',
+    padding: '40px 36px',
     display: 'flex',
-    gap: '24px',
+    flexDirection: 'column',
     justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    flexWrap: 'wrap',
+    gap: '32px'
+  },
+  brand: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '10px'
+  },
+  brandIcon: {
+    width: '36px',
+    height: '36px',
+    background: '#7c5cfc',
+    borderRadius: '10px',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    fontSize: '18px'
+  },
+  brandName: {
+    fontFamily: 'Georgia, serif',
+    fontSize: '20px',
+    color: '#fff',
+    fontWeight: '400'
+  },
+  leftBody: { flex: 1 },
+  tagline: {
+    fontSize: '28px',
+    fontWeight: '900',
+    color: '#fff',
+    lineHeight: '1.2',
+    marginBottom: '14px'
+  },
+  taglineAccent: { color: '#f5b942' },
+  leftDesc: {
+    fontSize: '14px',
+    color: 'rgba(255,255,255,0.55)',
+    lineHeight: '1.6',
+    fontWeight: '600',
+    margin: 0
+  },
+  stepsTrack: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '14px'
+  },
+  stepRow: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '12px',
+    transition: 'opacity 0.3s'
+  },
+  stepDot: {
+    width: '28px',
+    height: '28px',
+    borderRadius: '50%',
+    border: '2px solid',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    fontSize: '11px',
+    fontWeight: '800',
+    flexShrink: 0,
+    transition: 'all 0.3s'
+  },
+  stepLabel: {
+    fontSize: '13px',
+    fontWeight: '700',
+    transition: 'color 0.3s'
+  },
+
+  /* Right */
+  right: {
+    background: '#fff',
+    padding: '36px 36px 32px',
+    display: 'flex',
+    flexDirection: 'column'
+  },
+  rightTop: {
+    display: 'flex',
+    justifyContent: 'flex-end',
+    marginBottom: '28px'
+  },
+  loginLink: {
+    fontSize: '13px',
+    fontWeight: '700',
+    color: '#64748b',
+    background: 'none',
+    border: 'none',
+    cursor: 'pointer',
+    padding: 0,
+    fontFamily: 'inherit'
+  },
+  stepKicker: {
+    fontSize: '11px',
+    fontWeight: '800',
+    textTransform: 'uppercase',
+    letterSpacing: '0.1em',
+    color: '#7c5cfc',
     marginBottom: '8px'
   },
-  kicker: {
-    color: '#6366f1',
-    fontWeight: '800',
-    marginBottom: '12px',
-    fontSize: '13px',
-    textTransform: 'uppercase',
-    letterSpacing: '0.08em'
-  },
-  title: {
-    fontSize: '36px',
-    lineHeight: '1.15',
-    margin: 0,
-    color: '#0f172a',
+  question: {
+    fontSize: '22px',
     fontWeight: '900',
-    background: 'linear-gradient(135deg, #0f172a, #4338ca)',
-    webkitBackgroundClip: 'text',
-    webkitTextFillColor: 'transparent',
-    backgroundClip: 'text'
+    color: '#0f172a',
+    lineHeight: '1.25',
+    marginBottom: '24px'
   },
-  subtitle: {
-    color: '#64748b',
-    marginTop: '14px',
-    maxWidth: '500px',
-    fontSize: '15px',
-    lineHeight: '1.6',
-    fontWeight: '500'
+
+  /* Age step */
+  ageGroup: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '10px',
+    flex: 1
   },
-  loginButton: {
-    border: '2px solid #e0e7ff',
-    background: 'transparent',
-    color: '#6366f1',
-    borderRadius: '16px',
-    padding: '14px 22px',
-    cursor: 'pointer',
-    fontWeight: '700',
-    fontSize: '14px',
-    transition: 'all 0.3s ease',
-    textTransform: 'uppercase',
-    letterSpacing: '0.05em'
-  },
-  stepIndicator: {
-    marginTop: '32px',
-    marginBottom: '4px',
-    color: '#a78bfa',
+  ageLabel: {
     fontSize: '12px',
     fontWeight: '800',
     textTransform: 'uppercase',
-    letterSpacing: '0.1em'
+    letterSpacing: '0.06em',
+    color: '#64748b'
   },
-  question: {
-    marginTop: '8px',
-    marginBottom: '28px',
+  ageInput: {
+    border: '2px solid #e2e8f0',
+    borderRadius: '14px',
+    padding: '14px 18px',
     fontSize: '24px',
+    fontFamily: 'inherit',
     fontWeight: '800',
     color: '#0f172a',
-    lineHeight: '1.3'
+    background: '#fff',
+    width: '140px',
+    outline: 'none'
   },
-  inputGroup: {
-    marginTop: '32px',
-    marginBottom: '28px',
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '12px'
-  },
-  label: {
-    fontWeight: '700',
-    color: '#1e293b',
-    fontSize: '14px',
-    textTransform: 'uppercase',
-    letterSpacing: '0.05em'
-  },
-  input: {
-    borderRadius: '18px',
-    border: '2px solid #e2e8f0',
-    padding: '16px 20px',
-    fontSize: '16px',
-    outline: 'none',
-    width: '100%',
-    maxWidth: '260px',
-    transition: 'all 0.3s ease',
-    background: '#f8fafc'
-  },
-  helperText: {
-    color: '#94a3b8',
+  ageHint: {
     fontSize: '13px',
-    marginTop: '4px',
-    fontWeight: '500'
+    color: '#94a3b8',
+    fontWeight: '600',
+    margin: 0
   },
+
+  /* Options */
   optionsGrid: {
-    marginTop: '28px',
-    marginBottom: '28px',
     display: 'grid',
-    gap: '12px',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))'
+    gridTemplateColumns: '1fr 1fr',
+    gap: '10px',
+    flex: 1
   },
   optionCard: {
-    borderRadius: '20px',
-    border: '2px solid #e2e8f0',
-    padding: '22px 18px',
+    border: '2px solid',
+    borderRadius: '14px',
+    padding: '16px 14px',
     textAlign: 'left',
-    fontSize: '15px',
-    color: '#0f172a',
     cursor: 'pointer',
-    transition: 'all 0.3s ease',
-    background: '#ffffff',
-    fontWeight: '600',
-    lineHeight: '1.5'
+    fontFamily: 'inherit',
+    fontSize: '14px',
+    fontWeight: '700',
+    lineHeight: '1.4',
+    transition: 'border-color 0.2s, background 0.2s, color 0.2s'
   },
-  footer: {
-    marginTop: '40px',
-    display: 'grid',
-    gridTemplateColumns: '1fr auto',
-    gap: '24px',
-    alignItems: 'center'
-  },
-  summaryBox: {
-    padding: '24px 28px',
-    borderRadius: '24px',
-    border: '2px solid #e0e7ff',
-    background: 'linear-gradient(135deg, #f8fafc 0%, #f0f4ff 100%)',
-    boxShadow: '0 4px 16px rgba(99, 102, 241, 0.08)'
-  },
-  summaryLabel: {
-    fontSize: '11px',
-    textTransform: 'uppercase',
-    letterSpacing: '0.15em',
-    color: '#6b7280',
-    fontWeight: '800'
-  },
-  summaryValue: {
-    marginTop: '10px',
+  optionEmoji: {
     fontSize: '22px',
-    fontWeight: '900',
-    color: '#6366f1',
+    display: 'block',
+    marginBottom: '8px'
+  },
+
+  /* Result */
+  result: {
+    flex: 1,
     display: 'flex',
-    alignItems: 'center',
-    gap: '8px'
+    flexDirection: 'column',
+    justifyContent: 'center',
+    gap: '14px'
   },
-  summarySubtext: {
-    marginTop: '10px',
+  resultChip: {
+    display: 'inline-block',
+    background: '#f0ebff',
+    color: '#4a2fc3',
+    borderRadius: '999px',
+    padding: '6px 16px',
+    fontSize: '12px',
+    fontWeight: '800',
+    textTransform: 'uppercase',
+    letterSpacing: '0.06em',
+    alignSelf: 'flex-start'
+  },
+  resultDest: {
+    fontSize: '30px',
+    fontWeight: '900',
+    color: '#0f172a',
+    lineHeight: '1.2'
+  },
+  resultSub: {
+    fontSize: '14px',
     color: '#64748b',
-    fontSize: '13px',
+    fontWeight: '600',
     lineHeight: '1.6',
-    fontWeight: '500'
+    maxWidth: '280px',
+    margin: 0
   },
-  nextButton: {
+
+  /* Footer */
+  footer: {
+    marginTop: '28px',
+    display: 'flex',
+    justifyContent: 'flex-end'
+  },
+  nextBtn: {
+    background: '#7c5cfc',
+    color: '#fff',
     border: 'none',
-    borderRadius: '20px',
-    padding: '16px 32px',
-    background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
-    color: '#ffffff',
-    fontSize: '16px',
+    borderRadius: '14px',
+    padding: '14px 28px',
+    fontFamily: 'inherit',
+    fontSize: '15px',
     fontWeight: '800',
     cursor: 'pointer',
-    minWidth: '180px',
-    boxShadow: '0 8px 24px rgba(99, 102, 241, 0.4)',
-    transition: 'all 0.3s ease',
-    textTransform: 'uppercase',
-    letterSpacing: '0.05em'
+    transition: 'background 0.2s, opacity 0.2s'
   }
 };

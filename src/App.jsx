@@ -15,6 +15,8 @@ import SettingsScreen from './screens/SettingsScreen.jsx';
 import OnboardingFlow from './screens/OnboardingFlow.jsx';
 import WelcomeScreen from './screens/WelcomeScreen.jsx';
 import TourOverlay from './components/TourOverlay.jsx';
+import GuideScreen from './screens/GuideScreen.jsx';
+import GuideDrawer from './components/GuideDrawer.jsx';
 
 const EMPTY_STATS = {
   xp: 0,
@@ -49,11 +51,11 @@ const persistUser = (updated) => {
 function App() {
   const { user, signIn, signOut } = useContext(UserContext);
   const [activeTab, setActiveTab] = useState('Home');
+  const [isGuideOpen, setIsGuideOpen] = useState(false);
   const [achievementPopup, setAchievementPopup] = useState('');
   const [stats, setStats] = useState(EMPTY_STATS);
   const [showWelcome, setShowWelcome] = useState(false);
   const [showTour, setShowTour] = useState(false);
-
   const displayName = stats.username || user?.username || 'Guest';
 
   const triggerAchievementPopup = (label) => {
@@ -173,6 +175,7 @@ function App() {
       case 'Leagues':  return <LeagueScreen currentUser={displayName} userId={user?.id} />;
       case 'Salary':   return <SalaryScreen />;
       case 'Settings': return <SettingsScreen currentUser={user} stats={stats} updateData={updateData} signOutCallback={handleSignOut} onUsernameUpdate={handleUsernameUpdate} />;
+      case 'Guide':    return <GuideScreen />; 
       default:         return <HomeScreen onNavigate={(tab) => setActiveTab(tab)} />;
     }
   };
@@ -183,6 +186,22 @@ function App() {
 
   return (
     <div style={styles.container}>
+       <GuideDrawer isOpen={isGuideOpen} onClose={() => setIsGuideOpen(false)} />
+
+      {/* 4. Add a floating help button */}
+      <button 
+        onClick={() => setIsGuideOpen(true)}
+        style={{
+          position: 'fixed', bottom: '30px', right: '30px', zIndex: 999,
+          width: '50px', height: '50px', borderRadius: '25px', 
+          background: '#4338ca', color: 'white', border: 'none', 
+          boxShadow: '0 4px 15px rgba(67, 56, 202, 0.4)', cursor: 'pointer',
+          fontSize: '24px', fontWeight: 'bold'
+        }}
+        title="Open Guide"
+      >
+        ?
+      </button>
       {achievementPopup && <div style={styles.achievementToast}>🏆 {achievementPopup}</div>}
 
       {showWelcome && (
@@ -215,7 +234,7 @@ function App() {
 
         <nav style={styles.navBar}>
           {[
-            'Home', 'Courses', 'Games', 'Progress',
+            'Home', 'Courses', 'Games', 'Progress', 
             ...(stats.tier !== 'elementary' ? ['Discussion'] : [])
           ].map((tab) => {
             const isActive = activeTab === tab;
