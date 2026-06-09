@@ -424,17 +424,17 @@ const elementaryCoursesData = [
       {
         title: 'How to Earn Money',
         info: [
-          'Money doesn’t just appear; people earn it by helping others or doing a job.',
-          'As a kid, you can earn money through an allowance for doing chores, or by receiving gifts on your birthday.',
+          "Money doesn't just appear; people earn it by helping others or doing a job.",
+          "As a kid, you can earn money through an allowance for doing chores, or by receiving gifts on your birthday.",
           'You can also earn by being an "entrepreneur"—like selling lemonade, washing a car, or helping a neighbor rake leaves.',
           'The harder or better you work, the more people trust you to do a job again!',
-          'Earning money feels great because it’s a reward for your time and effort.'
+          "Earning money feels great because it's a reward for your time and effort."
         ],
         quiz: [
           { q: 'What is an "entrepreneur"?', choices: ['Someone who starts a small business, like a lemonade stand', 'A person who only spends money', 'A type of bank account', 'A specialized tool for raking leaves'], a: 0 },
           { q: 'Which is a way a kid might earn money?', choices: ['Helping a neighbor pull weeds in their garden', 'Finding a magic lamp', 'Waiting for it to grow on a tree', 'Just asking the bank for it'], a: 0 },
           { q: 'What is an "allowance"?', choices: ['Money parents might give you for doing regular chores', 'The amount of time you spend playing games', 'A type of tax you pay at the toy store', 'A special ticket for the movies'], a: 0 },
-          { q: 'If you want to earn more money, you should:', choices: ['Look for ways to help people and do a great job', 'Complain that you don’t have enough', 'Wait for your birthday to arrive', 'Spend the money you already have'], a: 0 },
+          { q: 'If you want to earn more money, you should:', choices: ['Look for ways to help people and do a great job', 'Complain that you don\'t have enough', 'Wait for your birthday to arrive', 'Spend the money you already have'], a: 0 },
           { q: 'Earning money is a reward for your:', choices: ['Time and effort', 'Luck', 'Good looks', 'Favorite color'], a: 0 }
         ]
       }
@@ -470,13 +470,13 @@ const elementaryCoursesData = [
         title: 'Wait for the Great',
         info: [
           'Patience is a "Money Superpower." If you wait and save, you can buy something much better later.',
-          'Impulse buying is when you see something and buy it immediately without thinking. This often leads to "Buyer’s Remorse" (feeling sad you spent the money).',
+          `Impulse buying is when you see something and buy it immediately without thinking. This often leads to "Buyer's Remorse" (feeling sad you spent the money).`,
           'Interest is like a "Thank You" payment. If you put money in a bank, the bank pays you a tiny bit extra for keeping it there!',
           'The longer you leave your money in the Saving Jar or a Bank, the more it can grow.',
           'Setting a goal, like a $50 LEGO set, helps you stay excited about saving.'
         ],
         quiz: [
-          { q: 'What is "Buyer’s Remorse"?', choices: ['Feeling sad after spending money on something you didn\'t really need', 'A special discount at the store', 'The name of a new video game', 'Winning a prize for saving money'], a: 0 },
+          { q: `What is "Buyer's Remorse"?`, choices: ['Feeling sad after spending money on something you didn\'t really need', 'A special discount at the store', 'The name of a new video game', 'Winning a prize for saving money'], a: 0 },
           { q: 'What is "Interest"?', choices: ['Extra money the bank pays you for saving with them', 'The cost of a movie ticket', 'A hobby you like to do', 'A fee you pay for being late'], a: 0 },
           { q: 'Why is patience a "Money Superpower"?', choices: ['It helps you save for much bigger and better things', 'It makes you run faster', 'It helps you find money on the ground', 'It means you never have to work'], a: 0 },
           { q: 'If you want a big toy, the best thing to do is:', choices: ['Set a goal and put money in your Saving Jar every week', 'Cry until someone buys it for you', 'Buy five small toys instead', 'Forget about it completely'], a: 0 },
@@ -497,10 +497,10 @@ const elementaryCoursesData = [
       {
         title: 'What is a Loan?',
         info: [
-          'Borrowing means taking something that isn’t yours and promising to give it back later.',
-          'A "Loan" is when you borrow money. You must always pay it back, usually by a certain date.',
+          "Borrowing means taking something that isn't yours and promising to give it back later.",
+          "A 'Loan' is when you borrow money. You must always pay it back, usually by a certain date.",
           'Your "Credit" is your reputation. If you always pay people back, you have "Good Credit" and people trust you.',
-          'If you borrow $5 from a friend and don\'t pay them back, they probably won\'t lend you money again. That is "Bad Credit."',
+          "If you borrow $5 from a friend and don't pay them back, they probably won't lend you money again. That is \"Bad Credit.\"",
           'Grown-ups use credit for big things like houses, but they have to be very careful to pay it back on time.'
         ],
         quiz: [
@@ -604,7 +604,7 @@ export default function CoursesScreen({ courseProgressMap = {}, setCourseProgres
       if (!courseLessonDone(id, i)) { firstIncomplete = i; break; }
     }
     setCurrentLesson(firstIncomplete);
-    setPage('course_home'); // Coursera usually starts with a "Course Home"
+    setPage('course_home');
   };
 
   const handleBeginQuiz = () => {
@@ -730,10 +730,10 @@ export default function CoursesScreen({ courseProgressMap = {}, setCourseProgres
                   <button
                     onClick={() => handleStartCourse(c.id, isFinished)}
                     style={{
-  ...cStyles.startBtn,
-  background: isFinished ? '#f0fdf4' : (isElementary ? c.gradient : '#0056D2'),
-  color: isFinished ? '#166534' : '#fff',
-}}
+                      ...cStyles.startBtn,
+                      background: isFinished ? '#f0fdf4' : (isElementary ? c.gradient : '#0056D2'),
+                      color: isFinished ? '#166534' : '#fff',
+                    }}
                   >
                     {isFinished ? 'Review Materials' : hasStarted ? 'Resume Learning' : 'Start Course'}
                   </button>
@@ -941,22 +941,24 @@ export default function CoursesScreen({ courseProgressMap = {}, setCourseProgres
     );
   }
 
-  // ─── REVIEW VIEW (UNTOUCHED) ───
+  // ─── REVIEW VIEW ───
   if (page === 'review' && course) {
     return (
       <div style={cStyles.innerContainer}>
         <button onClick={() => setPage('list')} style={cStyles.backBtn}>← Back</button>
         <div style={{ ...cStyles.courseHeaderBar, background: `linear-gradient(135deg, ${course.color}22, ${course.color}08)`, border: `1px solid ${course.color}30` }}>
-  <h2 style={{ margin: 0, color: '#1e1b4b', fontSize: '24px' }}>Review: {course.title}</h2>
-</div>
+          <h2 style={{ margin: 0, color: '#1e1b4b', fontSize: '24px' }}>Review: {course.title}</h2>
+        </div>
         <div style={cStyles.reviewCard}>
           {course.lessons.map((les, idx) => (
             <div key={idx} style={cStyles.reviewItem}>
               <div style={cStyles.reviewLessonTitle}>{les.title}</div>
               <ul style={cStyles.reviewList}>{les.info.map((line, i) => <li key={i} style={cStyles.reviewListItem}>{line}</li>)}</ul>
             </div>
-          ))},
+          ))}
           <button onClick={() => setPage('list')} style={{ ...cStyles.continueBtn, marginTop: '40px', maxWidth: '300px' }}>
+            Back to Dashboard
+          </button>
         </div>
       </div>
     );

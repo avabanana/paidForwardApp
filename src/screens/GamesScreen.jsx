@@ -27,14 +27,23 @@ const STOCK_WIN_REASONS = [
 ];
 
 const VOCAB_HELPER = {
-  pe: "Price-to-Earnings Ratio: Measures a company's share price relative to per-share earnings. A high P/E often signals high growth expectations.",
-  yield: "Dividend Yield: The percentage of a company's share price paid out annually in dividends. A way to earn passive income from stocks.",
-  ticker: "Ticker Symbol: A unique 1–5 letter abbreviation used to identify a stock on an exchange (e.g. AAPL = Apple).",
-  sentiment: "Market Sentiment: The overall attitude of investors toward a security. Bullish = optimistic, Bearish = pessimistic.",
-  volatility: "Volatility: How much a stock's price fluctuates. High volatility = higher risk AND higher potential reward.",
-  marketCap: "Market Capitalization: Total value of a company's outstanding shares. Calculated as: share price × total shares.",
-  eps: "Earnings Per Share: Net profit divided by total shares. The higher the EPS, the more profitable the company per share.",
-  beta: "Beta: Measures how much a stock moves relative to the overall market. Beta > 1 means more volatile than the market.",
+  ticker: "Ticker: A short 'nickname' for a company so traders can find it quickly without typing the whole name.",
+  price: "Price: What it costs to buy exactly one share (one 'slice') of the company right now.",
+  chart: "Chart: A line showing the path the stock price took. It helps you see if it's trending up or down.",
+  sentiment: "Sentiment: The market's 'mood.' Bullish means people think it will go up; Bearish means they think it will fall.",
+  sector: "Sector: The category the company belongs to, like 'Technology' or 'Energy'.",
+  prevClose: "Prev Close: The very last price the stock sold for when the market closed yesterday.",
+  open: "Open: The price the stock started at when the market first opened for business this morning.",
+  bid: "Bid: The highest price a buyer is currently waiting in line to pay to buy this stock from you.",
+  ask: "Ask: The lowest price a seller is currently willing to accept to sell this stock to you.",
+  range52: "52-Week Range: The highest and lowest price the stock has reached over the last full year.",
+  volume: "Volume: How many shares have been bought and sold by everyone today. High volume means a lot of activity!",
+  marketCap: "Market Cap: The 'Total Price Tag' for the whole company. It's what it would cost to buy the entire business.",
+  pe: "P/E Ratio: Tells you if a stock is 'expensive.' It compares the stock price to how much profit the company actually makes.",
+  eps: "EPS: How much profit the company made for every single share of stock. Like a company's 'allowance' per share.",
+  beta: "Beta: Measures 'jumpiness.' A high beta means the stock swings up and down much faster than the rest of the market.",
+  earnings: "Earnings Date: The day the company officially tells the public how much money they made recently.",
+  targetEst: "1y Target Est: A guess by professional experts on what the stock price will be worth one year from now."
 };
 
 const NPC_PERSONALITIES = {
@@ -610,27 +619,27 @@ export default function GamesScreen({ userTier, onGameEnd, onNavigate, userName 
 
           <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:32, marginBottom:20 }}>
             {[
-              ["Previous Close", `$${stock.prevClose}`],
-              ["Open", `$${stock.open}`],
-              ["Bid", stock.bid],
-              ["Ask", stock.ask],
-              ["52-Week Range", stock.range52],
-              ["Volume", stock.volume],
-              ["Market Cap", stock.marketCap],
-              ["P/E Ratio (TTM)", stock.pe],
-              ["EPS (TTM)", stock.eps],
-              ["Beta", stock.beta],
-              ["Earnings Date", stock.earnings],
-              ["1y Target Est", `$${stock.targetEst}`],
+              ["prevClose", "Previous Close", `$${stock.prevClose}`],
+              ["open", "Open", `$${stock.open}`],
+              ["bid", "Bid", stock.bid],
+              ["ask", "Ask", stock.ask],
+              ["range52", "52-Week Range", stock.range52],
+              ["volume", "Volume", stock.volume],
+              ["marketCap", "Market Cap", stock.marketCap],
+              ["pe", "P/E Ratio (TTM)", stock.pe],
+              ["eps", "EPS (TTM)", stock.eps],
+              ["beta", "Beta", stock.beta],
+              ["earnings", "Earnings Date", stock.earnings],
+              ["targetEst", "1y Target Est", `$${stock.targetEst}`],
             ].reduce((cols, item, i) => {
               const col = Math.floor(i / 6);
               cols[col] = [...(cols[col] || []), item];
               return cols;
             }, [[], []]).map((col, ci) => (
               <div key={ci}>
-                {col.map(([label, val]) => (
+                {col.map(([key, label, val]) => (
                   <div key={label} style={{ display:"flex", justifyContent:"space-between", padding:"10px 0", borderBottom:"1px solid #f1f5f9", fontSize:13 }}>
-                    <span style={{ color:"#64748b" }}>{label}</span>
+                    <span onClick={e => handleVocabClick(key, e)} style={{ color:"#64748b", cursor:"help", textDecoration:"underline dotted" }}>{label} ?</span>
                     <strong style={{ color:"#0f172a" }}>{val}</strong>
                   </div>
                 ))}
@@ -817,17 +826,15 @@ export default function GamesScreen({ userTier, onGameEnd, onNavigate, userName 
                 <tr style={{ borderBottom:"2px solid #f1f5f9" }}>
                   {[
                     ["ticker", "Ticker"],
-                    [null, "Price"],
-                    [null, "Chart"],
+                    ["price", "Price"],
+                    ["chart", "Chart"],
                     ["sentiment", "Sentiment"],
-                    [null, "Sector"],
+                    ["sector", "Sector"],
                   ].map(([key, label]) => (
                     <th key={label} style={{ padding:"8px 6px", textAlign:"left", color:"#94a3b8", fontWeight:600, fontSize:11, textTransform:"uppercase", letterSpacing:"0.05em" }}>
-                      {key ? (
-                        <span onClick={e => handleVocabClick(key, e)} style={{ cursor:"help", textDecoration:"underline dotted", color:"#6366f1" }}>
-                          {label} ?
-                        </span>
-                      ) : label}
+                      <span onClick={e => handleVocabClick(key, e)} style={{ cursor:"help", textDecoration:"underline dotted", color:"#6366f1" }}>
+                        {label} ?
+                      </span>
                     </th>
                   ))}
                 </tr>
@@ -1406,7 +1413,7 @@ export default function GamesScreen({ userTier, onGameEnd, onNavigate, userName 
 
 const gS = {
   vocabPopup: {
-    position:"fixed", zIndex:9999, background:"#fff", padding:"14px 18px", borderRadius:14,
+    position:"fixed", zIndex:20000, background:"#fff", padding:"14px 18px", borderRadius:14,
     width:230, boxShadow:"0 12px 40px rgba(0,0,0,0.15)", border:"1px solid #6366f1",
   },
   modalOverlay: {
