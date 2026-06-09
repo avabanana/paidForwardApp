@@ -56,6 +56,7 @@ function App() {
   const [stats, setStats] = useState(EMPTY_STATS);
   const [showWelcome, setShowWelcome] = useState(false);
   const [showTour, setShowTour] = useState(false);
+  const [showGuideTooltip, setShowGuideTooltip] = useState(false);
   const displayName = stats.username || user?.username || 'Guest';
 
   const triggerAchievementPopup = (label) => {
@@ -86,6 +87,12 @@ function App() {
     const isNew = !user.lastLogin || user.createdAt === user.lastLogin;
     if (!hasSeenWelcome && isNew) {
       setShowWelcome(true);
+    }
+
+    // Tooltip Logic: Show if this specific user ID hasn't dismissed it yet
+    const hasSeenTooltip = localStorage.getItem(`guide_tooltip_shown_${user.id}`);
+    if (!hasSeenTooltip) {
+      setShowGuideTooltip(true);
     }
   }, [user]);
 
@@ -163,6 +170,14 @@ function App() {
     setStats(prev => ({ ...prev, username: newName }));
   };
 
+  const handleOpenGuide = () => {
+    setIsGuideOpen(true);
+    if (showGuideTooltip) {
+      setShowGuideTooltip(false);
+      localStorage.setItem(`guide_tooltip_shown_${user?.id}`, 'true');
+    }
+  };
+
   const renderScreen = () => {
     switch (activeTab) {
       case 'Home':     return <HomeScreen userTier={stats.tier} onNavigate={(tab) => setActiveTab(tab)} />;
@@ -188,20 +203,94 @@ function App() {
     <div style={styles.container}>
        <GuideDrawer isOpen={isGuideOpen} onClose={() => setIsGuideOpen(false)} />
 
-      {/* 4. Add a floating help button */}
-      <button 
-        onClick={() => setIsGuideOpen(true)}
-        style={{
-          position: 'fixed', bottom: '30px', right: '30px', zIndex: 999,
-          width: '50px', height: '50px', borderRadius: '25px', 
-          background: '#4338ca', color: 'white', border: 'none', 
-          boxShadow: '0 4px 15px rgba(67, 56, 202, 0.4)', cursor: 'pointer',
-          fontSize: '24px', fontWeight: 'bold'
-        }}
-        title="Open Guide"
-      >
-        ?
-      </button>
+      {/* Floating help button + Tooltip logic */}
+      <>
+  <style>
+    {`
+      .guide-button {
+        position: fixed;
+        bottom: 40px;
+        right: 40px;
+        z-index: 9999;
+        width: 70px;
+        height: 70px;
+        border-radius: 50%;
+        background: #4338ca;
+        color: white;
+        border: 4px solid rgba(255, 255, 255, 0.3);
+        cursor: pointer;
+        font-size: 36px;
+        font-weight: bold;
+        box-shadow: 0 10px 25px rgba(67, 56, 202, 0.5);
+        transition: all 0.2s ease-in-out;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0;
+        line-height: 0;
+      }
+
+      .guide-button:hover {
+        transform: scale(1.1);
+        background: #4f46e5;
+        box-shadow: 0 12px 30px rgba(67, 56, 202, 0.6);
+      }
+
+      .guide-button:active {
+        transform: scale(0.95);
+      }
+
+      .guide-tooltip {
+        position: fixed;
+        bottom: 125px;
+        right: 35px;
+        z-index: 10000;
+        background: #1e1b4b;
+        color: white;
+        padding: 10px 16px;
+        border-radius: 12px;
+        font-size: 14px;
+        font-weight: 800;
+        box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+        animation: tooltipBounce 2s infinite;
+        white-space: nowrap;
+      }
+
+      .guide-tooltip-arrow {
+        position: absolute;
+        bottom: -8px;
+        right: 30px;
+        width: 0; 
+        height: 0; 
+        border-left: 8px solid transparent;
+        border-right: 8px solid transparent;
+        border-top: 8px solid #1e1b4b;
+      }
+
+      @keyframes tooltipBounce {
+        0%, 20%, 50%, 80%, 100% {transform: translateY(0);}
+        40% {transform: translateY(-10px);}
+        60% {transform: translateY(-5px);}
+      }
+    `}
+  </style>
+
+  {/* Display the tooltip only on the Home tab if it hasn't been dismissed */}
+  {activeTab === 'Home' && showGuideTooltip && (
+    <div className="guide-tooltip">
+      Click me for help! 💡
+      <div className="guide-tooltip-arrow"></div>
+    </div>
+  )}
+
+  <button 
+    className="guide-button"
+    onClick={handleOpenGuide}
+    title="Open Guide"
+  >
+    ?
+  </button>
+</>
       {achievementPopup && <div style={styles.achievementToast}>🏆 {achievementPopup}</div>}
 
       {showWelcome && (
