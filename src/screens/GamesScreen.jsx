@@ -758,7 +758,7 @@ export default function GamesScreen({ userTier, onGameEnd, onNavigate, userName 
         <div style={{ maxWidth:1240, margin:"0 auto", display:"grid", gridTemplateColumns:"240px 1fr 280px", gap:16, height:"calc(100vh - 32px)" }}>
 
           {/* LEFT: Standings + Feed */}
-          <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
+          <div style={{ display:"flex", flexDirection:"column", gap:12, overflow:"hidden", minHeight:0 }}>
             <div style={{ background:"#1e293b", borderRadius:16, padding:16, color:"#fff", flex:"0 0 auto" }}>
               <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:12 }}>
                 <h3 style={{ margin:0, fontSize:14, color:"#6366f1", fontWeight:700 }}>🏆 Standings</h3>
@@ -787,7 +787,7 @@ export default function GamesScreen({ userTier, onGameEnd, onNavigate, userName 
 
             <div style={{ background:"#1e293b", borderRadius:16, padding:16, color:"#fff", flex:1, overflow:"hidden", display:"flex", flexDirection:"column" }}>
               <h3 style={{ margin:"0 0 10px", fontSize:14, color:"#10b981", fontWeight:700 }}>📡 Activity Feed</h3>
-              <div style={{ overflowY:"auto", flex:1 }}>
+              <div style={{ overflowY:"hidden", flex:1 }}>
                 {leagueFeed.length === 0 ? (
                   <div style={{ fontSize:11, color:"#475569", fontStyle:"italic" }}>Waiting for trades...</div>
                 ) : leagueFeed.map((f, i) => (
